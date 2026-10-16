@@ -20,7 +20,7 @@ h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em;font-weight:700;color:var
 .loader label.btn{background:var(--card);color:var(--ac)}.loader label.btn:hover{background:var(--acbg)}.loader input[type=file]{display:none}.loader select{padding:8px 10px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}.heatctl select{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}.heatctl label{color:var(--mut)}
 #manualBtn{margin-left:auto;background:var(--card);color:var(--tx);border:1px solid var(--bd2);font-weight:500}#manualBtn[aria-expanded="true"]{border-color:var(--ac);color:var(--ac)}#manual{display:grid;gap:10px;padding-top:10px;border-top:1px dashed var(--bd2)}
 #theme{background:var(--card);color:var(--tx);border:1px solid var(--bd2);font-weight:500}
-[hidden]{display:none!important}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:22px 0 4px;border-bottom:1px solid var(--bd)}.tabs button{background:none!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;color:var(--mut)!important;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;box-shadow:none!important}.tabs button.on{color:var(--tx2)!important;border-bottom-color:var(--ac)!important}.heatctl input{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit;min-width:280px}.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden;margin-left:6px}.seg button{background:var(--input)!important;color:var(--mut)!important;border:0!important;border-radius:0!important;padding:6px 12px;font:inherit;cursor:pointer;box-shadow:none!important}.seg button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.kv td:first-child{color:var(--mut);width:40%}.kv td{white-space:normal}.delta{font-size:12px;margin-left:6px}.up{color:var(--ac)}.down{color:var(--rk)}.chips span{display:inline-block;padding:3px 9px;margin:2px 4px 2px 0;border:1px solid var(--bd2);border-radius:999px;font-size:12px}.loader small{color:var(--mut)}#status{font-size:12.5px;color:var(--mut)}#status.err{color:var(--rk)}#status.ok{color:var(--ac)}
+[hidden]{display:none!important}.temas{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0}.temas button{background:var(--card)!important;color:var(--mut)!important;border:1px solid var(--bd2)!important;border-radius:999px!important;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;box-shadow:none!important}.temas button.on{background:var(--acbg)!important;color:var(--tx2)!important;border-color:var(--ac)!important;font-weight:600}.lk[data-emp]{cursor:pointer;text-decoration:underline dotted}.div{background:rgba(240,81,67,.18)}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:22px 0 4px;border-bottom:1px solid var(--bd)}.tabs button{background:none!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;color:var(--mut)!important;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;box-shadow:none!important}.tabs button.on{color:var(--tx2)!important;border-bottom-color:var(--ac)!important}.heatctl input{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit;min-width:280px}.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden;margin-left:6px}.seg button{background:var(--input)!important;color:var(--mut)!important;border:0!important;border-radius:0!important;padding:6px 12px;font:inherit;cursor:pointer;box-shadow:none!important}.seg button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.kv td:first-child{color:var(--mut);width:40%}.kv td{white-space:normal}.delta{font-size:12px;margin-left:6px}.up{color:var(--ac)}.down{color:var(--rk)}.chips span{display:inline-block;padding:3px 9px;margin:2px 4px 2px 0;border:1px solid var(--bd2);border-radius:999px;font-size:12px}.loader small{color:var(--mut)}#status{font-size:12.5px;color:var(--mut)}#status.err{color:var(--rk)}#status.ok{color:var(--ac)}
 .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px}.topbar img{height:40px;flex:none;margin-top:4px}
 .tagline{color:var(--mut);font-size:13px}.tagline b{color:var(--ac2)}
 .pills{height:4px;margin:14px 0 4px;background:linear-gradient(90deg,var(--ac) 0 60%,#12B8A2 60% 80%,#7C5CE6 80%);border-radius:2px}
@@ -68,10 +68,11 @@ dialog{border:1px solid var(--bd);border-radius:8px;box-shadow:0 16px 24px -2px 
   <p class="hint">Clique em qualquer célula, fatia ou barra para ver a lista de clientes daquele recorte.</p>
   <div id="status">Suba os 2 arquivos crus (empresas_elite___cadastro + Exportação de Clientes) ou cole o link da planilha para começar.</div>
 </div>
-<nav class="tabs" id="tabs"><button type="button" data-tab="carteira" class="on">Gestão de Carteira</button><button type="button" data-tab="empresa">Visão da Empresa</button><button type="button" data-tab="historico">Visão de Gestão · Histórico Elite</button></nav>
+<nav class="tabs" id="tabs"><button type="button" data-tab="carteira" class="on">Gestão de Carteira</button><button type="button" data-tab="empresa">Visão da Empresa</button><button type="button" data-tab="historico">Visão de Gestão · Histórico Elite</button><button type="button" id="fontesBtn" style="margin-left:auto">ℹ️ Fontes dos dados</button></nav>
 <section id="tab-carteira">
 <div class="kpis" id="kpis"></div>
 <div id="check"></div>
+<nav class="temas" id="temas"></nav>
 <div id="body"><p class="note">Aguardando dados.</p></div>
 </section>
 <section id="tab-empresa" hidden></section>
@@ -735,7 +736,7 @@ async function chamarWebApp(params) {
   if (!tok) { pedirToken(); throw null; }
   const d = await jsonp(`${WEBAPP_URL}?token=${encodeURIComponent(tok)}&${params}`);
   if (!d || !d.ok) {
-    if (d && d.erro === 'token') { localStorage.removeItem('wtoken'); pedirToken('Código de acesso inválido. Digite novamente.'); throw null; }
+    if (d && d.erro === 'token') { localStorage.removeItem('wtoken'); IDB.limpar(); pedirToken('Código de acesso inválido. Digite novamente.'); throw null; }
     throw new Error('Serviço de dados: ' + ((d && d.mensagem) || 'resposta inválida.'));
   }
   return d;
@@ -749,31 +750,75 @@ function resumoStatus(st) {
     : `CustomerX de ${st.cx.arquivo_de || st.cx.atualizado_em}`);
   return p.join(' · ');
 }
-async function carregarPeriodo(per) {
-  $('#status').textContent = per === 'atual' ? 'Buscando os dados mais recentes no Drive…' : `Buscando ${rotuloPeriodo(per).toLowerCase()}…`;
-  $('#status').className = '';
-  const d = await chamarWebApp('periodo=' + encodeURIComponent(per));
+// ===== Cache no navegador (IndexedDB): reabrir a página é instantâneo; só baixa de novo quando o Drive publica dados novos =====
+let VERSAO = '';
+const IDB = (() => {
+  let pdb;
+  const abrir = () => pdb || (pdb = new Promise((res, rej) => {
+    const r = indexedDB.open('blingdash', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('c');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = (modo, f) => abrir().then(db => new Promise((res, rej) => {
+    const t = db.transaction('c', modo), q = f(t.objectStore('c'));
+    t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error);
+  }));
+  return {
+    get: k => tx('readonly', st => st.get(k)).catch(() => null),
+    put: (k, v) => tx('readwrite', st => st.put(v, k)).catch(() => null),
+    limpar: () => tx('readwrite', st => st.clear()).catch(() => null),
+  };
+})();
+const versaoDe = st => st ? [st.ultima_publicacao, (st.cx || {}).arquivo_de, (st.meta || {}).arquivo_de].join('|') : '';
+
+// transforma a resposta do Drive em linhas (e aplica o complemento/validação do CustomerX)
+function prepararPayload(d) {
+  const validar = new URLSearchParams(location.search).has('validar');
   let cxRows = rowsFromB64(d.cx);
   if (d.cx.ext === 'json' && d.cxComp) {
     const comp = rowsFromB64(d.cxComp);
-    if (new URLSearchParams(location.search).has('validar')) mostrarValidacao(validarCx(cxRows, comp));
+    if (validar) mostrarValidacao(validarCx(cxRows, comp));
     cxRows = complementarCx(cxRows, comp);
-  } else if (new URLSearchParams(location.search).has('validar')) mostrarValidacao(null);
-  const t = montarTabelas(rowsFromB64(d.meta), cxRows);
+  } else if (validar) mostrarValidacao(null);
+  return { metaRows: rowsFromB64(d.meta), cxRows, status: d.status };
+}
+function aplicarDados(p, per, sufixo) {
+  if (per === 'atual') window.ULTIMO_STATUS = p.status;
+  const t = montarTabelas(p.metaRows, p.cxRows);
   ALL = buildAccounts(t.cxRows, t.metaRows);
   const par = t.semPar ? `${t.semPar} de ${t.total} empresas da Meta sem par na Exportação` : 'todos os CNPJs da Meta localizados na Exportação';
   const fonte = per === 'atual' ? 'Drive (automático)' : `Drive · ${rotuloPeriodo(per)}`;
-  finishLoad(fonte, true, [par, per === 'atual' ? resumoStatus(d.status) : ''].filter(Boolean).join(' · '));
+  finishLoad(fonte, true, [par, per === 'atual' ? resumoStatus(p.status) : '', sufixo || ''].filter(Boolean).join(' · '));
+}
+async function carregarPeriodo(per) {
+  $('#status').textContent = per === 'atual' ? 'Buscando os dados mais recentes no Drive…' : `Buscando ${rotuloPeriodo(per).toLowerCase()}…`;
+  $('#status').className = '';
+  const p = prepararPayload(await chamarWebApp('periodo=' + encodeURIComponent(per)));
+  aplicarDados(p, per);
+  if (per === 'atual' && VERSAO && !new URLSearchParams(location.search).has('validar')) IDB.put('atual', Object.assign({ ver: VERSAO }, p));
 }
 async function iniciarAuto() {
   $('#autoRow').hidden = false;
-  const d = await chamarWebApp('acao=lista');
+  const validar = new URLSearchParams(location.search).has('validar');
+  const cache = validar ? null : await IDB.get('atual');
+  if (cache) { try { aplicarDados(cache, 'atual', 'conferindo se há dados novos…'); } catch (e) { /* cache inválido: segue */ } }
+  // sem cache, pede a lista e os dados ao mesmo tempo (carrega mais rápido)
+  const pLista = chamarWebApp('acao=lista'), pAtual = cache ? null : chamarWebApp('periodo=atual');
+  if (pAtual) pAtual.catch(() => {});
+  const d = await pLista;
+  VERSAO = versaoDe(d.status);
   const mesAtual = new Date().toISOString().slice(0, 7);
-  const sel = $('#periodo');
-  sel.innerHTML = '<option value="atual">Hoje (mais recente)</option>' +
+  $('#periodo').innerHTML = '<option value="atual">Hoje (mais recente)</option>' +
     (d.periodos || []).filter(p => p !== mesAtual).map(p => `<option value="${p}">${rotuloPeriodo(p)}</option>`).join('');
   $('#tokenBox').hidden = true;
-  await carregarPeriodo('atual');
+  if (cache && cache.ver === VERSAO) aplicarDados(cache, 'atual', 'carregado do cache do navegador (já é a versão mais recente)');
+  else {
+    if (!cache) $('#status').textContent = 'Buscando os dados mais recentes no Drive…';
+    const p = prepararPayload(pAtual ? await pAtual : await chamarWebApp('periodo=atual'));
+    aplicarDados(p, 'atual');
+    if (!validar) IDB.put('atual', Object.assign({ ver: VERSAO }, p));
+  }
+  if (typeof carregarHist === 'function') setTimeout(() => carregarHist('mes', true), 800); // adianta o histórico em segundo plano
 }
 function toggleManual(open) {
   const box = $('#manual'), btn = $('#manualBtn'); if (!box || !btn) return;
@@ -846,7 +891,7 @@ const HV2 = { sub: 'elite', gran: 'mes', carteira: '', empresa: '', csm: '' };
 const renderCarteira = render;
 render = function () {
   for (const k in HIST) if (HIST[k] && HIST[k].erro) delete HIST[k];   // dados recarregados: tenta o histórico de novo
-  renderCarteira(); renderAbaAtual();
+  renderCarteira(); if (temDados()) { extrasCarteira(); organizarTemas(); } renderAbaAtual();
 };
 function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); }
 function trocarAba(t) {
@@ -890,19 +935,25 @@ function linhas(series, labels, fmt = fmtInt, doZero = true) {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>${leg}`;
 }
 const tabela = (cab, linhasT) => `<div class="tw"><table><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${linhasT.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-const delta = (a, b, fmt = fmtInt) => (a == null || b == null || a === b) ? '' : `<span class="delta ${a > b ? 'up' : 'down'}">${a > b ? '▲' : '▼'} ${esc(fmt(Math.abs(a - b)))}</span>`;
+const delta = (a, b, fmt = fmtInt, inverso = false) => {
+  if (a == null || b == null || a === b) return b == null ? '' : '<span class="delta">= sem variação</span>';
+  const sobe = a > b, bom = inverso ? !sobe : sobe, pc = b ? ` (${sobe ? '+' : '−'}${(Math.abs(a - b) / Math.abs(b) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%)` : '';
+  return `<span class="delta ${bom ? 'up' : 'down'}">${sobe ? '▲' : '▼'} ${esc(fmt(Math.abs(a - b)))}${pc}</span>`;
+};
 
 // ---------- dados históricos (Apps Script: acao=historico) ----------
 const histDisponivel = () => typeof WEBAPP_URL !== 'undefined' && WEBAPP_URL;
-async function carregarHist(gran) {
+async function carregarHist(gran, silencioso) {
   if (HIST[gran] || HIST_CARREGANDO[gran]) return HIST[gran];
   HIST_CARREGANDO[gran] = true;
   try {
-    const d = await chamarWebApp('acao=historico&gran=' + gran);
+    const c = VERSAO ? await IDB.get('hist:' + gran) : null;
+    const d = (c && c.ver === VERSAO) ? c.d : await chamarWebApp('acao=historico&gran=' + gran);
+    if (VERSAO && !(c && c.ver === VERSAO)) IDB.put('hist:' + gran, { ver: VERSAO, d });
     const per = Object.keys(d.periodos || {}).sort();
     HIST[gran] = { per, snap: Object.fromEntries(per.map(p => [p, resumoParaContas(d.periodos[p])])), tarefas: d.tarefas, atrasadas: d.atrasadas };
-  } catch (e) { HIST[gran] = { erro: e ? e.message : 'Informe o código de acesso na aba Gestão de Carteira.' }; }
-  HIST_CARREGANDO[gran] = false; renderAbaAtual(); return HIST[gran];
+  } catch (e) { HIST[gran] = silencioso ? undefined : { erro: e ? e.message : 'Informe o código de acesso na aba Gestão de Carteira.' }; }
+  HIST_CARREGANDO[gran] = false; if (TAB !== 'carteira') renderAbaAtual(); return HIST[gran];
 }
 function resumoParaContas(r) {
   const ix = n => r.colunas.indexOf(n);
@@ -992,12 +1043,12 @@ function ligarBuscaEmpresa() {
 function renderHistorico() {
   const box = document.getElementById('tab-historico');
   const seg = (k, ops) => `<span class="seg">${ops.map(([v, l]) => `<button type="button" data-h2="${k}" data-v="${v}" class="${HV2[k] === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
-  let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)']])}</label><label>Período:${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
+  let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)'], ['comparar', 'Comparador']])}</label><label>Período:${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
   if (!histDisponivel()) { box.innerHTML = h + '<p class="note">O histórico usa os dados automáticos do Drive (configure o WEBAPP_URL).</p>'; return; }
   const H = HIST[HV2.gran];
   if (!H) { box.innerHTML = h + '<p class="note">Carregando histórico…</p>'; carregarHist(HV2.gran); return; }
   if (H.erro) { box.innerHTML = h + `<p class="note">${esc(H.erro)}</p>`; return; }
-  box.innerHTML = h + (HV2.sub === 'elite' ? histElite(H) : histCsm(H));
+  box.innerHTML = h + (HV2.sub === 'elite' ? histElite(H) : HV2.sub === 'csm' ? histCsm(H) : comparador(H));
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-h2]'); if (!b) return;
@@ -1010,6 +1061,22 @@ document.addEventListener('change', e => {
   HV2[t.dataset.h2f] = v; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
 });
 
+function metricas(a) {
+  const IFc = Object.fromEntries(['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'].map(k => [k, a.filter(x => x.IF === k).length]));
+  return { n: a.length, ativos: a.filter(x => x.status === 'Ativo').length, hs: avg(a, x => /^finalizad/i.test(x.status) ? null : x.hs),
+    mrr: sum(a, x => x.mrr), arr: sum(a, x => x.arr), gmv: sum(a, x => x.gmv), ped: sum(a, x => x.ped), risco: a.filter(x => x.motivo).length, IFc,
+    criticos: a.filter(x => x.hs != null && x.hs < HEALTH_BANDS.atencao && !/^finalizad/i.test(x.status)).length };
+}
+// matriz de/para entre dois períodos (só empresas presentes nos dois)
+function movimentacao(antes, depois, chave, ordem, nome) {
+  const mA = new Map(antes.map(x => [x.id, x])), cont = {}, mudou = [];
+  depois.forEach(x => { const y = mA.get(x.id); if (!y) return; const de = chave(y), para = chave(x); cont[de + '>' + para] = (cont[de + '>' + para] || 0) + 1; if (de !== para) mudou.push([x, de, para]); });
+  const cab = ['De → Para', ...ordem.map(nome), 'Total'];
+  const lin = ordem.map(de => { const t = ordem.reduce((s, pa) => s + (cont[de + '>' + pa] || 0), 0);
+    return [`<b>${esc(nome(de))}</b>`, ...ordem.map(pa => { const v = cont[de + '>' + pa] || 0; return v ? (de === pa ? `<span class="note" style="margin:0">${v}</span>` : `<b style="color:${ordem.indexOf(pa) > ordem.indexOf(de) ? 'var(--ac)' : 'var(--rk)'}">${v}</b>`) : '·'; }), fmtInt(t)]; })
+    .filter(r => r[r.length - 1] !== '0');
+  return { html: tabela(cab, lin), mudou };
+}
 function histElite(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas. A primeira entra na próxima publicação do Drive.</p>';
   const ult = H.snap[H.per[H.per.length - 1]];
@@ -1020,12 +1087,7 @@ function histElite(H) {
     <label>Empresa: <input data-h2f="empresa" list="h2emp" placeholder="Todas as empresas" value="${empSel ? esc(empSel.nome + ' · ' + empSel.id) : ''}"></label><datalist id="h2emp">${empresas.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">`).join('')}</datalist></div>`;
   const labs = H.per.map(rotulo);
   const filtra = arr => arr.filter(x => (!HV2.carteira || x.csm === HV2.carteira) && (!HV2.empresa || x.id === HV2.empresa));
-  const P = H.per.map(p => {
-    const a = filtra(H.snap[p]), at = a.filter(x => x.status === 'Ativo');
-    const IFc = Object.fromEntries(['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'].map(k => [k, a.filter(x => x.IF === k).length]));
-    return { n: a.length, ativos: at.length, hs: avg(a, x => /^finalizad/i.test(x.status) ? null : x.hs), mrr: sum(a, x => x.mrr), arr: sum(a, x => x.arr), gmv: sum(a, x => x.gmv),
-      ped: sum(a, x => x.ped), risco: a.filter(x => x.motivo).length, IFc, criticos: a.filter(x => x.hs != null && x.hs < HEALTH_BANDS.atencao).length };
-  });
+  const P = H.per.map(p => metricas(filtra(H.snap[p])));
   const k = P.length - 1, prev = P[k - 1] || null, pk = P[k];
   const nomePer = HV2.gran === 'mes' ? 'o mês anterior' : 'a semana anterior';
   h += `<p class="lead">${empSel ? esc(empSel.nome) : (HV2.carteira ? 'Carteira ' + esc(HV2.carteira) : 'Todo o plano Elite')} · último período: <b>${rotulo(H.per[k])}</b>${prev ? ' · setas comparam com ' + nomePer : ''}</p>`;
@@ -1033,8 +1095,20 @@ function histElite(H) {
     kpiBox(fmtInt(pk.n), 'empresas', delta(pk.n, prev && prev.n)), kpiBox(fmtInt(pk.ativos), 'com contrato ativo', delta(pk.ativos, prev && prev.ativos)),
     kpiBox((pk.hs == null ? '–' : Math.round(pk.hs)), 'Health Score médio', delta(pk.hs && Math.round(pk.hs), prev && prev.hs && Math.round(prev.hs))),
     kpiBox(fmtMil(pk.mrr), 'MRR', delta(pk.mrr, prev && prev.mrr, fmtMil)), kpiBox(fmtMi(pk.gmv), 'GMV (CustomerX)', delta(pk.gmv, prev && prev.gmv, fmtMi)),
-    kpiBox(fmtInt(pk.IFc.IF0), 'IF0 · cancelados', delta(pk.IFc.IF0, prev && prev.IFc.IF0)), kpiBox(fmtInt(pk.risco), 'com motivo de risco', delta(pk.risco, prev && prev.risco)),
+    kpiBox(fmtInt(pk.IFc.IF0), 'IF0 · cancelados', delta(pk.IFc.IF0, prev && prev.IFc.IF0, fmtInt, true)), kpiBox(fmtInt(pk.risco), 'com motivo de risco', delta(pk.risco, prev && prev.risco, fmtInt, true)),
   ].join('')}</div>`;
+  if (prev) {
+    const atualA = filtra(H.snap[H.per[k]]), antesA = filtra(H.snap[H.per[k - 1]]);
+    const idsAntes = new Set(antesA.map(x => x.id)), idsAgora = new Set(atualA.map(x => x.id));
+    const entraram = atualA.filter(x => !idsAntes.has(x.id)), sairam = antesA.filter(x => !idsAgora.has(x.id));
+    const viraramIF0 = atualA.filter(x => x.IF === 'IF0' && (antesA.find(y => y.id === x.id) || {}).IF !== 'IF0');
+    h += `<p class="note">Desde ${nomePer}: <b>${entraram.length}</b> entraram na base · <b>${sairam.length}</b> saíram · <b>${viraramIF0.length}</b> passaram para IF0 (cancelaram).${entraram.length ? ' Entraram: ' + entraram.slice(0, 12).map(x => esc(x.nome)).join(', ') + (entraram.length > 12 ? '…' : '') : ''}</p>`;
+    const mf = movimentacao(antesA, atualA, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa');
+    const mi = movimentacao(antesA, atualA, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => f);
+    h += `<h3 class="sp">Movimentação entre faixas · ${labs[k - 1]} → ${labs[k]}</h3><p class="note" style="margin-top:0">Linha = faixa no período anterior; coluna = faixa agora. Verde = subiu de faixa, vermelho = desceu. ${mf.mudou.length} empresas mudaram de faixa.</p>` + mf.html;
+    if (mf.mudou.length) h += `<details><summary>Ver as ${mf.mudou.length} empresas que mudaram de faixa</summary>${tabela(['Empresa', 'Carteira', 'De', 'Para'], mf.mudou.sort((p, q) => q[2] - q[1]).map(([x, de, pa]) => [`<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`, esc(x.csm), de ? 'Faixa ' + de : '—', pa ? 'Faixa ' + pa : '—']))}</details>`;
+    h += `<h3 class="sp">Movimentação entre IFs · ${labs[k - 1]} → ${labs[k]}</h3><p class="note" style="margin-top:0">${mi.mudou.length} empresas mudaram de IF. Verde = IF maior (melhorou), vermelho = IF menor.</p>` + mi.html;
+  }
   h += `<div class="grid">${card('Health Score médio', '', linhas([{ nome: 'HS médio', vals: P.map(x => x.hs) }], labs, fmtInt, false))}${card('MRR', '', linhas([{ nome: 'MRR', vals: P.map(x => x.mrr) }], labs, fmtMil))}${card('GMV (CustomerX)', '', linhas([{ nome: 'GMV', vals: P.map(x => x.gmv) }], labs, fmtMi))}${card('Empresas por IF', '', linhas(['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5'].map(f => ({ nome: f, vals: P.map(x => x.IFc[f]) })), labs))}</div>`;
   const per = H.per.map((p, i) => i).reverse();
   h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
@@ -1044,6 +1118,53 @@ function histElite(H) {
     ...['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'].map(f => [IF_LABEL[f] || f, ...per.map(i => fmtInt(P[i].IFc[f]))]),
   ]);
   if (H.per.length < 2) h += `<p class="note">As fotos começaram a ser gravadas agora. A cada ${HV2.gran === 'mes' ? 'fim de mês' : 'fim de semana'} entra uma nova coluna, e os gráficos passam a mostrar a evolução.</p>`;
+  h += onboarding();
+  return h;
+}
+// Onboarding (entradas no Elite): vem das datas de início/fim de onboarding do CustomerX, então já tem histórico
+function onboarding() {
+  if (!temDados()) return '';
+  const base = ALL.filter(a => (!HV2.carteira || a.csm === HV2.carteira) && (!HV2.empresa || a.id === HV2.empresa));
+  const ini = a => toDate(col(a._r, 'Data de inicio de Onboarting')), fim = a => toDate(col(a._r, 'Data de finalização de onboarding'));
+  const hoje = new Date(), meses = [];
+  for (let i = 11; i >= 0; i--) { const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1); meses.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); }
+  const chaveMes = d => d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') : '';
+  const iniciados = meses.map(m => base.filter(a => chaveMes(ini(a)) === m).length), finalizados = meses.map(m => base.filter(a => chaveMes(fim(a)) === m).length);
+  const andamento = base.filter(a => ini(a) && !fim(a) && !finalizada(a));
+  const dur = base.filter(a => ini(a) && fim(a) && fim(a) >= ini(a)).map(a => (fim(a) - ini(a)) / 864e5);
+  if (!iniciados.some(Boolean) && !finalizados.some(Boolean) && !andamento.length) return `<h3 class="sp">Onboarding</h3><p class="note">Nenhuma data de onboarding preenchida no CustomerX para este recorte.</p>`;
+  return `<h2>Onboarding (entradas no Elite)</h2><p class="lead">Pelas datas de início e de finalização de onboarding do CustomerX · últimos 12 meses.</p>
+    <div class="kpis">${kpiBox(fmtInt(andamento.length), `<span class="ck lk" data-l="${reg('Onboarding em andamento', ALL.filter(a => andamento.includes(a)))}">onboardings em andamento</span>`)}${kpiBox(dur.length ? Math.round(dur.reduce((s, x) => s + x, 0) / dur.length) + ' d' : '–', 'duração média do onboarding')}${kpiBox(fmtInt(iniciados[11]), 'iniciados neste mês')}${kpiBox(fmtInt(finalizados[11]), 'finalizados neste mês')}</div>
+    <div class="grid">${card('Onboardings por mês', 'iniciados × finalizados', linhas([{ nome: 'Iniciados', vals: iniciados }, { nome: 'Finalizados', vals: finalizados }], meses.map(rotulo)))}</div>`;
+}
+
+// Comparador: dois gráficos lado a lado, uma linha por carteira
+const METRICAS = [['hs', 'Health Score médio', fmtInt], ['mrr', 'MRR', fmtMil], ['gmv', 'GMV (CustomerX)', fmtMi], ['n', 'Empresas', fmtInt], ['ativos', 'Com contrato ativo', fmtInt],
+  ['risco', 'Com motivo de risco', fmtInt], ['criticos', 'HS crítico', fmtInt], ['if0', 'IF0 · cancelados', fmtInt], ['ped', 'Pedidos/mês (soma)', fmtInt]];
+const CMP = { a: 'hs', b: 'mrr', cart: null };
+document.addEventListener('change', e => {
+  const t = e.target.closest('[data-cmp]'); if (!t) return;
+  if (t.dataset.cmp === 'cart') CMP.cart = [...document.querySelectorAll('[data-cmp="cart"]:checked')].map(x => x.value); else CMP[t.dataset.cmp] = t.value;
+  const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
+});
+function comparador(H) {
+  if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas.</p>';
+  const ult = H.snap[H.per[H.per.length - 1]];
+  const tam = {}; ult.forEach(x => { if (x.csm) tam[x.csm] = (tam[x.csm] || 0) + 1; });
+  const carteiras = Object.keys(tam).sort();
+  if (!CMP.cart) CMP.cart = ['__todas__', ...Object.entries(tam).sort((p, q) => q[1] - p[1]).slice(0, 3).map(x => x[0])];
+  const ops = v => METRICAS.map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('');
+  let h = `<div class="heatctl"><label>Gráfico A: <select data-cmp="a">${ops(CMP.a)}</select></label><label>Gráfico B: <select data-cmp="b">${ops(CMP.b)}</select></label></div>
+    <div class="chips" style="margin:6px 0 10px">${['__todas__', ...carteiras].map(c => `<label><span><input type="checkbox" data-cmp="cart" value="${esc(c)}"${CMP.cart.includes(c) ? ' checked' : ''}> ${c === '__todas__' ? 'Todo o Elite' : esc(c)}</span></label>`).join('')}</div>`;
+  const labs = H.per.map(rotulo), sel = CMP.cart.slice(0, 6);
+  const val = (m, k) => k === 'if0' ? m.IFc.IF0 : m[k];
+  const graf = k => { const [, nome, fmt] = METRICAS.find(x => x[0] === k);
+    return card(nome, 'uma linha por carteira', linhas(sel.map(c => ({ nome: c === '__todas__' ? 'Todo o Elite' : c, vals: H.per.map(p => val(metricas(H.snap[p].filter(x => c === '__todas__' || x.csm === c)), k)) })), labs, fmt, k !== 'hs')); };
+  h += `<div class="grid">${graf(CMP.a)}${graf(CMP.b)}</div>`;
+  if (CMP.cart.length > 6) h += '<p class="note">Mostrando as 6 primeiras carteiras marcadas.</p>';
+  const per = H.per.map((p, i) => i).reverse();
+  h += `<h3 class="sp">Tabela · ${METRICAS.find(x => x[0] === CMP.a)[1]}</h3>` + tabela(['Carteira', ...per.map(i => labs[i])],
+    sel.map(c => [c === '__todas__' ? 'Todo o Elite' : esc(c), ...per.map(i => { const m = metricas(H.snap[H.per[i]].filter(x => c === '__todas__' || x.csm === c)); const v = val(m, CMP.a); return v == null ? '–' : METRICAS.find(x => x[0] === CMP.a)[2](CMP.a === 'hs' ? Math.round(v) : v); })]));
   return h;
 }
 
@@ -1079,7 +1200,66 @@ function histCsm(H) {
   ]);
   if (!sel) h += `<h3 class="sp">Comparativo por CSM · ${labs[labs.length - 1] || ''}</h3>` + tabela(['CSM', 'Carteira', 'Criadas', 'Agendadas', 'Finalizadas', 'Com atraso', 'Reuniões', 'Empresas contatadas', 'Em atraso agora'],
     users.filter(u => respEmails.has(u.email)).map(u => { const b = (tab[pers[pers.length - 1]] || {})[u.id] || {}; return [esc(u.nome), esc(carteiraDe(u) || '—'), fmtInt(b.criadas || 0), fmtInt(b.agendadas || 0), fmtInt(b.finalizadas || 0), fmtInt(b.finalizadas_com_atraso || 0), fmtInt(b.reunioes || 0), fmtInt(b.empresas_contatadas || 0), fmtInt((T.atrasadas_agora || {})[u.id] || 0)]; }));
-  h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
+  h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
   return h;
 }
+
+// =====================================================================
+// GESTÃO DE CARTEIRA: guias por objetivo + Top 20 em risco + convergência IF × HS
+// =====================================================================
+const TEMAS = [['geral', 'Visão geral da carteira'], ['risco', 'Análise de risco'], ['expansao', 'Expansão'], ['integracoes', 'Integrações'], ['portfolio', 'Portfólio'], ['tudo', 'Tudo']];
+let TEMA = localStorage.getItem('tema') || 'geral', TOP_POR = 'mrr';
+const temaDe = t => /^(Health Score|Visão geral|1\.|2\.)/.test(t) ? 'geral' : /^(3\.|Top 20|Converg)/.test(t) ? 'risco' : /^4\./.test(t) ? 'expansao' : /^8\./.test(t) ? 'integracoes' : 'portfolio';
+function organizarTemas() {
+  $('#temas').innerHTML = TEMAS.map(([k, l]) => `<button type="button" data-tema="${k}" class="${k === TEMA ? 'on' : ''}">${l}</button>`).join('');
+  let atual = 'geral';
+  [...$('#body').children].forEach(el => { if (el.tagName === 'H2') atual = temaDe(el.textContent.trim()); el.dataset.tema = atual; el.hidden = TEMA !== 'tudo' && atual !== TEMA; });
+}
+document.getElementById('temas').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tema]'); if (!b) return;
+  TEMA = b.dataset.tema; try { localStorage.setItem('tema', TEMA); } catch (_) {} organizarTemas();
+});
+const emRisco = a => !finalizada(a) && (a.banda !== 'Saudável' || ['IF1', 'IF2', 'IF3'].includes(a.IF) || !!a.temMotivo);
+const semContato = a => a.diasInteracao == null || a.diasInteracao > 30;
+function extrasCarteira() {
+  const risco = ACC.filter(emRisco), semC = risco.filter(semContato);
+  const top = risco.slice().sort((p, q) => (TOP_POR === 'gmv' ? (q.gmv || 0) - (p.gmv || 0) : (q.mrr || 0) - (p.mrr || 0))).slice(0, 20);
+  const btn = (v, l) => `<button type="button" data-top="${v}" class="${TOP_POR === v ? 'on' : ''}">${l}</button>`;
+  let h = `<h2>Top 20 clientes em risco</h2><p class="lead">Contas não finalizadas com Health Score em Atenção/Crítico, IF1 a IF3 ou motivo de risco registrado · ${$('#csm').value === '__all__' ? 'todas as carteiras' : 'carteira ' + esc($('#csm').value)}.
+    <span class="ck lk" data-l="${reg('Contas em risco', risco)}">${risco.length} contas em risco</span>, das quais <span class="ck lk" data-l="${reg('Em risco e sem interação há mais de 30 dias', semC)}"><b>${semC.length} estão sem interação há mais de 30 dias</b></span>.</p>
+    <div class="heatctl">Ordenar por:<span class="seg">${btn('mrr', 'MRR')}${btn('gmv', 'GMV')}</span></div>`;
+  h += tabela(['#', 'Empresa', 'Carteira', 'IF', 'HS', 'MRR', 'GMV último mês', 'Motivo do risco', 'Sem interação', 'Sem login'],
+    top.map((a, i) => [i + 1, `<span class="lk" data-emp="${esc(a.id)}">${esc(a.nome)}</span>`, esc(a.csm), esc(a.IF), `${a.score} <span class="note" style="margin:0">${esc(a.banda)}</span>`,
+      fmtMoney(a.mrr), fmtMi(a.gmv), esc(S(col(a._r, 'Motivo do risco')) || '—'), semContato(a) ? `<b style="color:var(--rk)">⚠ ${a.diasInteracao == null ? 'sem registro' : a.diasInteracao + ' d'}</b>` : a.diasInteracao + ' d', fmtDays(a.diasLogin)]));
+  // convergência IF × Health Score (para os CSMs validarem)
+  const ativos = ACC.filter(a => !finalizada(a)), bandas = ['Saudável', 'Atenção', 'Crítico'];
+  const diverge = (f, b) => (['IF4', 'IF5'].includes(f) && b === 'Crítico') || (['IF1', 'IF2'].includes(f) && b === 'Saudável');
+  const linhasM = IF_ORDER.filter(f => ativos.some(a => a.IF === f)).map(f => {
+    const g = ativos.filter(a => a.IF === f);
+    return `<tr><td>${esc(IF_LABEL[f] || f)}</td>${bandas.map(b => { const c = g.filter(a => a.banda === b); return `<td class="hm ck${c.length && diverge(f, b) ? ' div' : ''}" data-l="${reg(`${f} · Health Score ${b}`, c)}">${c.length}<span>${pct(c.length, g.length)}</span></td>`; }).join('')}<td class="hm">${g.length}</td></tr>`;
+  }).join('');
+  const nDiv = ativos.filter(a => diverge(a.IF, a.banda)).length;
+  h += `<h2>Convergência entre IF e Health Score</h2><p class="lead">Contas não finalizadas. Em vermelho, combinações que não conversam (IF4/IF5 com HS crítico ou IF1/IF2 com HS saudável): <span class="ck lk" data-l="${reg('IF e Health Score divergentes', ativos.filter(a => diverge(a.IF, a.banda)))}"><b>${nDiv} contas para os CSMs revisarem</b></span>.</p>
+    <div class="tw"><table class="mx"><thead><tr><th>IF</th>${bandas.map(b => `<th>${b}</th>`).join('')}<th>Total</th></tr></thead><tbody>${linhasM}</tbody></table></div>`;
+  $('#body').insertAdjacentHTML('beforeend', h);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-top]'); if (t) { TOP_POR = t.dataset.top; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
+  const em = e.target.closest('[data-emp]'); if (em) { EMP_ID = em.dataset.emp; trocarAba('empresa'); window.scrollTo(0, document.getElementById('tabs').offsetTop - 10); }
+});
+
+// ===== Fontes dos dados (documentação de origem e frequência) =====
+document.getElementById('fontesBtn').addEventListener('click', () => {
+  const st = (window.ULTIMO_STATUS || {});
+  $('#mtitle').textContent = 'Fontes dos dados, frequência e regras';
+  $('#mbody').innerHTML = tabela(['Fonte', 'O que traz', 'Quando atualiza', 'Observações'], [
+    ['<b>CustomerX (API)</b>', 'Cadastro, carteira, responsável, tags (IF e faixa), Health Score, MRR, ARR, LTV, NPS, CSAT, contratos, campos personalizados, contatos e tarefas', 'Todo dia: coleta começa à 1h (lotes de 5 min, ~1h30 de duração) e é publicada ao terminar; republicada às 7h', 'Somente leitura. Limite de 240 consultas/min. Tarefas: histórico dos últimos 24 meses.'],
+    ['<b>Metabase · pergunta 5535</b>', 'GMV e pedidos do último mês, média de 3 meses, último login, armazenamento, marketplaces, e-commerces, logísticas, tickets de 30 dias, requisições e saúde da API, aplicativos com uso na API', 'Todo dia às 7h', 'Hoje entra pelo arquivo da pasta "entrada Metabase" (a API está atrás do login da empresa). A linha de status mostra a data do arquivo.'],
+    ['<b>Exportação manual do CustomerX</b> (opcional)', 'Conferência (?validar=1) e as colunas ainda em validação: Último MRR Ativo, Dias da última tarefa e Responsável', 'Quando alguém coloca um arquivo na pasta "entrada CustomerX"', 'Pode ser dispensada depois da validação final.'],
+    ['<b>Histórico</b>', 'Foto resumida da base (HS, IF, faixa, MRR, ARR, GMV, carteira, motivo de risco)', 'Sobrescrita todo dia: ao virar o mês/semana fica a do último dia', 'Começou a ser gravado em outubro/2026.'],
+    ['<b>Cruzamento</b>', 'CustomerX × Metabase pelo CNPJ e, se faltar, pelo código da empresa', '—', 'Empresas sem par aparecem só com os dados do CustomerX.'],
+    ['<b>Regras</b>', 'HS médio sem contas Finalizadas · IF0 fora da expansão · "em risco" = HS Atenção/Crítico, IF1–IF3 ou motivo de risco · reunião = tarefa com reunião/check-in/call/meet/kick-off/apresentação/alinhamento', '—', 'Ajustáveis no código.'],
+  ]) + (st.ultima_publicacao ? `<p class="note">Última publicação no Drive: ${esc(st.ultima_publicacao)} · ${esc(resumoStatus(st))}</p>` : '');
+  $('#modal').showModal();
+});
 </script></body></html>
