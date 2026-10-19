@@ -1123,19 +1123,38 @@ function filtrarListaEmpresas(v) {
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-emplista]')) { EMP_ID = ''; trocarAba('empresa'); } });
 // Modal com a lista de tickets da empresa (planilha "lista_de_tickets_aberto…")
+// Link do ticket no suporte do Bling: https://www.bling.com.br/suporte.php#edit/<ID Ticket>
+const LINK_TICKET = 'https://www.bling.com.br/suporte.php#edit/';
 function abrirTickets(id) {
   const a = ALL.find(x => x.id === id); if (!a) return;
   const TK = buildAccounts.TK;
   $('#mtitle').textContent = `Tickets · ${a.nome}`;
   if (!TK || !a.ticketsLista) {
-    $('#mbody').innerHTML = `<p class="note" style="margin:0">A lista de tickets não foi carregada.${window.ULTIMO_STATUS && window.ULTIMO_STATUS.tickets && window.ULTIMO_STATUS.tickets.erro ? ' Motivo informado na última publicação: <b>' + esc(window.ULTIMO_STATUS.tickets.erro) + '</b>.' : ''} Ela vem da planilha Google de tickets preenchida pelo n8n (ou da carga manual do arquivo <b>lista_de_tickets_aberto…</b>).</p>`;
+    const st = (window.ULTIMO_STATUS || {}).tickets;
+    const motivo = st && st.erro
+      ? `Motivo informado na última publicação: <b>${esc(st.erro)}</b>.`
+      : st && st.arquivo_de
+        ? `O Apps Script publicou a lista em ${esc(st.arquivo_de)}, mas o App da Web não a enviou para esta página. No Apps Script, faça <b>Implantar › Gerenciar implantações › lápis › Nova versão</b> e recarregue.`
+        : 'A última publicação ainda não incluiu a lista de tickets. No Apps Script, rode <b>publicarDados</b> e recarregue esta página.';
+    $('#mbody').innerHTML = `<p class="note" style="margin:0">A lista detalhada de tickets não foi carregada${a.tickets != null ? ` (o total de ${fmtInt(a.tickets)} vem da coluna da base Meta)` : ''}. ${motivo}</p>`;
     $('#modal').showModal(); return;
   }
   const lista = a.ticketsLista.filter(t => t._data && daysBetween(t._data, buildAccounts.REF) <= TICKETS_DIAS);
   const fmtCel = v => typeof v === 'number' ? (Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100)) : (v instanceof Date ? fmtDate(v) : S(v));
-  const cols = TK.hdr.map((h, j) => [h, j]).filter(([h]) => h);
-  $('#mbody').innerHTML = `<p class="note" style="margin:0 0 10px">${lista.length} ticket(s) nos últimos ${TICKETS_DIAS} dias (data da base: ${fmtDate(buildAccounts.REF)}), do mais recente para o mais antigo.</p>`
-    + (lista.length ? tabela(cols.map(([h]) => esc(h)), lista.map(t => cols.map(([, j]) => esc(fmtCel(t._r[j]))))) : '<p class="mut">Nenhum ticket neste período.</p>');
+  const iId = TK.hdr.findIndex(h => /^id ticket$/i.test(h.trim())), iNum = TK.hdr.findIndex(h => /^n[uú]mero$/i.test(h.trim()));
+  const idTxt = v => { const x = S(v).replace(/\.0+$/, '').replace(/\D/g, ''); return x; };
+  const link = t => { const x = iId >= 0 ? idTxt(t._r[iId]) : ''; return x ? LINK_TICKET + x : ''; };
+  const ocultas = new Set([iId, iNum]);
+  const cols = TK.hdr.map((h, j) => [h, j]).filter(([h, j]) => h && !ocultas.has(j));
+  const cab = ['Ticket', 'ID do ticket', ...cols.map(([h]) => esc(h))];
+  const linhas = lista.map(t => {
+    const url = link(t), num = iNum >= 0 ? fmtCel(t._r[iNum]) : '', idv = iId >= 0 ? idTxt(t._r[iId]) : '';
+    const a1 = url ? `<a href="${esc(url)}" target="_blank" rel="noopener" title="Abrir o ticket no suporte do Bling">${num ? 'Nº ' + esc(num) : 'Abrir'} ↗</a>` : esc(num || '–');
+    const a2 = url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(idv)}</a>` : esc(idv || '–');
+    return [a1, a2, ...cols.map(([, j]) => esc(fmtCel(t._r[j])))];
+  });
+  $('#mbody').innerHTML = `<p class="note" style="margin:0 0 10px">${lista.length} ticket(s) nos últimos ${TICKETS_DIAS} dias (data da base: ${fmtDate(buildAccounts.REF)}), do mais recente para o mais antigo. Clique no número para abrir o ticket no suporte do Bling.</p>`
+    + (lista.length ? tabela(cab, linhas) : '<p class="mut">Nenhum ticket neste período.</p>');
   if (!$('#modal').open) $('#modal').showModal();
 }
 document.addEventListener('click', e => {
