@@ -744,7 +744,7 @@ async function chamarWebApp(params) {
 function resumoStatus(st) {
   if (!st) return '';
   const p = [];
-  if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `Metabase de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
+  if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `${st.meta.origem === 'API' ? 'Metabase (API)' : '⚠ Metabase (arquivo de reserva)'} de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
   if (st.cx) p.push(st.cx.erro ? `⚠ CustomerX: ${st.cx.erro}` : st.cx.origem === 'API'
     ? `CustomerX (API) de ${st.cx.arquivo_de || st.cx.atualizado_em}${st.cx.clientes_com_falha ? ` · ⚠ ${st.cx.clientes_com_falha} clientes com indicador faltando` : ''}${st.cx.complemento_de ? ` · colunas em validação da exportação de ${st.cx.complemento_de}` : ''}`
     : `CustomerX de ${st.cx.arquivo_de || st.cx.atualizado_em}`);
