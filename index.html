@@ -27,7 +27,7 @@ h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em;font-weight:700;color:var
 .c-red{background:var(--neg-bg)!important;color:var(--neg-fg);font-weight:600}.c-yel{background:var(--warn-bg)!important;color:var(--warn-fg);font-weight:600}.c-grn{background:var(--pos-bg)!important;color:var(--pos-fg);font-weight:600}
 .lg{display:block;font-size:10.5px;color:var(--mut);font-weight:400}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kpi.ck:hover{border-color:var(--ac)}.kpi{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;box-shadow:var(--sh)}.kpi b{display:block;font-size:22px;color:var(--tx2);font-weight:700}.kpi span{color:var(--mut);font-size:12.5px}
+.kpi.ck:hover{border-color:var(--ac)}.tx-pop a.lkop{display:block;padding:6px 8px;border-radius:6px;color:var(--tx);text-decoration:none}.tx-pop a.lkop:hover{background:var(--hover)}.emp-oculta{display:none!important}.voltar{background:var(--card)!important;color:var(--tx)!important;border:1px solid var(--bd2)!important;font-weight:500}.kpi{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;box-shadow:var(--sh)}.kpi b{display:block;font-size:22px;color:var(--tx2);font-weight:700}.kpi span{color:var(--mut);font-size:12.5px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px 18px;box-shadow:var(--sh)}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-top:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:12px;margin-top:12px}
@@ -61,12 +61,12 @@ dialog{border:1px solid var(--bd);border-radius:8px;box-shadow:0 16px 24px -2px 
 <div class="loader">
   <div class="row"><label for="csm">Carteira (CSM):</label><select id="csm"><option>—</option></select><button id="manualBtn" type="button" aria-expanded="false" aria-controls="manual">📂 Carregar arquivos manualmente</button><button id="theme" type="button" title="Alternar tema">🌙 Modo escuro</button></div>
   <div id="manual" hidden>
-  <div class="row"><input type="text" id="gurl" placeholder="Link da Planilha Google com as abas Tabela Cx e Tabela Meta"><button id="gload">Carregar da Google Sheets</button><label class="btn">Subir os 2 arquivos .xlsx<input type="file" id="file" accept=".xlsx,.xls,.csv" multiple></label></div>
-    <div class="row"><small>Envie os 2 arquivos crus: o que começa com <b>empresas_elite___cadastro</b> (dados Meta) e o que começa com <b>Exportação de Clientes (Completa)</b> (dados CSM). Pode selecionar os dois de uma vez. Valem só para o seu navegador.</small></div>
+  <div class="row"><input type="text" id="gurl" placeholder="Link da Planilha Google com as abas Tabela Cx e Tabela Meta"><button id="gload">Carregar da Google Sheets</button><label class="btn">Subir os arquivos .xlsx<input type="file" id="file" accept=".xlsx,.xls,.csv" multiple></label></div>
+    <div class="row"><small>Envie os arquivos crus: o que começa com <b>base_dash____dados_meta</b> (dados Meta), o que começa com <b>Exportação de Clientes (Completa)</b> (dados CSM) e, opcional, o que começa com <b>lista_de_tickets_aberto</b> (tickets). Pode selecionar os dois de uma vez. Valem só para o seu navegador.</small></div>
   </div>
   <div class="row" id="autoRow" hidden><label for="periodo">Dados de:</label><select id="periodo"><option value="atual">Hoje</option></select><span id="tokenBox" hidden><input type="password" id="wtoken" placeholder="Código de acesso" style="min-width:200px"> <button id="wtokenOk" type="button">Conectar</button></span></div>
   <p class="hint">Clique em qualquer célula, fatia ou barra para ver a lista de clientes daquele recorte.</p>
-  <div id="status">Suba os 2 arquivos crus (empresas_elite___cadastro + Exportação de Clientes) ou cole o link da planilha para começar.</div>
+  <div id="status">Suba os 2 arquivos crus (base_dash____dados_meta + Exportação de Clientes + lista_de_tickets_aberto) ou cole o link da planilha para começar.</div>
 </div>
 <nav class="tabs" id="tabs"><button type="button" data-tab="carteira" class="on">Gestão de Carteira</button><button type="button" data-tab="empresa">Visão da Empresa</button><button type="button" data-tab="historico">Visão de Gestão · Histórico Elite</button><button type="button" id="fontesBtn" style="margin-left:auto">ℹ️ Fontes dos dados</button></nav>
 <section id="tab-carteira">
@@ -166,10 +166,13 @@ function detectSheet(rows) {
 }
 
 // ===== Tratamento dos arquivos crus (substitui os PROCX do Excel) =====
-// Arquivo 1: começa com "empresas_elite___cadastro"  -> dados da aba "Tabela Meta" (crus)
+// Arquivo 1: começa com "base_dash____dados_meta" (antes: "empresas_elite___cadastro") -> dados da aba "Tabela Meta" (crus)
+// Arquivo 3 (opcional): começa com "lista_de_tickets_aberto" -> lista de tickets dos últimos 90 dias
 // Arquivo 2: começa com "Exportação de Clientes (Completa)" -> dados da aba "Tabela CSM/Cx" (crus)
 const normName = s => S(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-const PREFIX_META = 'empresaselitecadastro';   // empresas_elite___cadastro...
+const PREFIXES_META = ['basedashdadosmeta', 'empresaselitecadastro'];   // base_dash____dados_meta... (novo) ou empresas_elite___cadastro... (antigo)
+const PREFIX_TICKETS = 'listadeticketsaberto';    // lista_de_tickets_aberto_nos_ultimos_90_dias...
+const ehMeta = n => PREFIXES_META.some(p => n.startsWith(p));
 const PREFIX_CX = 'exportacaodeclientes';      // Exportação de Clientes (Completa)...
 const cnpjKey = v => S(v).replace(/\D/g, '');
 const rawRows = wb => XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
@@ -207,7 +210,7 @@ function montarTabelas(metaRaw, cxRaw) {
   });
   // --- Meta crua -> vira a "Tabela Meta" com as colunas buscadas/calculadas ---
   const hM = findHeaderRow(metaRaw, 'id empresa', 'cnpj');
-  if (hM < 0) throw new Error('O arquivo "empresas_elite___cadastro" não tem as colunas ID Empresa e CNPJ. Confira se é a exportação correta.');
+  if (hM < 0) throw new Error('O arquivo "base_dash____dados_meta" não tem as colunas ID Empresa e CNPJ. Confira se é a exportação correta.');
   const mHdr = metaRaw[hM].map(S);
   const iIdM = mHdr.findIndex(h => /^id empresa$/i.test(h));
   const iCnpjM = mHdr.findIndex(h => /^cnpj$/i.test(h));
@@ -228,6 +231,26 @@ function montarTabelas(metaRaw, cxRaw) {
   return { cxRows: [cxHdr2, ...cxBody], metaRows: [outHdr, ...mBody], semPar, total: mBody.length };
 }
 
+// ===== Lista de tickets (planilha "lista_de_tickets_aberto…"): opcional =====
+let TICKETS = null; // linhas cruas da planilha de tickets
+function indexarTickets(rows, cnpjsBase) {
+  if (!rows || !rows.length) return null;
+  const hi = findHeaderRow(rows, 'cnpj'); if (hi < 0) return null;
+  const hdr = rows[hi].map(S), iC = hdr.findIndex(h => h.toLowerCase() === 'cnpj'), iE = hdr.findIndex(h => h.toLowerCase() === 'empresa');
+  const iD = hdr.findIndex(h => /abertura/i.test(h));
+  const porCnpj = new Map(), porNome = new Map();
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i] || []; if (!r.length || r.every(c => S(c) === '')) continue;
+    const t = { _r: r, _data: iD >= 0 ? toDate(r[iD]) : null, _txt: iD >= 0 ? S(r[iD]) : '' };
+    const c = cnpjKey(r[iC]);
+    if (c && cnpjsBase.has(c)) { if (!porCnpj.has(c)) porCnpj.set(c, []); porCnpj.get(c).push(t); }
+    else if (iE >= 0) { const n = normName(r[iE]); if (n) { if (!porNome.has(n)) porNome.set(n, []); porNome.get(n).push(t); } } // CNPJ diferente do cadastro: casa pelo nome
+  }
+  const ordenar = l => l.sort((a, b) => b._txt.localeCompare(a._txt));
+  porCnpj.forEach(ordenar); porNome.forEach(ordenar);
+  return { hdr, porCnpj, porNome };
+}
+const TICKETS_DIAS = 30; // "tickets nos últimos 30 dias": abertos até 30 dias antes da data da base
 function buildAccounts(cxRows, metaRows) {
   const cx = toRecords(cxRows).rows, meta = toRecords(metaRows || []).rows;
   // data de referência = login mais recente na Tabela Meta (aproxima a data da exportação); senão hoje
@@ -235,6 +258,8 @@ function buildAccounts(cxRows, metaRows) {
   buildAccounts.REF = REF;
   const mIdx = new Map(), mIdxCnpj = new Map();
   meta.forEach(m => { mIdx.set(idKey(col(m, 'ID Empresa')), m); const c = cnpjKey(col(m, 'CNPJ')); if (c && !mIdxCnpj.has(c)) mIdxCnpj.set(c, m); });
+  const cnpjsBase = new Set([...cx.map(r => cnpjKey(col(r, 'CNPJ/CPF') ?? col(r, 'CNPJ'))), ...meta.map(m => cnpjKey(col(m, 'CNPJ')))].filter(Boolean));
+  const TK = indexarTickets(TICKETS, cnpjsBase); buildAccounts.TK = TK;
   return cx.map(r => {
     const id = idKey(col(r, 'ID Empresa'));
     const cnpj = cnpjKey(col(r, 'CNPJ/CPF') ?? col(r, 'CNPJ'));
@@ -277,7 +302,15 @@ function buildAccounts(cxRows, metaRows) {
     const seg = S(col(r, 'Segmento')) || 'Sem segmento na Cx';
     const segGrupo = seg === 'Sem segmento na Cx' ? seg : (SEG_MAP[seg.toLowerCase()] || seg);
     const mrr = m ? N(col(m, 'MRR')) : (N(col(r, 'Último MRR Ativo')) || N(col(r, 'MRR')) || null);
-    const tickets = m ? N(col(m, 'Total Tickets Últimos 30 Dias')) : null;
+    // tickets: com a lista de tickets carregada, conta os abertos nos últimos 30 dias; sem ela, usa a coluna da Meta (se existir)
+    let ticketsLista = null, tickets = m ? N(col(m, 'Total Tickets Últimos 30 Dias')) : null;
+    if (TK) {
+      const cM = m ? cnpjKey(col(m, 'CNPJ')) : '', vistos = new Set(); ticketsLista = [];
+      [TK.porCnpj.get(cnpj), cM !== cnpj ? TK.porCnpj.get(cM) : null, TK.porNome.get(normName(col(r, 'Razão Social'))), m ? TK.porNome.get(normName(col(m, 'Razão Social'))) : null]
+        .forEach(l => (l || []).forEach(t => { if (!vistos.has(t)) { vistos.add(t); ticketsLista.push(t); } }));
+      ticketsLista.sort((a, b) => b._txt.localeCompare(a._txt));
+      tickets = ticketsLista.filter(t => t._data && daysBetween(t._data, REF) <= TICKETS_DIAS).length;
+    }
     const nApps = m ? N(col(m, 'Aplicativos com Uso na API')) : null;
     const integ = S(col(r, 'Integrações ativas')).split(',').map(x => x.trim()).filter(Boolean);
     return {
@@ -296,7 +329,8 @@ function buildAccounts(cxRows, metaRows) {
       contaDigital: sim('Tem Bling Conta Digital'), cert, checkout: sim('Utilizou Checkout'), pdv: sim('Utilizou PDV'), meuNegocio: sim('Utilizou Meu Negócio'),
       acimaFaixa: pos === 'Sem faixa na tag' ? null : (pos === 'Acima do intervalo' ? 1 : 0),
       abaixoFaixa: pos === 'Sem faixa na tag' ? null : (pos === 'Abaixo do intervalo' ? 1 : 0),
-      situacaoMeta: m ? S(col(m, 'Situação')) : '', link: S(col(r, 'Link Admin de Empresas')),
+      situacaoMeta: m ? S(col(m, 'Situação')) : '', link: S(col(r, 'Link Admin de Empresas')), linkCx: m ? S(col(m, 'Link CustomerX', 'Link CX', 'Link Cx')) : '',
+      cnpjTxt: S(col(r, 'CNPJ/CPF')) || (m ? S(col(m, 'CNPJ')) : ''), ticketsLista,
       ultLogin, diasLogin, ultContato, diasContato, diasTarefa, diasInteracao, tipoContato, nps,
       _r: r, _m: m,
       hsCx: Nraw(col(r, 'HS')), // Health Score oficial: coluna X (HS) da Exportação de Clientes
@@ -401,7 +435,21 @@ const scoreCls = s => s == null ? '' : s >= HEALTH_BANDS.saudavel ? 'c-grn' : s 
 const fmtDays = d => d == null ? '–' : d <= 0 ? 'hoje' : d + ' d';
 const fmtDate = d => d ? d.toLocaleDateString('pt-BR') : '–';
 const armCls = v => v == null ? '' : v > ARM_RED ? 'c-red' : '';
-const nomeLink = a => a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.nome)}</a>` : esc(a.nome);
+// Nome da empresa com link: ADM (Link Admin de Empresas, da Cx) e CX (Link CustomerX, da Meta).
+// Com os dois links, o clique abre um menu para escolher; com um só, vai direto; sem nenhum, fica sem link.
+const linksDe = a => [a.link ? ['ADM', a.link] : null, a.linkCx ? ['CX', a.linkCx] : null].filter(Boolean);
+const linkUnico = (a, txt) => { const L = linksDe(a);
+  if (!L.length) return txt;
+  if (L.length === 1) return `<a href="${esc(L[0][1])}" target="_blank" rel="noopener" title="Abrir no ${L[0][0]}">${txt}</a>`;
+  return `<a href="#" class="lkmenu" data-adm="${esc(a.link)}" data-cx="${esc(a.linkCx)}" title="Abrir no ADM ou no CX">${txt}</a>`; };
+const nomeLink = a => linkUnico(a, esc(a.nome));
+const linkBotao = (url, rot) => url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${rot} ↗</a>` : '<span class="mut">—</span>';
+document.addEventListener('click', e => {
+  const el = e.target.closest('a.lkmenu'); if (!el) return;
+  e.preventDefault(); e.stopPropagation();
+  const p = txAbrirPop(el, `<div class="tx-tit">Abrir empresa em</div><a class="lkop" href="${esc(el.dataset.adm)}" target="_blank" rel="noopener">🔗 ADM (Admin de Empresas)</a><a class="lkop" href="${esc(el.dataset.cx)}" target="_blank" rel="noopener">🔗 CX (CustomerX)</a>`);
+  p.addEventListener('click', ev => { if (ev.target.closest('a.lkop')) setTimeout(txFecharPop, 0); });
+}, true);
 
 const RISK_IND = [
   { name: 'Pedidos −25% vs. média 3m', f: a => a.queda, semDado: 'sem linha na Tabela Meta ou sem pedidos do último mês' }, { name: `Saúde da API < ${API_GREEN}%`, f: a => a.apiBaixa, tone: 'red', semDado: 'não usa API ou sem linha na Tabela Meta' }, { name: 'Preço citado como risco', f: a => a.riscos['Preço'] },
@@ -605,15 +653,27 @@ function loadWorkbook(wb, fonte) {
   finishLoad(fonte, !!meta);
 }
 // --- carga dos 2 arquivos crus ---
-const RAW = { meta: null, cx: null, metaName: '', cxName: '' };
+const RAW = { meta: null, cx: null, tickets: null, metaName: '', cxName: '', ticketsName: '' };
+// última montagem (para remontar quando a lista de tickets chega depois)
+let ULTIMA_BASE = null;
+function remontarComTickets(rows, nome) {
+  TICKETS = rows;
+  if (!ULTIMA_BASE) return false;
+  ALL = buildAccounts(ULTIMA_BASE.cxRows, ULTIMA_BASE.metaRows);
+  $('#status').textContent = $('#status').textContent.replace(/ · tickets: [^·]*/, '') + ` · tickets: ${nome}`;
+  render(); renderAbaAtual(); return true;
+}
 function tryBuildRaw() {
+  if (RAW.tickets && !(RAW.meta && RAW.cx) && ULTIMA_BASE) { remontarComTickets(RAW.tickets, RAW.ticketsName); return; }
   if (RAW.meta && RAW.cx) {
     const t = montarTabelas(RAW.meta, RAW.cx);
+    TICKETS = RAW.tickets || TICKETS;
+    ULTIMA_BASE = { cxRows: t.cxRows, metaRows: t.metaRows };
     ALL = buildAccounts(t.cxRows, t.metaRows);
     const extra = t.semPar ? `${t.semPar} de ${t.total} empresas da Meta sem par na Exportação (CNPJ/ID não localizado)` : 'todos os CNPJs da Meta localizados na Exportação';
-    finishLoad(`${RAW.metaName} + ${RAW.cxName} (só neste navegador)`, true, extra);
+    finishLoad(`${RAW.metaName} + ${RAW.cxName}${RAW.ticketsName ? ' + ' + RAW.ticketsName : ''} (só neste navegador)`, true, extra + (TICKETS ? '' : ' · sem a lista de tickets (tickets de 30 dias pela coluna da Meta, se existir)'));
   } else {
-    const falta = !RAW.meta ? 'o arquivo que começa com "empresas_elite___cadastro" (dados Meta)' : 'o arquivo que começa com "Exportação de Clientes (Completa)" (dados CSM)';
+    const falta = !RAW.meta ? 'o arquivo que começa com "base_dash____dados_meta" (dados Meta)' : 'o arquivo que começa com "Exportação de Clientes (Completa)" (dados CSM)';
     const tem = RAW.meta ? RAW.metaName : RAW.cxName;
     $('#status').textContent = `Recebi "${tem}". Agora suba ${falta} para montar os gráficos.`;
     $('#status').className = '';
@@ -741,10 +801,17 @@ async function chamarWebApp(params) {
   }
   return d;
 }
+// Metabase: API ou n8n = automático; arquivo com mais de 1 dia ou colocado à mão = aviso
+function metaRotulo(m, nome = 'Metabase') {
+  const d = toDate(S(m.arquivo_de).split(' ')[0]), velho = d && (Date.now() - d.getTime()) / 864e5 > 1.5;
+  const fonte = { API: 'API', n8n: 'n8n', 'e-mail': 'e-mail' }[m.origem] || 'arquivo manual';
+  return (velho || m.origem === 'pasta' ? '⚠ ' : '') + `${nome} (${fonte})`;
+}
 function resumoStatus(st) {
   if (!st) return '';
   const p = [];
-  if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `${st.meta.origem === 'API' ? 'Metabase (API)' : '⚠ Metabase (arquivo de reserva)'} de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
+  if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `${metaRotulo(st.meta)} de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
+  if (st.tickets) p.push(st.tickets.erro ? '⚠ lista de tickets indisponível' : `${metaRotulo(st.tickets, 'Tickets')} de ${st.tickets.arquivo_de || st.tickets.atualizado_em}`);
   if (st.cx) p.push(st.cx.erro ? `⚠ CustomerX: ${st.cx.erro}` : st.cx.origem === 'API'
     ? `CustomerX (API) de ${st.cx.arquivo_de || st.cx.atualizado_em}${st.cx.clientes_com_falha ? ` · ⚠ ${st.cx.clientes_com_falha} clientes com indicador faltando` : ''}${st.cx.complemento_de ? ` · colunas em validação da exportação de ${st.cx.complemento_de}` : ''}`
     : `CustomerX de ${st.cx.arquivo_de || st.cx.atualizado_em}`);
@@ -780,11 +847,16 @@ function prepararPayload(d) {
     if (validar) mostrarValidacao(validarCx(cxRows, comp));
     cxRows = complementarCx(cxRows, comp);
   } else if (validar) mostrarValidacao(null);
-  return { metaRows: rowsFromB64(d.meta), cxRows, status: d.status };
+  const metaRows = rowsFromB64(d.meta);
+  if (findHeaderRow(metaRows, 'id empresa', 'cnpj') < 0 && findHeaderRow(metaRows, 'id ticket') >= 0)
+    throw new Error('O serviço de dados devolveu a lista de tickets no lugar da planilha Meta. No Apps Script, a Meta deve ser o arquivo que começa com "base_dash____dados_meta" e os tickets o que começa com "lista_de_tickets_aberto".');
+  return { metaRows, cxRows, status: d.status, ticketsRows: d.tickets ? rowsFromB64(d.tickets) : null };
 }
 function aplicarDados(p, per, sufixo) {
   if (per === 'atual') window.ULTIMO_STATUS = p.status;
   const t = montarTabelas(p.metaRows, p.cxRows);
+  TICKETS = p.ticketsRows || (RAW.tickets && per === 'atual' ? RAW.tickets : null);
+  ULTIMA_BASE = { cxRows: t.cxRows, metaRows: t.metaRows };
   ALL = buildAccounts(t.cxRows, t.metaRows);
   const par = t.semPar ? `${t.semPar} de ${t.total} empresas da Meta sem par na Exportação` : 'todos os CNPJs da Meta localizados na Exportação';
   const fonte = per === 'atual' ? 'Drive (automático)' : `Drive · ${rotuloPeriodo(per)}`;
@@ -848,14 +920,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       for (const f of files) {
         const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
         const n = normName(f.name);
-        if (n.startsWith(PREFIX_META)) { RAW.meta = rawRows(wb); RAW.metaName = f.name; }
+        if (ehMeta(n)) { RAW.meta = rawRows(wb); RAW.metaName = f.name; }
+        else if (n.startsWith(PREFIX_TICKETS)) { RAW.tickets = rawRows(wb); RAW.ticketsName = f.name; }
         else if (n.startsWith(PREFIX_CX)) { RAW.cx = rawRows(wb); RAW.cxName = f.name; }
         else {
           // compatibilidade: arquivo único já tratado, com as abas "Tabela Cx" e "Tabela Meta"
           let legado = false;
           wb.SheetNames.forEach(s => { if (detectSheet(XLSX.utils.sheet_to_json(wb.Sheets[s], { header: 1, defval: '' })) === 'cx') legado = true; });
           if (legado) { loadWorkbook(wb, f.name + ' (só neste navegador)'); e.target.value = ''; return; }
-          throw new Error(`Arquivo fora do padrão: "${f.name}". Envie o arquivo que começa com "empresas_elite___cadastro" (dados Meta) e o que começa com "Exportação de Clientes (Completa)" (dados CSM).`);
+          throw new Error(`Arquivo fora do padrão: "${f.name}". Envie o arquivo que começa com "base_dash____dados_meta" (dados Meta) e o que começa com "Exportação de Clientes (Completa)" (dados CSM).`);
         }
       }
       tryBuildRaw();
@@ -879,14 +952,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const f of files) { try { $('#status').textContent = 'Carregando ' + f + '…'; await loadRepoFile(f); return; } catch (e) { /* tenta o próximo */ } }
   const saved = localStorage.getItem('sheetUrl');
   if (saved) { $('#gurl').value = saved; $('#status').textContent = 'Carregando…'; loadGoogle(saved).catch(fail); }
-  else { toggleManual(true); $('#status').textContent = 'Nenhum dados.xlsx no repositório. Suba os 2 arquivos crus (empresas_elite___cadastro + Exportação de Clientes) ou cole o link da planilha para ver os gráficos.'; $('#status').className = ''; }
+  else { toggleManual(true); $('#status').textContent = 'Nenhum dados.xlsx no repositório. Suba os 2 arquivos crus (base_dash____dados_meta + Exportação de Clientes + lista_de_tickets_aberto) ou cole o link da planilha para ver os gráficos.'; $('#status').className = ''; }
 });
 </script>
 <script>
 // =====================================================================
 // ABAS: Gestão de Carteira · Visão da Empresa · Visão de Gestão (Histórico Elite)
 // =====================================================================
-let TAB = 'carteira', EMP_ID = '', HIST = {}, HIST_CARREGANDO = {};
+let TAB = 'carteira', EMP_ID = '', EMP_CSM = null, HIST = {}, HIST_CARREGANDO = {};
 const HV2 = { sub: 'elite', gran: 'mes', carteira: '', empresa: '', csm: '' };
 const renderCarteira = render;
 render = function () {
@@ -975,20 +1048,30 @@ const rotulo = p => /^\d{4}-\d{2}$/.test(p) ? `${MESES[+p.slice(5) - 1]}/${p.sli
 function renderEmpresa() {
   const box = document.getElementById('tab-empresa');
   if (!temDados()) { box.innerHTML = '<p class="note">Aguardando dados.</p>'; return; }
-  const base = (ACC && ACC.length ? ACC : ALL).slice().sort((p, q) => p.nome.localeCompare(q.nome));
+  // filtro por CSM da própria aba (começa igual ao seletor de carteira do topo)
+  const csmsEmp = [...new Set(ALL.map(x => x.csm).filter(Boolean))].sort();
+  if (EMP_CSM === null || (EMP_CSM !== '__all__' && !csmsEmp.includes(EMP_CSM))) EMP_CSM = csmsEmp.includes($('#csm').value) ? $('#csm').value : '__all__';
+  const base = ALL.filter(x => EMP_CSM === '__all__' || x.csm === EMP_CSM).sort((p, q) => p.nome.localeCompare(q.nome));
   const a = ALL.find(x => x.id === EMP_ID);
-  let h = `<div class="heatctl" style="margin-top:16px"><label>Empresa: <input id="empBusca" list="empLista" placeholder="Digite o nome, CNPJ ou código" value="${a ? esc(a.nome + ' · ' + a.id) : ''}"></label>
+  let h = `<div class="heatctl" style="margin-top:16px"><label>Empresa: <input id="empBusca" list="empLista" placeholder="Digite o nome, CNPJ ou código" value="${a ? esc(a.nome + ' · ' + a.id) : ''}" autocomplete="off"></label>
     <datalist id="empLista">${base.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">${esc(x.csm)}</option>`).join('')}</datalist>
-    <span class="note" style="margin:0">${base.length} empresas ${$('#csm').value === '__all__' ? 'em todas as carteiras' : 'na carteira selecionada'}</span></div>`;
-  if (!a) { box.innerHTML = h + '<p class="note">Escolha uma empresa para ver a análise dela.</p>'; ligarBuscaEmpresa(); return; }
+    <label>CSM: <select id="empCsm"><option value="__all__"${EMP_CSM === '__all__' ? ' selected' : ''}>Todos</option>${csmsEmp.map(c => `<option${c === EMP_CSM ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+    ${a ? '<button type="button" class="voltar" data-emplista="1">← Ver lista de empresas</button>' : `<span class="note" style="margin:0" id="empConta">${base.length} empresas</span>`}</div>`;
+  if (!a) {
+    // listagem: aparece só quando nenhuma empresa está selecionada
+    h += `<p class="note">Clique no nome da empresa para ver a análise dela. Digitar no campo Empresa também filtra a lista.</p>`;
+    h += `<div class="tw"><table id="empTabela"><thead><tr><th>ID da empresa</th><th>Empresa</th><th>CNPJ</th><th>Link ADM</th><th>Link CX</th><th>CSM</th></tr></thead><tbody>${base.map(x =>
+      `<tr data-busca="${esc(normBusca([x.nome, x.razao, x.id, x.cnpjTxt, x.csm].join(' ')))}"><td>${esc(x.id)}</td><td><span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>${x.razao && x.razao !== x.nome ? `<span class="mut sm" style="display:block">${esc(x.razao)}</span>` : ''}</td><td>${esc(x.cnpjTxt || '—')}</td><td>${linkBotao(x.link, 'ADM')}</td><td>${linkBotao(x.linkCx, 'CX')}</td><td>${esc(x.csm || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+    box.innerHTML = h; ligarBuscaEmpresa(); return;
+  }
 
   const m = a._m || {}, M = n => col(m, n);
   const req7 = N(M('Total Requisições Últimos 7 Dias')), apps = N(M('Aplicativos com Uso na API'));
-  h += `<h2>${esc(a.nome)}</h2><p class="lead">${esc(a.razao)} · CNPJ ${esc(S(col(a._r, 'CNPJ/CPF')) || S(M('CNPJ')))} · código ${esc(a.id)} · carteira <b>${esc(a.csm || '—')}</b> · ${esc(a.statusCx || '—')}${a.link ? ` · <a href="${esc(a.link)}" target="_blank" rel="noopener">abrir no Admin</a>` : ''}</p>`;
+  h += `<h2>${esc(a.nome)}</h2><p class="lead">${esc(a.razao)} · CNPJ ${esc(S(col(a._r, 'CNPJ/CPF')) || S(M('CNPJ')))} · código ${esc(a.id)} · carteira <b>${esc(a.csm || '—')}</b> · ${esc(a.statusCx || '—')}${a.link ? ` · <a href="${esc(a.link)}" target="_blank" rel="noopener">abrir no ADM ↗</a>` : ''}${a.linkCx ? ` · <a href="${esc(a.linkCx)}" target="_blank" rel="noopener">abrir no CX ↗</a>` : ''}</p>`;
   h += `<div class="kpis">${[
     kpiBox(a.score, `Health Score · ${esc(a.banda)} (${esc(a.scoreFonte)})`), kpiBox(esc(a.IF), esc(a.ifLabel || '')), kpiBox(esc(a.fx ? 'Faixa ' + a.fx : '—'), esc(a.fxLabel || 'sem faixa na tag')),
     kpiBox(fmtMoney(a.mrr), 'MRR'), kpiBox(fmtMi(a.gmv), 'GMV último mês'), kpiBox(fmtInt(a.pedUlt), 'pedidos último mês'), kpiBox(fmtInt(a.media), 'pedidos/mês (média 3m)'),
-    kpiBox(fmtInt(a.tickets), 'tickets nos últimos 30 dias'), kpiBox(fmtInt(req7), 'requisições de API (7 dias)'), kpiBox(fmtInt(apps), 'aplicativos com uso na API'),
+    `<div class="kpi ck" data-tk="${esc(a.id)}" title="Clique para ver os tickets"><b>${fmtInt(a.tickets)}</b><span class="lk">tickets nos últimos 30 dias</span></div>`, kpiBox(fmtInt(req7), 'requisições de API (7 dias)'), kpiBox(fmtInt(apps), 'aplicativos com uso na API'),
     kpiBox(a.api == null ? '–' : fmtPctExact(a.api), 'saúde da API (% 2xx)'), kpiBox(a.arm == null ? '–' : fmtPctExact(a.arm), 'armazenamento utilizado'),
     kpiBox(fmtDays(a.diasLogin), 'desde o último login'), kpiBox(fmtDays(a.diasContato), 'desde o último contato' + (a.tipoContato ? ' · ' + esc(a.tipoContato) : '')), kpiBox(fmtDays(a.diasTarefa), 'desde a última tarefa concluída'),
   ].join('')}</div>`;
@@ -1027,8 +1110,41 @@ function renderEmpresa() {
   h += `<details style="margin-top:22px"><summary>Todos os campos da empresa (CustomerX e Metabase)</summary><div class="grid">${card('CustomerX', '', kv(a._r))}${card('Metabase', a._m ? '' : 'empresa não encontrada na planilha do Metabase', a._m ? kv(a._m) : '')}</div></details>`;
   box.innerHTML = h; ligarBuscaEmpresa();
 }
+const normBusca = t => S(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function filtrarListaEmpresas(v) {
+  const t = document.getElementById('empTabela'); if (!t) return;
+  const q = normBusca(v.includes(' · ') ? v.slice(0, v.lastIndexOf(' · ')) : v).trim(), dig = v.replace(/\D/g, '');
+  let n = 0;
+  t.querySelectorAll('tbody tr').forEach(tr => { const b = tr.dataset.busca || ''; const ok = !q || b.includes(q) || (dig.length >= 3 && b.replace(/\D/g, '').includes(dig)); tr.classList.toggle('emp-oculta', !ok); if (ok) n++; });
+  const c = document.getElementById('empConta'); if (c) c.textContent = q ? `${n} de ${t.tBodies[0].rows.length} empresas` : `${t.tBodies[0].rows.length} empresas`;
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-emplista]')) { EMP_ID = ''; trocarAba('empresa'); } });
+// Modal com a lista de tickets da empresa (planilha "lista_de_tickets_aberto…")
+function abrirTickets(id, todos) {
+  const a = ALL.find(x => x.id === id); if (!a) return;
+  const TK = buildAccounts.TK;
+  $('#mtitle').textContent = `Tickets · ${a.nome}`;
+  if (!TK || !a.ticketsLista) {
+    $('#mbody').innerHTML = '<p class="note" style="margin:0">A lista de tickets não foi carregada. Ela vem da planilha que começa com <b>lista_de_tickets_aberto</b> (pasta dos dados Meta ou carga manual).</p>';
+    $('#modal').showModal(); return;
+  }
+  const lista30 = a.ticketsLista.filter(t => t._data && daysBetween(t._data, buildAccounts.REF) <= TICKETS_DIAS);
+  const lista = todos ? a.ticketsLista : lista30;
+  const fmtCel = v => typeof v === 'number' ? (Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100)) : (v instanceof Date ? fmtDate(v) : S(v));
+  const cols = TK.hdr.map((h, j) => [h, j]).filter(([h]) => h);
+  $('#mbody').innerHTML = `<p class="note" style="margin:0 0 10px">${lista30.length} ticket(s) nos últimos 30 dias · ${a.ticketsLista.length} nos últimos 90 dias (data da base: ${fmtDate(buildAccounts.REF)}). `
+    + `<span class="lk ck" data-tkt="${esc(a.id)}" data-todos="${todos ? '' : '1'}">${todos ? 'Ver só os últimos 30 dias' : 'Ver os 90 dias'}</span></p>`
+    + (lista.length ? tabela(cols.map(([h]) => esc(h)), lista.map(t => cols.map(([, j]) => esc(fmtCel(t._r[j]))))) : '<p class="mut">Nenhum ticket neste período.</p>');
+  if (!$('#modal').open) $('#modal').showModal();
+}
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-tk]'); if (k) { abrirTickets(k.dataset.tk, false); return; }
+  const t = e.target.closest('[data-tkt]'); if (t) abrirTickets(t.dataset.tkt, !!t.dataset.todos);
+});
 function ligarBuscaEmpresa() {
   const inp = document.getElementById('empBusca'); if (!inp) return;
+  const sel = document.getElementById('empCsm'); if (sel) sel.onchange = () => { EMP_CSM = sel.value; renderEmpresa(); };
+  inp.oninput = () => filtrarListaEmpresas(inp.value);
   inp.onchange = () => {
     const v = inp.value.trim(), idTxt = v.includes(' · ') ? v.slice(v.lastIndexOf(' · ') + 3) : v, dig = v.replace(/\D/g, '');
     const a = ALL.find(x => x.id === idTxt) || ALL.find(x => dig.length >= 8 && S(col(x._r, 'CNPJ/CPF')).replace(/\D/g, '') === dig)
@@ -1254,7 +1370,8 @@ document.getElementById('fontesBtn').addEventListener('click', () => {
   $('#mtitle').textContent = 'Fontes dos dados, frequência e regras';
   $('#mbody').innerHTML = tabela(['Fonte', 'O que traz', 'Quando atualiza', 'Observações'], [
     ['<b>CustomerX (API)</b>', 'Cadastro, carteira, responsável, tags (IF e faixa), Health Score, MRR, ARR, LTV, NPS, CSAT, contratos, campos personalizados, contatos e tarefas', 'Todo dia: coleta começa à 1h (lotes de 5 min, ~1h30 de duração) e é publicada ao terminar; republicada às 7h', 'Somente leitura. Limite de 240 consultas/min. Tarefas: histórico dos últimos 24 meses.'],
-    ['<b>Metabase · pergunta 5535</b>', 'GMV e pedidos do último mês, média de 3 meses, último login, armazenamento, marketplaces, e-commerces, logísticas, tickets de 30 dias, requisições e saúde da API, aplicativos com uso na API', 'Todo dia às 7h', 'Hoje entra pelo arquivo da pasta "entrada Metabase" (a API está atrás do login da empresa). A linha de status mostra a data do arquivo.'],
+    ['<b>Metabase · "base dash · dados meta v2"</b>', 'GMV e pedidos do último mês, último login, armazenamento, marketplaces, e-commerces, logísticas, adoção de produtos, requisições e saúde da API, aplicativos com uso na API e link do CustomerX', 'Todo dia: o n8n baixa às 06h45 e o painel publica às 7h', 'O n8n roda dentro da rede da Bling (meta.svc) e salva o arquivo na pasta "entrada Metabase". A linha de status mostra a data do arquivo.'],
+    ['<b>Metabase · "lista de tickets abertos (90 dias) · plano Elite"</b>', 'Cada ticket: empresa, CNPJ, data de abertura, tipo, status, prioridade, canal, grupo, módulo, funcionalidade e responsáveis', 'Todo dia: n8n às 06h45, publicado às 7h', 'Cruzada pelo CNPJ (e pelo nome, quando o CNPJ difere). Alimenta "tickets nos últimos 30 dias" e a lista de tickets da empresa.'],
     ['<b>Exportação manual do CustomerX</b> (opcional)', 'Conferência (?validar=1) e as colunas ainda em validação: Último MRR Ativo, Dias da última tarefa e Responsável', 'Quando alguém coloca um arquivo na pasta "entrada CustomerX"', 'Pode ser dispensada depois da validação final.'],
     ['<b>Histórico</b>', 'Foto resumida da base (HS, IF, faixa, MRR, ARR, GMV, carteira, motivo de risco)', 'Sobrescrita todo dia: ao virar o mês/semana fica a do último dia', 'Começou a ser gravado em outubro/2026.'],
     ['<b>Cruzamento</b>', 'CustomerX × Metabase pelo CNPJ e, se faltar, pelo código da empresa', '—', 'Empresas sem par aparecem só com os dados do CustomerX.'],
