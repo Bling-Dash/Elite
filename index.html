@@ -812,7 +812,7 @@ function resumoStatus(st) {
   if (!st) return '';
   const p = [];
   if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `${metaRotulo(st.meta)} de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
-  if (st.tickets) p.push(st.tickets.erro ? '⚠ lista de tickets indisponível' : `${metaRotulo(st.tickets, 'Tickets')} de ${st.tickets.arquivo_de || st.tickets.atualizado_em}`);
+  if (st.tickets) p.push(st.tickets.erro ? `⚠ lista de tickets indisponível (${st.tickets.erro})` : `${metaRotulo(st.tickets, 'Tickets')} de ${st.tickets.arquivo_de || st.tickets.atualizado_em}`);
   if (st.cx) p.push(st.cx.erro ? `⚠ CustomerX: ${st.cx.erro}` : st.cx.origem === 'API'
     ? `CustomerX (API) de ${st.cx.arquivo_de || st.cx.atualizado_em}${st.cx.clientes_com_falha ? ` · ⚠ ${st.cx.clientes_com_falha} clientes com indicador faltando` : ''}${st.cx.complemento_de ? ` · colunas em validação da exportação de ${st.cx.complemento_de}` : ''}`
     : `CustomerX de ${st.cx.arquivo_de || st.cx.atualizado_em}`);
@@ -1128,7 +1128,7 @@ function abrirTickets(id) {
   const TK = buildAccounts.TK;
   $('#mtitle').textContent = `Tickets · ${a.nome}`;
   if (!TK || !a.ticketsLista) {
-    $('#mbody').innerHTML = '<p class="note" style="margin:0">A lista de tickets não foi carregada. Ela vem da planilha que começa com <b>lista_de_tickets_aberto</b> (pasta dos dados Meta ou carga manual).</p>';
+    $('#mbody').innerHTML = `<p class="note" style="margin:0">A lista de tickets não foi carregada.${window.ULTIMO_STATUS && window.ULTIMO_STATUS.tickets && window.ULTIMO_STATUS.tickets.erro ? ' Motivo informado na última publicação: <b>' + esc(window.ULTIMO_STATUS.tickets.erro) + '</b>.' : ''} Ela vem da planilha Google de tickets preenchida pelo n8n (ou da carga manual do arquivo <b>lista_de_tickets_aberto…</b>).</p>`;
     $('#modal').showModal(); return;
   }
   const lista = a.ticketsLista.filter(t => t._data && daysBetween(t._data, buildAccounts.REF) <= TICKETS_DIAS);
