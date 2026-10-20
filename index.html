@@ -279,7 +279,11 @@ function buildAccounts(cxRows, metaRows) {
     const splitList = t => S(t).split(',').map(x => x.trim()).filter(Boolean);
     const mktList = m ? splitList(col(m, 'Marketplaces Configurados')) : null;   // null = sem dado na Tabela Meta
     const ecomList = m ? splitList(col(m, 'E-commerces Configurados')) : null;
-    const mrrRaw = m ? S(col(m, 'MRR')) : (S(col(r, 'Último MRR Ativo')) || S(col(r, 'MRR')));
+    // MRR: base é a CX (coluna MRR da Exportação de Clientes), inclusive quando é zero;
+    // a Tabela Meta só entra quando a conta não tem MRR na CX (campo vazio)
+    const mrrCx = N(col(r, 'MRR')), mrrMeta = m ? N(col(m, 'MRR')) : null;
+    const mrrFonte = mrrCx != null ? 'CX' : (mrrMeta != null ? 'Meta' : '');
+    const mrrRaw = `CX: ${S(col(r, 'MRR')) || 'vazio'} · Meta: ${m ? (S(col(m, 'MRR')) || 'vazio') : 'sem linha na Meta'} · usado: ${mrrFonte || 'nenhum'}`;
     const ecomTxt = m ? S(col(m, 'E-commerces Configurados')) : (ECOM_CX.some(e => S(col(r, 'Integrações ativas')).toLowerCase().includes(e)) ? '(integração Cx)' : '');
     const temEcom = ecomTxt ? 1 : 0;
     const logs = m ? S(col(m, 'Logísticas Configuradas')) : '';
@@ -302,7 +306,7 @@ function buildAccounts(cxRows, metaRows) {
     const nps = N(col(r, 'NPS Score'));
     const seg = S(col(r, 'Segmento')) || 'Sem segmento na Cx';
     const segGrupo = seg === 'Sem segmento na Cx' ? seg : (SEG_MAP[seg.toLowerCase()] || seg);
-    const mrr = m ? N(col(m, 'MRR')) : (N(col(r, 'Último MRR Ativo')) || N(col(r, 'MRR')) || null);
+    const mrr = mrrFonte === 'CX' ? mrrCx : (mrrFonte === 'Meta' ? mrrMeta : null);
     // tickets: com a lista de tickets carregada, conta os abertos nos últimos 90 dias; sem ela, usa a coluna de 90 dias da Meta (se existir)
     let ticketsLista = null, tickets = m ? N(col(m, 'Total Tickets Últimos 90 Dias')) : null;
     if (TK) {
@@ -330,7 +334,7 @@ function buildAccounts(cxRows, metaRows) {
       contaDigital: sim('Tem Bling Conta Digital'), cert, checkout: sim('Utilizou Checkout'), pdv: sim('Utilizou PDV'), meuNegocio: sim('Utilizou Meu Negócio'),
       acimaFaixa: pos === 'Sem faixa na tag' ? null : (pos === 'Acima do intervalo' ? 1 : 0),
       abaixoFaixa: pos === 'Sem faixa na tag' ? null : (pos === 'Abaixo do intervalo' ? 1 : 0),
-      situacaoMeta: m ? S(col(m, 'Situação')) : '', link: S(col(r, 'Link Admin de Empresas')), linkCx: m ? S(col(m, 'Link CustomerX', 'Link CX', 'Link Cx')) : '',
+      mrrFonte, mrrCx, mrrMeta, situacaoMeta: m ? S(col(m, 'Situação')) : '', link: S(col(r, 'Link Admin de Empresas')), linkCx: m ? S(col(m, 'Link CustomerX', 'Link CX', 'Link Cx')) : '',
       cnpjTxt: S(col(r, 'CNPJ/CPF')) || (m ? S(col(m, 'CNPJ')) : ''), ticketsLista,
       ultLogin, diasLogin, ultContato, diasContato, diasTarefa, diasInteracao, tipoContato, nps,
       _r: r, _m: m,
@@ -382,7 +386,7 @@ function openList(i) {
   const L = LISTS[i]; if (!L) return;
   const rows = [...L.acc].sort(L.sort || ((a, b) => a.score - b.score || (b.gmv || 0) - (a.gmv || 0)));
   $('#mtitle').textContent = `${L.title} · ${rows.length} conta${rows.length === 1 ? '' : 's'}`;
-  $('#mbody').innerHTML = (L.resumo ? `<p class="note" style="margin:0 0 10px">${L.resumo}</p>` : '') + (rows.length ? `<table><thead><tr><th>Empresa</th><th>Score</th><th>CSM</th><th>IF</th><th>Faixa</th><th>Segmento (Cx)</th><th>Plano</th><th>MRR</th><th>GMV último mês</th><th>Pedidos (média 3m)</th><th>Tickets 90d</th><th>Último login</th><th>Última interação</th><th>Armazenamento</th><th>Saúde API</th><th>Posição vs faixa</th><th>Motivo do risco</th><th>Integrações</th></tr></thead><tbody>${rows.map(a => `<tr><td>${nomeLink(a)}<span class="mut sm">${esc(a.razao !== a.nome ? a.razao : '')}</span></td><td class="${scoreCls(a.score)}" title="${esc('Score: ' + a.scoreFonte + (a.penalidades.length ? ' · Sinais: ' + a.penalidades.map(p => p[0]).join(' · ') : ''))}">${a.score}</td><td>${esc(a.csm)}</td><td>${a.IF}</td><td>${a.fx ? 'Faixa ' + a.fx : '–'}</td><td>${esc(a.seg)}</td><td>${esc(a.plano) || '–'}</td><td title="Valor na planilha: ${esc(a.mrrRaw)}">${fmtMoney(a.mrr)}</td><td>${fmtMi(a.gmv)}</td><td>${fmtInt(a.media)}</td><td>${a.tickets == null ? '–' : fmtInt(a.tickets)}</td><td class="${a.diasLogin != null && a.diasLogin > 15 ? 'c-red' : a.diasLogin != null && a.diasLogin > 7 ? 'c-yel' : ''}">${fmtDays(a.diasLogin)}</td><td class="${a.diasInteracao != null && a.diasInteracao > 60 ? 'c-red' : a.diasInteracao != null && a.diasInteracao > 30 ? 'c-yel' : ''}">${fmtDays(a.diasInteracao)}</td><td class="${armCls(a.arm)}" title="Valor na planilha: ${esc(a.armRaw)}">${fmtPctExact(a.arm)}</td><td class="${apiCls(a.api)}" title="Valor na planilha: ${esc(a.apiRaw)}">${fmtPctExact(a.api)}</td><td>${esc(a.pos)}</td><td>${esc(a.motivo) || '–'}</td><td class="wrap">${esc(a.integ.join(', ')) || '–'}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Nenhuma conta neste recorte.</p>');
+  $('#mbody').innerHTML = (L.resumo ? `<p class="note" style="margin:0 0 10px">${L.resumo}</p>` : '') + (rows.length ? `<table><thead><tr><th>Empresa</th><th>Score</th><th>CSM</th><th>IF</th><th>Faixa</th><th>Segmento (Cx)</th><th>Plano</th><th>MRR</th><th>GMV último mês</th><th>Pedidos (média 3m)</th><th>Tickets 90d</th><th>Último login</th><th>Última interação</th><th>Armazenamento</th><th>Saúde API</th><th>Posição vs faixa</th><th>Motivo do risco</th><th>Integrações</th></tr></thead><tbody>${rows.map(a => `<tr><td>${nomeLink(a)}<span class="mut sm">${esc(a.razao !== a.nome ? a.razao : '')}</span></td><td class="${scoreCls(a.score)}" title="${esc('Score: ' + a.scoreFonte + (a.penalidades.length ? ' · Sinais: ' + a.penalidades.map(p => p[0]).join(' · ') : ''))}">${a.score}</td><td>${esc(a.csm)}</td><td>${a.IF}</td><td>${a.fx ? 'Faixa ' + a.fx : '–'}</td><td>${esc(a.seg)}</td><td>${esc(a.plano) || '–'}</td><td title="${esc(a.mrrRaw)}">${fmtMoney(a.mrr)}</td><td>${fmtMi(a.gmv)}</td><td>${fmtInt(a.media)}</td><td>${a.tickets == null ? '–' : fmtInt(a.tickets)}</td><td class="${a.diasLogin != null && a.diasLogin > 15 ? 'c-red' : a.diasLogin != null && a.diasLogin > 7 ? 'c-yel' : ''}">${fmtDays(a.diasLogin)}</td><td class="${a.diasInteracao != null && a.diasInteracao > 60 ? 'c-red' : a.diasInteracao != null && a.diasInteracao > 30 ? 'c-yel' : ''}">${fmtDays(a.diasInteracao)}</td><td class="${armCls(a.arm)}" title="Valor na planilha: ${esc(a.armRaw)}">${fmtPctExact(a.arm)}</td><td class="${apiCls(a.api)}" title="Valor na planilha: ${esc(a.apiRaw)}">${fmtPctExact(a.api)}</td><td>${esc(a.pos)}</td><td>${esc(a.motivo) || '–'}</td><td class="wrap">${esc(a.integ.join(', ')) || '–'}</td></tr>`).join('')}</tbody></table>` : '<p class="mut">Nenhuma conta neste recorte.</p>');
   $('#modal').showModal();
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-l]'); if (t) openList(+t.dataset.l); });
@@ -552,7 +556,7 @@ function render() {
 
   // 1. IF
   const ifPie = (title, sub, f, fmt) => card(title, sub, pie(ifGroups.map(g => ({ label: g.label, value: sum(g.acc, f), color: IF_COLOR[g.key], text: fmt(sum(g.acc, f)), acc: g.acc })), title));
-  h += `<h2>1. Distribuição por IF</h2><div class="grid">` + ifPie('Empresas por IF', `% das ${ACC.length} contas`, a => 1, v => v + ' emp.') + ifPie('GMV último mês por IF', '% do GMV', a => a.gmv, fmtMi) + ifPie('Pedidos (média 3 meses) por IF', '% do volume médio de pedidos', a => a.media, v => fmtInt(v) + ' ped.') + ifPie('MRR por IF', '% do MRR (Tabela Meta)', a => a.mrr, fmtMil) + '</div>';
+  h += `<h2>1. Distribuição por IF</h2><div class="grid">` + ifPie('Empresas por IF', `% das ${ACC.length} contas`, a => 1, v => v + ' emp.') + ifPie('GMV último mês por IF', '% do GMV', a => a.gmv, fmtMi) + ifPie('Pedidos (média 3 meses) por IF', '% do volume médio de pedidos', a => a.media, v => fmtInt(v) + ' ped.') + ifPie('MRR por IF', '% do MRR (CX; Meta só quando vazio na CX)', a => a.mrr, fmtMil) + '</div>';
   h += `<h3 class="sp">Média de pedidos (3 meses) × intervalo da faixa</h3><p class="lead">A tag de faixa traz o intervalo de pedidos (ex.: "Faixa 3 · 20 a 30 mil"). A média de pedidos dos 3 meses é comparada com esse intervalo.</p><div class="grid">` +
     card('Média de pedidos × intervalo da faixa', `${sum(comp, a => a.acimaFaixa)} das ${comp.length} contas comparáveis estão acima do teto`, pie(posKeys.map(k => ({ label: k, value: ACC.filter(a => a.pos === k).length, color: POS_COLOR[k], text: ACC.filter(a => a.pos === k).length + ' emp.', acc: ACC.filter(a => a.pos === k) })), 'Posição vs faixa')) + '</div><div class="two">' +
     card('Por IF', 'Contas comparáveis (com faixa na tag)', stack(ifPresent.map(g => ({ label: g.label, parts: posParts(g.acc), extra: semFx(g.acc) })))) +
@@ -1546,10 +1550,10 @@ document.getElementById('exportAll').addEventListener('click', e => {
   e.stopPropagation();
   if (!temDados()) { alert('Os dados ainda não foram carregados.'); return; }
   txEscolherFormato(e.currentTarget, `Exportar todas as ${ALL.length} empresas`, fmt => {
-    const resumoCab = ['Empresa', 'Razão Social', 'Código', 'CNPJ', 'Carteira', 'Status', 'IF', 'Faixa', 'Health Score', 'Faixa do HS', 'Fonte do HS', 'Em risco', 'MRR', 'GMV último mês', 'Pedidos último mês',
+    const resumoCab = ['Empresa', 'Razão Social', 'Código', 'CNPJ', 'Carteira', 'Status', 'IF', 'Faixa', 'Health Score', 'Faixa do HS', 'Fonte do HS', 'Em risco', 'MRR', 'Fonte do MRR', 'GMV último mês', 'Pedidos último mês',
       'Pedidos/mês (média 3m)', 'Tickets 90d', 'Dias sem login', 'Dias sem interação', 'Armazenamento %', 'Saúde API %', 'Posição vs faixa', 'Motivo do risco', 'Sinais do Health Score'];
     const resumo = a => [a.nome, a.razao, a.id, S(col(a._r, 'CNPJ/CPF')), a.csm, a.statusCx, a.IF, a.fx ? 'Faixa ' + a.fx : '', a.score, a.banda, a.scoreFonte, emRisco(a) ? 'Sim' : 'Não',
-      a.mrr, a.gmv, a.pedUlt, a.media, a.tickets, a.diasLogin, a.diasInteracao, a.arm, a.api, a.pos, S(col(a._r, 'Motivo do risco')), a.penalidades.map(p => p[0]).join(' · ')];
+      a.mrr, a.mrrFonte || '', a.gmv, a.pedUlt, a.media, a.tickets, a.diasLogin, a.diasInteracao, a.arm, a.api, a.pos, S(col(a._r, 'Motivo do risco')), a.penalidades.map(p => p[0]).join(' · ')];
     const chaves = obj => Object.keys(obj || {}).filter(k => !k.startsWith('_'));
     const cxCols = [...new Set(ALL.flatMap(a => chaves(a._r)))], mtCols = [...new Set(ALL.flatMap(a => chaves(a._m)))];
     const v = x => x instanceof Date ? fmtDate(x) : (x == null ? '' : x);
