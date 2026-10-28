@@ -179,6 +179,14 @@ button.voltar:hover{border-color:var(--ac)!important}
 @media (min-width:1101px){#tab-empresa .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}}
 #tab-empresa .kpis .kpi{min-height:88px}
 
+
+/* abinhas Crítico / Atenção */
+.abinhas{display:inline-flex;gap:2px;padding:3px;margin:2px 0 12px;border:1px solid var(--bd);border-radius:9px;background:var(--card2)}
+.abinhas button{border:0;background:transparent;color:var(--mut);font:inherit;font-size:13px;font-weight:600;padding:5px 14px;border-radius:7px;cursor:pointer}
+.abinhas button span{font-weight:500;margin-left:4px;opacity:.8}
+.abinhas button.on{background:var(--card);color:var(--tx2);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.abinhas button[data-hsaba="critico"].on{color:var(--rk)}.abinhas button[data-hsaba="atencao"].on{color:var(--yl)}
+.abinhas button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -748,8 +756,24 @@ function render() {
   // 7. Segmentos
   h += `<h2><span class="hn">7. </span>Segmentos (agrupados)</h2><div class="grid">` + card('Empresas por segmento', '', barList(segGroups.map(g => ({ label: g.label, value: g.acc.length, color: g.color, acc: g.acc })), v => v + ' emp.')) + card('MRR por segmento', '', barList([...segGroups].sort((a, b) => sum(b.acc, x => x.mrr) - sum(a.acc, x => x.mrr)).map(g => ({ label: g.label, value: sum(g.acc, a => a.mrr), color: g.color, acc: g.acc })), fmtMil)) + card('GMV por segmento', '', barList([...segGroups].sort((a, b) => sum(b.acc, x => x.gmv) - sum(a.acc, x => x.gmv)).map(g => ({ label: g.label, value: sum(g.acc, a => a.gmv), color: g.color, acc: g.acc })), fmtMi)) + '</div>';
   h += `<h3 class="sp">Segmento × IF</h3>` + matrix(segGroups, ifPresent.map(g => ({ label: g.key, acc: g.acc })), 'Segmento');
+  const hsPorSegmento = () => {
+    // mesmas faixas do dashboard inteiro (HEALTH_BANDS): Crítico abaixo de 50 · Atenção de 50 a 74
+    const ehCrit = a => a.banda === 'Crítico', ehAten = a => a.banda === 'Atenção';
+    const lista = (f, nome, cor) => {
+      const it = segGroups.map(g => ({ label: g.label, acc: g.acc.filter(f), color: g.color })).filter(i => i.acc.length).sort((a, b) => b.acc.length - a.acc.length);
+      if (!it.length) return `<p class="mut" style="margin:6px 0 0">Nenhuma conta em ${nome}.</p>`;
+      const mx = Math.max(...it.map(i => i.acc.length), 1);
+      return `<div class="bl">${it.map(i => `<div class="blr ck" data-l="${reg('Health Score ' + nome + ' · ' + i.label, i.acc)}"><span>${esc(i.label)}</span><div class="blb"><i style="width:${100 * i.acc.length / mx}%;background:${cor}"></i></div><b>${i.acc.length} emp.</b></div>`).join('')}</div>`;
+    };
+    const nC = sum(segGroups, g => g.acc.filter(ehCrit).length), nA = sum(segGroups, g => g.acc.filter(ehAten).length);
+    const abas = `<div class="abinhas" role="tablist" aria-label="Faixa do Health Score">`
+      + `<button type="button" role="tab" data-hsaba="critico" aria-selected="true" class="on">Crítico <span>${nC}</span></button>`
+      + `<button type="button" role="tab" data-hsaba="atencao" aria-selected="false">Atenção <span>${nA}</span></button></div>`;
+    return card('Health Score em Atenção ou Crítico', `contas por segmento · Crítico: HS abaixo de ${HEALTH_BANDS.atencao} · Atenção: HS de ${HEALTH_BANDS.atencao} a ${HEALTH_BANDS.saudavel - 1} · clique para ver`,
+      abas + `<div data-hspainel="critico">${lista(ehCrit, 'Crítico', BAND_COLOR['Crítico'])}</div><div data-hspainel="atencao" hidden>${lista(ehAten, 'Atenção', BAND_COLOR['Atenção'])}</div>`);
+  };
   const segInd = (title, f, titleList) => card(title, 'contas por segmento · clique para ver', barList(segGroups.map(g => ({ label: g.label, value: g.acc.filter(f).length, color: g.color, acc: g.acc.filter(f) })).filter(i => i.value).sort((a, b) => b.value - a.value), v => v + ' emp.'));
-  h += `<h3 class="sp">Indicadores por segmento</h3><div class="grid">` + segInd('Citam preço como risco', a => a.riscos['Preço']) + segInd('Volume acima da faixa', a => a.acimaFaixa === 1) + segInd('Sem e-commerce', a => !a.temEcom) + segInd('Saúde da API abaixo de ' + API_GREEN + '%', a => a.apiBaixa === 1) + segInd('Mais de 5 tickets em 90 dias', a => a.ticketsAlto === 1) + segInd('Health Score em Atenção ou Crítico', a => a.banda !== 'Saudável') + '</div>';
+  h += `<h3 class="sp">Indicadores por segmento</h3><div class="grid">` + segInd('Citam preço como risco', a => a.riscos['Preço']) + segInd('Volume acima da faixa', a => a.acimaFaixa === 1) + segInd('Sem e-commerce', a => !a.temEcom) + segInd('Saúde da API abaixo de ' + API_GREEN + '%', a => a.apiBaixa === 1) + segInd('Mais de 5 tickets em 90 dias', a => a.ticketsAlto === 1) + hsPorSegmento() + '</div>';
 
   // 8. Integrações: marketplaces, e-commerces e hubs separados (verde = tem · vermelho = não tem; clique para ver as empresas)
   const platStack = (getList, maxRows) => {
@@ -1495,6 +1519,12 @@ function organizarTemas() {
   let atual = 'geral';
   [...$('#body').children].forEach(el => { if (el.tagName === 'H2') atual = temaDe(el.textContent.trim()); el.dataset.tema = atual; el.hidden = TEMA !== 'tudo' && atual !== TEMA; });
 }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-hsaba]'); if (!b) return;
+  const c = b.closest('.card');
+  c.querySelectorAll('[data-hsaba]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+  c.querySelectorAll('[data-hspainel]').forEach(p => { p.hidden = p.dataset.hspainel !== b.dataset.hsaba; });
+});
 document.getElementById('status').addEventListener('click', e => { if (e.target.closest('a,button,[data-l]')) return; e.currentTarget.classList.toggle('aberto'); });
 document.getElementById('temas').addEventListener('click', e => {
   const b = e.target.closest('button[data-tema]'); if (!b) return;
