@@ -457,13 +457,15 @@ function buildAccounts(cxRows, metaRows) {
     const nApps = m ? N(col(m, 'Aplicativos com Uso na API')) : null;
     const integ = S(col(r, 'Integrações ativas')).split(',').map(x => x.trim()).filter(Boolean);
     // Cobrança: "atrasado no mês" = empresa Ativada, cobrança no mês da data de referência e antes dela,
-    // e último pagamento anterior à cobrança (ou nenhum pagamento).
+    // e último pagamento num mês anterior ao da cobrança (ou nenhum pagamento).
+    // Pagamento no mesmo mês da cobrança, mesmo antes da data (pagamento adiantado), conta como em dia.
+    const mesNum = d => d.getFullYear() * 12 + d.getMonth();
     const sitEmp = m ? S(col(m, 'Situação Empresa', 'Situação')) : '';
     const temCob = !!m && col(m, 'Data de Cobrança') !== undefined, temSitCx = !!m && col(m, 'Situação Contrato CX') !== undefined;
     const dtCob = temCob ? toDate(col(m, 'Data de Cobrança')) : null, dtPag = temCob ? toDate(col(m, 'Data Último Pagamento')) : null;
     const sitCx = temSitCx ? S(col(m, 'Situação Contrato CX')) : '';
     const atrasoMes = !temCob ? null : (sitEmp.toLowerCase() === 'ativada' && dtCob && dtCob.getFullYear() === REF.getFullYear() && dtCob.getMonth() === REF.getMonth()
-      && dtCob < REF && (!dtPag || dtPag < dtCob)) ? 1 : 0;
+      && dtCob < REF && (!dtPag || mesNum(dtPag) < mesNum(dtCob))) ? 1 : 0;
     const cxEsperada = SIT_CX_ESPERADA[sitEmp.toLowerCase()];
     const divCx = !temSitCx ? null : (cxEsperada !== undefined && sitCx.toLowerCase() !== cxEsperada ? 1 : 0);
     const inadSit = m ? (sitEmp.toLowerCase() === 'inadimplente' ? 1 : 0) : null;
@@ -1568,8 +1570,8 @@ function extrasCarteira() {
     const op = resumo => ({ cobranca: true, resumo, sort: (p, q) => (p.dtCob || 0) - (q.dtCob || 0) || (q.mrr || 0) - (p.mrr || 0) });
     const it = (acc, cor, txt, titulo, resumo) => `<div class="ck" data-l="${reg(titulo, acc, op(resumo))}" title="Clique para ver a lista"><b style="color:${cor}">${acc.length}</b><span>${txt}</span></div>`;
     const pares = [...groupBy(div, a => `${a.sitEmp || 'sem situação'} → ${a.sitCx || 'vazio no CX'}`).entries()].sort((p, q) => q[1].length - p[1].length);
-    h += `<h2>Cobrança e situação no CX</h2><p class="lead">Dados da Tabela Meta, com data de referência ${fmtDate(ref)} (${esc(mesRef)}). <b>Pagamento atrasado</b>: empresa Ativada, cobrança neste mês e antes da data de referência, e último pagamento anterior à cobrança. <b>Divergência CX</b>: a situação do contrato no CX não é a esperada para a situação da empresa (Ativada → active_contract · Inadimplente → contract_finalized); CX vazio também conta.</p>`
-      + `<div class="stat">${it(atr, 'var(--rk)', 'pagamento atrasado no mês', 'Pagamento atrasado no mês', `Cobranças de ${esc(mesRef)} vencidas até ${fmtDate(ref)} sem pagamento registrado depois delas.`)}`
+    h += `<h2>Cobrança e situação no CX</h2><p class="lead">Dados da Tabela Meta, com data de referência ${fmtDate(ref)} (${esc(mesRef)}). <b>Pagamento atrasado</b>: empresa Ativada, cobrança neste mês e antes da data de referência, e último pagamento em mês anterior ao da cobrança (ou nenhum pagamento); pagamento no mesmo mês da cobrança conta como em dia. <b>Divergência CX</b>: a situação do contrato no CX não é a esperada para a situação da empresa (Ativada → active_contract · Inadimplente → contract_finalized); CX vazio também conta.</p>`
+      + `<div class="stat">${it(atr, 'var(--rk)', 'pagamento atrasado no mês', 'Pagamento atrasado no mês', `Cobranças de ${esc(mesRef)} vencidas até ${fmtDate(ref)} cujo último pagamento é de um mês anterior ao da cobrança.`)}`
       + `${it(ina, 'var(--rk)', 'empresas inadimplentes', 'Situação da empresa: Inadimplente', '')}`
       + `${it(div, 'var(--yl)', 'divergências com o CX', 'Divergência entre a situação da empresa e o CX', 'Passe o mouse na situação do CX para ver o valor esperado.')}</div>`;
     if (pares.length) h += `<div class="grid" style="margin-top:12px">` + card('Divergências por combinação', 'situação da empresa → situação do contrato no CX · clique para ver', barList(pares.map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + ' emp.')) + '</div>';
