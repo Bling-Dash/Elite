@@ -338,6 +338,31 @@ button:focus-visible,.ck:focus-visible,a:focus-visible,select:focus-visible,inpu
 .dica-txt::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
 .dica-txt p{margin:0;font-size:13px;color:var(--tx);max-width:none}.dica-txt p+p{margin-top:8px}
 .dica:hover .dica-txt,.dica:focus-within .dica-txt{display:block}
+
+/* matriz de riscos / expansão: % em destaque, cor só onde o grupo está acima da média do Elite */
+.hxleg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 10px;font-size:12px;color:var(--mut)}
+.hxleg span{display:inline-flex;align-items:center;gap:6px}.hxleg i{width:14px;height:14px;border-radius:3px;border:1px solid var(--bd2)}
+table.mx.hx{table-layout:fixed;min-width:820px}
+table.mx.hx th:first-child,table.mx.hx td.ind{width:24%;min-width:200px}
+table.mx.hx th{vertical-align:bottom;padding:12px 8px;font-size:12.5px;color:var(--tx2)}
+table.mx.hx th span{margin-top:2px}
+table.mx.hx td{border-bottom:1px solid var(--bd);border-right:0}
+table.mx.hx td.ind{white-space:normal;line-height:1.35;color:var(--tx2);font-weight:500;padding:12px 14px}
+table.mx.hx td.hm{padding:10px 8px;vertical-align:middle;background-clip:padding-box;border-left:2px solid var(--card)}
+table.mx.hx td.hm span.pc{display:block;font-size:14.5px;font-weight:700;color:var(--tx2);line-height:1.2}
+table.mx.hx td.hm span.fr{display:block;font-size:11px;color:var(--mut);margin-top:1px}
+table.mx.hx td.hm span.mb{display:block;width:64%;max-width:72px;height:3px;margin:7px auto 0;border-radius:2px;background:var(--bd);overflow:hidden}
+table.mx.hx td.hm span.mb i{display:block;height:100%;border-radius:2px;opacity:.85}
+table.mx.hx td.hm span.sd{display:inline-block;margin-top:5px;font-size:10.5px;color:var(--mut)!important;text-decoration:none;border-bottom:1px dotted var(--bd2);line-height:1.2}
+table.mx.hx td.hm span.sd:hover{color:var(--tx2)!important;border-bottom-color:var(--tx2)}
+table.mx.hx td.hm.nv3 span.fr,table.mx.hx td.hm.nv3 span.sd{color:var(--tx)!important}
+table.mx.hx .tot{background:var(--card2);border-left:1px solid var(--bd2)!important}
+table.mx.hx td.tot span.pc{color:var(--tx2)}
+table.mx.hx tbody tr:hover td{background-color:transparent}
+table.mx.hx tbody tr:hover td.ind,table.mx.hx tbody tr:hover td.hm:not([style]){background:var(--hover)}
+table.mx.hx tbody tr:hover td.tot{background:var(--card2)}
+table.mx.hx td.hm.zero span.pc{color:var(--mut);font-weight:500}table.mx.hx td.hm.zero span.mb{visibility:hidden}
+table.mx.hx td.hm.ck:hover{outline:2px solid var(--btn);outline-offset:-2px}
 </style>
 </head>
 <body>
@@ -751,16 +776,31 @@ function heat(groups, indicators, totalAcc, tom) {
   totalAcc = totalAcc || ACC;
   // groups: [{label, acc}], indicators: [{name, f, semDado?}] with f(acc) -> 1/0/null (null = conta sem dado para o indicador)
   // Base do %: sempre o total de empresas do grupo (IF ou faixa). Conta sem dado conta como "não tem", mas aparece no aviso "k sem dado".
-  const th = groups.map(g => `<th>${esc(g.short || g.label)}<span>n=${g.acc.length}</span></th>`).join('');
-  const rows = indicators.map(ind => { const cells = [...groups, { label: 'Total', acc: totalAcc }].map(g => {
-    const nome = g.short || g.label, N = g.acc.length, comInd = g.acc.filter(a => ind.f(a) === 1), x = comInd.length;
-    const semDado = g.acc.filter(a => ind.f(a) == null);
-    const sd = semDado.length ? `<span class="ck lk sd" data-l="${reg(`${ind.name} · ${nome} · sem dado (${ind.semDado || 'sem dado'})`, semDado)}" title="Sem dado: ${esc(ind.semDado || 'sem dado')}">${semDado.length} sem dado</span>` : '';
-    if (!N) return '<td class="hm"><span>–</span></td>';
-    const p = x / N; const li = reg(`${ind.name} · ${nome}`, comInd); const rgb = (ind.tone || tom) === 'red' ? '240,81,67' : '52,173,97';
-    return `<td class="hm ck" data-l="${li}" style="background:rgba(${rgb},${(0.08 + 0.45 * p).toFixed(2)})">${x}/${N}<span>${pct(x, N)}</span>${sd}</td>`; }).join('');
-    return `<tr><td>${esc(ind.name)}</td>${cells}</tr>`; }).join('');
-  return `<div class="tw"><table class="mx"><thead><tr><th>Indicador</th>${th}<th>Total<span>n=${totalAcc.length}</span></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  // Cor: só onde o grupo está ACIMA da taxa do Elite (coluna Total) — 1,15×, 1,5× e 2× ou mais. Abaixo da média fica neutro.
+  const cab = groups.map(g => `<th>${esc(g.short || g.label)}<span>n=${fmtInt(g.acc.length)}</span></th>`).join('');
+  const rows = indicators.map(ind => {
+    const rgb = (ind.tone || tom) === 'red' ? '240,81,67' : '52,173,97';
+    const todos = [...groups.map(g => ({ g, tot: false })), { g: { label: 'Total', acc: totalAcc }, tot: true }];
+    const dados = todos.map(({ g, tot }) => {
+      const N = g.acc.length, comInd = g.acc.filter(a => ind.f(a) === 1), semDado = g.acc.filter(a => ind.f(a) == null);
+      return { g, tot, N, x: comInd.length, comInd, semDado, p: N ? comInd.length / N : 0 };
+    });
+    const T = dados[dados.length - 1], pt = T.p, maxP = Math.max(...dados.map(d => d.p), 0.0001);
+    const cells = dados.map(d => {
+      const nome = d.g.short || d.g.label;
+      if (!d.N) return `<td class="hm${d.tot ? ' tot' : ''}"><span class="pc">–</span></td>`;
+      const r = pt ? d.p / pt : (d.p ? 9 : 0);
+      const nivel = d.tot || d.x < 2 ? 0 : r >= 2 ? 3 : r >= 1.5 ? 2 : r >= 1.15 ? 1 : 0;
+      const fundo = nivel ? ` style="background:rgba(${rgb},${[0, .14, .26, .40][nivel]})"` : '';
+      const dica = `${d.x} de ${d.N} empresas (${pct(d.x, d.N)})${d.tot ? '' : ` · Elite: ${pct(T.x, T.N)}${pt ? ` · ${r.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}× a média` : ''}`}`;
+      const sd = d.semDado.length ? `<span class="ck sd" data-l="${reg(`${ind.name} · ${nome} · sem dado (${ind.semDado || 'sem dado'})`, d.semDado)}" title="Sem dado: ${esc(ind.semDado || 'sem dado')} — clique para ver">${fmtInt(d.semDado.length)} sem dado</span>` : '';
+      return `<td class="hm ck${d.tot ? ' tot' : ''}${nivel ? ' nv' + nivel : ''}${d.x ? '' : ' zero'}" data-l="${reg(`${ind.name} · ${nome}`, d.comInd)}" title="${esc(dica)}"${fundo}><span class="pc">${pct(d.x, d.N)}</span><span class="fr">${fmtInt(d.x)} de ${fmtInt(d.N)}</span><span class="mb"><i style="width:${(d.p / maxP * 100).toFixed(1)}%;background:rgb(${rgb})"></i></span>${sd}</td>`;
+    }).join('');
+    return `<tr><td class="ind">${esc(ind.name)}</td>${cells}</tr>`;
+  }).join('');
+  const cor = tom === 'red' ? '240,81,67' : '52,173,97';
+  const leg = `<div class="hxleg"><span>Destaque em relação à média do Elite:</span>${[['1,15×', .14], ['1,5×', .26], ['2× ou mais', .40]].map(([t, o]) => `<span><i style="background:rgba(${cor},${o})"></i>${t}</span>`).join('')}<span class="mut">sem cor = na média ou abaixo</span></div>`;
+  return `${leg}<div class="tw"><table class="mx hx"><thead><tr><th>Indicador</th>${cab}<th class="tot">Elite<span>n=${fmtInt(totalAcc.length)}</span></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function matrix(rowGroups, colGroups, rowLabel) {
   const th = colGroups.map(c => `<th>${esc(c.label)}</th>`).join('');
@@ -912,7 +952,7 @@ function render() {
 
   // 3. Riscos
   const hr = heatCtl('risco', ifPresent, fxGroups);
-  h += `<h2><span class="hn">3. </span>Riscos por ${hr.by === 'IF' ? 'IF' : 'faixa'}</h2><p class="lead">Cada célula mostra quantas empresas do grupo têm o indicador sobre o total de empresas do grupo (n do cabeçalho). Embaixo aparece quantas empresas não têm a informação daquele indicador (contam como "não tem"); clique para ver quais são.</p>` + hr.html + heat(hr.groups, RISK_IND, null, 'red');
+  h += `<h2><span class="hn">3. </span>Riscos por ${hr.by === 'IF' ? 'IF' : 'faixa'}</h2><p class="lead">Cada célula mostra o % de empresas do grupo com o indicador e, embaixo, quantas são (ex.: 9 de 34). A barrinha compara os grupos da mesma linha. A cor marca onde o grupo está acima da média do Elite (última coluna): quanto mais forte, mais acima; na média ou abaixo fica sem cor. "Sem dado" são empresas sem a informação daquele indicador (contam como "não tem"); clique para ver quais são. Passe o mouse numa célula para ver a comparação.</p>` + hr.html + heat(hr.groups, RISK_IND, null, 'red');
   const motivoPie = g => { const items = RISCOS.map(([k], i) => ({ label: k, value: sum(g.acc, a => a.riscos[k]), color: hue(i + 3), text: sum(g.acc, a => a.riscos[k]) + ' citações', acc: g.acc.filter(a => a.riscos[k]) })).filter(i => i.value).sort((a, b) => b.value - a.value); const tit = g.key === 'IF0' ? 'Motivo do cancelamento · IF0' : 'Motivos de risco · ' + g.key; return items.length ? card(tit, `${g.acc.length} contas · uma conta pode citar mais de um motivo`, pie(items, g.key === 'IF0' ? 'Motivo do cancelamento IF0' : 'Motivos ' + g.key)) : ''; };
   const topIfs = ifPresent.filter(g => sum(g.acc, a => a.temMotivo) > 0);
   h += `<h3 class="sp">Motivos de risco por IF</h3><p class="lead">Um gráfico para cada IF que tem ao menos uma conta com motivo de risco.</p><div class="grid">${topIfs.map(motivoPie).join('')}</div>`;
@@ -924,7 +964,7 @@ function render() {
   const fxExp = fxGroups.map(g => ({ ...g, acc: g.acc.filter(a => a.IF !== 'IF0') })).filter(g => g.acc.length);
   const he = heatCtl('exp', ifPresent.filter(g => g.key !== 'IF0'), fxExp);
   const compExp = comp.filter(a => a.IF !== 'IF0');
-  h += `<h2><span class="hn">4. </span>Oportunidades de expansão por ${he.by === 'IF' ? 'IF' : 'faixa'}</h2><p class="lead">A faixa Elite é de volume de pedidos. ${sum(compExp, a => a.acimaFaixa)} de ${compExp.length} contas têm volume acima do teto da faixa. Clientes IF0 (cancelados) não entram aqui.</p><p class="lead">Cada célula mostra quantas empresas do grupo têm o indicador sobre o total de empresas do grupo (n do cabeçalho). Embaixo aparece quantas empresas não têm a informação daquele indicador (contam como "não tem"); clique para ver quais são.</p>` + he.html + heat(he.groups, EXP_IND, accExp);
+  h += `<h2><span class="hn">4. </span>Oportunidades de expansão por ${he.by === 'IF' ? 'IF' : 'faixa'}</h2><p class="lead">A faixa Elite é de volume de pedidos. ${sum(compExp, a => a.acimaFaixa)} de ${compExp.length} contas têm volume acima do teto da faixa. Clientes IF0 (cancelados) não entram aqui.</p><p class="lead">Cada célula mostra o % de empresas do grupo com o indicador e, embaixo, quantas são (ex.: 9 de 34). A barrinha compara os grupos da mesma linha. A cor marca onde o grupo está acima da média do Elite (última coluna): quanto mais forte, mais acima; na média ou abaixo fica sem cor. "Sem dado" são empresas sem a informação daquele indicador (contam como "não tem"); clique para ver quais são. Passe o mouse numa célula para ver a comparação.</p>` + he.html + heat(he.groups, EXP_IND, accExp);
   const cobKeys = ['Sem e-commerce (oferta: Bling Loja Virtual)', 'E-commerce com logística além da de marketplace', 'E-commerce só com logística de marketplace (oferta: Bling Envios)', 'E-commerce sem logística (oferta: Bling Envios)', 'E-commerce sem dado de logística (só na Cx)'];
   const cobColor = ['#34AD61', '#8BE0AA', '#F5A60A', '#F05143', '#97A4B8'];
   const semEcom = ACC.filter(a => !a.temEcom).sort((a, b) => (b.gmv || 0) - (a.gmv || 0));
