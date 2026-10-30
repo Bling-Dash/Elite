@@ -203,7 +203,7 @@ html{color-scheme:light}:root[data-theme="dark"]{color-scheme:dark}
 body{font-family:var(--ff);font-size:14px;background:var(--bg);scrollbar-color:var(--bd2) transparent}
 .pular{position:absolute;left:12px;top:-60px;z-index:60;background:var(--btn);color:#fff;padding:8px 12px;border-radius:var(--r);font-weight:700;text-decoration:none}.pular:focus{top:8px}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic,.chev,.seta,.iconbtn svg,.sidetgl svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* barra superior: logo + os três menus principais, como "Meu Negócio · Cadastros · Vendas" no ERP */
 .appbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;height:calc(var(--hdr) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 18px 0;background:var(--nav);border-bottom:1px solid var(--bd);box-shadow:0 1px 3px rgba(0,0,0,.18)}
@@ -329,6 +329,15 @@ button:focus-visible,.ck:focus-visible,a:focus-visible,select:focus-visible,inpu
 }
 @media (max-width:560px){.ph-r{width:100%}.ph-r>*{flex:1}.pillsel,.pillsel select{width:100%;max-width:none}.frow>.row,.fld,.fld .inl{width:100%}#periodo,#wtoken{min-width:0;flex:1}#manualBtn{margin-left:0;width:100%}}
 @media (prefers-reduced-motion:reduce){.side,.sg>button .chev{transition:none}}
+
+/* "i" azul ao lado do título: a explicação aparece ao passar o mouse (ou ao focar pelo teclado) */
+.dica{position:relative;display:inline-flex;vertical-align:middle;margin-left:8px;font-size:13px;font-weight:400;letter-spacing:0;line-height:1.5}
+.dica-i{display:grid;place-items:center;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:#0EB2E8;color:#fff;font:700 12px/1 Georgia,'Times New Roman',serif;font-style:italic;cursor:help}
+:root[data-theme="dark"] .dica-i{background:#41CFFA;color:#0B2733}
+.dica-txt{display:none;position:absolute;top:calc(100% + 8px);left:-12px;z-index:35;width:max-content;max-width:min(460px,78vw);padding:12px 14px;background:var(--card);color:var(--tx);border:1px solid var(--bd2);border-radius:var(--r);box-shadow:0 10px 24px rgba(0,0,0,.3);text-align:left}
+.dica-txt::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
+.dica-txt p{margin:0;font-size:13px;color:var(--tx);max-width:none}.dica-txt p+p{margin-top:8px}
+.dica:hover .dica-txt,.dica:focus-within .dica-txt{display:block}
 </style>
 </head>
 <body>
@@ -1350,17 +1359,20 @@ function linhas(series, labels, fmt = fmtInt, doZero = true) {
   if (!doZero) { const f = (mx - mn) * 0.15 || 5; mn = Math.max(0, mn - f); mx = mx + f; } if (mx === mn) mx = mn + 1;
   const x = i => P.l + (labels.length === 1 ? (W - P.l - P.r) / 2 : i * (W - P.l - P.r) / (labels.length - 1));
   const y = v => P.t + (H - P.t - P.b) * (1 - (v - mn) / (mx - mn));
+  // rótulos do eixo curtos (R$ 2,4 mi / R$ 950 mil) para caberem na margem do gráfico
+  const eixo = v => { const t = fmt(v); if (!/R\$/.test(t) || Math.abs(v) < 1000) return t; const a = Math.abs(v);
+    return 'R$ ' + (a >= 1e6 ? (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi' : Math.round(v / 1e3).toLocaleString('pt-BR') + ' mil'); };
   let g = '';
-  for (let k = 0; k <= 4; k++) { const v = mn + (mx - mn) * k / 4, yy = y(v); g += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)"/><text x="${P.l - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--mut)">${esc(fmt(v))}</text>`; }
+  for (let k = 0; k <= 4; k++) { const v = mn + (mx - mn) * k / 4, yy = y(v); g += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)" vector-effect="non-scaling-stroke"/><text x="${P.l - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--mut)">${esc(eixo(v))}</text>`; }
   const passo = Math.max(1, Math.ceil(labels.length / 6));
   labels.forEach((l, i) => { if (i % passo === 0 || i === labels.length - 1) g += `<text x="${x(i)}" y="${H - P.b + 16}" text-anchor="middle" font-size="11" fill="var(--mut)">${esc(l)}</text>`; });
   series.forEach((s, si) => {
     const cor = s.cor || CORES[si % CORES.length]; let d = '', pts = '';
     s.vals.forEach((v, i) => { if (v == null || !isFinite(v)) return; d += (d ? 'L' : 'M') + x(i) + ' ' + y(v); pts += `<circle cx="${x(i)}" cy="${y(v)}" r="3.2" fill="${cor}"><title>${esc(s.nome)} · ${esc(labels[i])}: ${esc(fmt(v))}</title></circle>`; });
-    g += `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2"/>${pts}`;
+    g += `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>${pts}`;
   });
   const leg = series.length > 1 ? `<div class="chips" style="margin-top:6px">${series.map((s, si) => `<span><b style="color:${s.cor || CORES[si % CORES.length]}">●</b> ${esc(s.nome)}</span>`).join('')}</div>` : '';
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>${leg}`;
+  return `<svg class="lc" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;overflow:visible">${g}</svg>${leg}`;
 }
 const tabela = (cab, linhasT) => { const nc = colsNum(linhasT); return `<div class="tw"><table><thead><tr>${cab.map((c, j) => `<th${nc.has(j) ? ' class="num"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${linhasT.map(r => `<tr>${r.map((c, j) => `<td${nc.has(j) ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; };
 const delta = (a, b, fmt = fmtInt, inverso = false) => {
@@ -1737,10 +1749,14 @@ function extrasCarteira() {
       + `<div class="stat">${it(atr, 'var(--rk)', 'pagamento atrasado no mês', 'Pagamento atrasado no mês', `Cobranças de ${esc(mesRef)} vencidas até ${fmtDate(ref)} cujo último pagamento é de um mês anterior ao da cobrança.`)}`
       + `${it(ina, 'var(--rk)', 'empresas inadimplentes', 'Situação da empresa: Inadimplente', '')}`
       + `${it(div, 'var(--yl)', 'divergências com o CX', 'Divergência entre a situação da empresa e o CX', 'Passe o mouse na situação do CX para ver o valor esperado.')}</div>`;
-    if (pares.length) h += `<div class="grid" style="margin-top:12px">` + card('Divergências por combinação', 'situação da empresa → situação do contrato no CX · clique para ver', barList(pares.map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + ' emp.')) + '</div>';
-    if (alerta.length) h += `<h3 class="sp">Empresas com alerta · ${alerta.length}</h3>` + tabela(['Empresa', 'Carteira', 'Situação empresa', 'Situação contrato CX', 'Data de cobrança', 'Último pagamento', 'MRR', 'Alerta'],
-      alerta.map(a => [`<span class="lk" data-emp="${esc(a.id)}">${esc(a.nome)}</span>`, esc(a.csm), esc(a.sitEmp) || '–', `<span title="${esc(a.cxEsperada ? 'Esperado: ' + a.cxEsperada : '')}"${a.divCx === 1 ? ' style="color:var(--rk);font-weight:600"' : ''}>${esc(a.sitCx) || 'vazio'}</span>`,
-        `<span${a.atrasoMes === 1 ? ' style="color:var(--rk);font-weight:600"' : ''}>${fmtDate(a.dtCob)}</span>`, fmtDate(a.dtPag), fmtMoney(a.mrr), esc(alertasCob(a).join(', '))]));
+    const tipos = [...groupBy(alerta, a => alertasCob(a).join(' + ')).entries()].sort((p, q) => q[1].length - p[1].length);
+    const porCart = [...groupBy(alerta, a => a.csm || 'sem carteira').entries()].sort((p, q) => q[1].length - p[1].length);
+    const barras = (lista, un) => barList(lista.map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + un);
+    const cartoes = [];
+    if (alerta.length) cartoes.push(card(`Empresas com alerta · ${alerta.length}`, 'por tipo de alerta · clique para ver as empresas', barras(tipos, ' emp.')));
+    if (pares.length) cartoes.push(card('Divergências por combinação', 'situação da empresa → situação do contrato no CX · clique para ver', barras(pares, ' emp.')));
+    if (alerta.length && porCart.length > 1) cartoes.push(card('Empresas com alerta por carteira', 'clique para ver as empresas de cada carteira', barras(porCart, ' emp.')));
+    if (cartoes.length) h += `<div class="grid" style="margin-top:12px">${cartoes.join('')}</div>`;
   }
   // convergência IF × Health Score (para os CSMs validarem)
   const ativos = ACC.filter(a => !finalizada(a)), bandas = ['Saudável', 'Atenção', 'Crítico'];
@@ -2001,6 +2017,41 @@ document.getElementById('exportAll').addEventListener('click', e => {
   ['trocarAba', 'organizarTemas', 'renderHistorico', 'renderEmpresa'].forEach(n => {
     const f = window[n]; if (typeof f !== 'function') return;
     window[n] = function () { const r = f.apply(this, arguments); try { syncNav(); } catch (_) {} return r; };
+  });
+
+
+  // ----- explicações dos títulos viram um "i" azul ao lado do título -----
+  let dicaN = 0;
+  function dicas(root) {
+    if (!root) return;
+    root.querySelectorAll('h2, h3').forEach(h => {
+      if (h.closest('.card, dialog, .dica-txt') || h.querySelector('.dica')) return;
+      const textos = [];
+      let el = h.nextElementSibling;
+      while (el && el.tagName === 'P' && (el.classList.contains('lead') || (h.tagName === 'H3' && el.classList.contains('note')))) { textos.push(el); el = el.nextElementSibling; }
+      if (!textos.length) return;
+      const id = 'dica' + (++dicaN);
+      const caixa = document.createElement('span'); caixa.className = 'dica';
+      caixa.innerHTML = `<button type="button" class="dica-i" aria-label="Sobre: ${escN(h.textContent.trim())}" aria-describedby="${id}">i</button><span class="dica-txt" role="tooltip" id="${id}"></span>`;
+      const alvo = caixa.lastElementChild;
+      textos.forEach(t => { const p = document.createElement('p'); p.innerHTML = t.innerHTML; alvo.appendChild(p); t.remove(); });
+      h.appendChild(caixa);
+    });
+  }
+  // gráficos de linha: o SVG estica com o cartão; o texto e os pontos voltam ao tamanho real
+  function ajustarGraficos() {
+    document.querySelectorAll('svg.lc').forEach(svg => {
+      const w = svg.getBoundingClientRect().width; if (!w) return;
+      const k = svg.viewBox.baseVal.width / w;
+      svg.querySelectorAll('text').forEach(t => t.setAttribute('font-size', (11.5 * k).toFixed(2)));
+      svg.querySelectorAll('circle').forEach(c => c.setAttribute('r', (3.6 * k).toFixed(2)));
+    });
+  }
+  let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(ajustarGraficos, 120); });
+  function posRender() { dicas(document.getElementById('body')); dicas(document.getElementById('tab-empresa')); dicas(document.getElementById('tab-historico')); ajustarGraficos(); }
+  ['render', 'renderHistorico', 'renderEmpresa', 'trocarAba'].forEach(n => {
+    const f = window[n]; if (typeof f !== 'function') return;
+    window[n] = function () { const r = f.apply(this, arguments); try { posRender(); } catch (_) {} return r; };
   });
 
   // gaveta (telas pequenas) e recolher (telas grandes)
