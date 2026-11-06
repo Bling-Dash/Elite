@@ -1276,11 +1276,11 @@ function render() {
 // --- carga de dados ---
 function finishLoad(fonte, temMeta, extra) {
   const csms = [...new Set(ALL.map(a => a.csm).filter(Boolean))].sort();
-  const sel = $('#csm'), prev = (ALL.length && csms.includes(sel.value)) ? sel.value : (localStorage.getItem('csm') || 'Bruno');
+  const sel = $('#csm'), prev = (ALL.length && csms.includes(sel.value)) ? sel.value : (localStorage.getItem('csm') || '');
   sel.innerHTML = csms.map(c => `<option>${esc(c)}</option>`).join('') + '<option value="__all__">Todas as carteiras</option>';
   sel.value = csms.includes(prev) ? prev : (prev === '__all__' ? '__all__' : csms[0]);
-  $('#status').textContent = `${fonte} · ${ALL.length} empresas · ${temMeta ? 'Cx + Meta' : 'só Cx (sem Tabela Meta: GMV, API e e-commerce ficam limitados)'}${extra ? ' · ' + extra : ''} · carregado ${new Date().toLocaleString('pt-BR')}`;
-  $('#status').className = 'ok'; render(); toggleManual(false);
+  $('#status').textContent = `${fonte} · ${ALL.length} empresas em ${csms.length} carteiras · ${temMeta ? 'Cx + Meta' : 'só Cx (sem Tabela Meta: GMV, API e e-commerce ficam limitados)'}${extra ? ' · ' + extra : ''} · carregado ${new Date().toLocaleString('pt-BR')}`;
+  $('#status').className = 'ok'; $('#status').title = 'Carteiras encontradas nos dados: ' + csms.join(', '); render(); toggleManual(false);
 }
 function loadWorkbook(wb, fonte) {
   let cx = null, meta = null;
@@ -1354,7 +1354,9 @@ function rowsFromB64(f) {
 }
 // Colunas da API ainda em validação (a exportação manual prevalece enquanto houver uma).
 // Quando a validação confirmar que batem, é só tirar o nome daqui.
-const CX_PREFERIR_EXPORTACAO = ['Último MRR Ativo', 'Dias da última tarefa concluída', 'Responsável: Analista Principal'];
+// "Responsável: Analista Principal" saiu desta lista: quem é o CSM de cada cliente precisa vir sempre da API (ao vivo).
+// Com a exportação manual prevalecendo, uma exportação antiga mantinha o responsável anterior e o CSM novo ficava sem carteira.
+const CX_PREFERIR_EXPORTACAO = ['Último MRR Ativo', 'Dias da última tarefa concluída'];
 
 // ===== Validação: compara, coluna a coluna, a tabela da API com a exportação manual (abra a página com ?validar=1) =====
 function validarCx(apiRows, compRows) {
@@ -1656,6 +1658,15 @@ const delta = (a, b, fmt = fmtInt, inverso = false) => {
   return `<span class="delta ${bom ? 'up' : 'down'}">${sobe ? '▲' : '▼'} ${esc(fmt(Math.abs(a - b)))}${pc}</span>`;
 };
 
+// ---------- carteiras ao vivo ----------
+// As fotos do histórico só passam a ter uma carteira nova depois de gravadas; por isso as listas de carteiras e de CSMs
+// somam o que está nas fotos com o que está nos dados de hoje (ALL), e uma carteira nova aparece no mesmo dia, sem ajuste manual.
+const carteirasAoVivo = () => [...new Set(ALL.map(a => a.csm).filter(Boolean))];
+const respDe = a => S(col(a._r || {}, 'Responsável: Analista Principal')).toLowerCase();
+function carteiraAoVivoDe(email) {
+  const cont = {}; ALL.forEach(a => { if (a.csm && respDe(a) === email) cont[a.csm] = (cont[a.csm] || 0) + 1; });
+  const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : '';
+}
 // ---------- dados históricos (Apps Script: acao=historico) ----------
 const histDisponivel = () => typeof WEBAPP_URL !== 'undefined' && WEBAPP_URL;
 async function carregarHist(gran, silencioso) {
@@ -2309,7 +2320,7 @@ function movimentacao(antes, depois, chave, ordem, nome) {
 function histElite(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas. A primeira entra na próxima publicação do Drive.</p>';
   const ult = H.snap[H.per[H.per.length - 1]];
-  const carteiras = [...new Set(H.per.flatMap(p => H.snap[p].map(x => x.csm)).filter(Boolean))].sort();
+  const carteiras = [...new Set([...H.per.flatMap(p => H.snap[p].map(x => x.csm)), ...carteirasAoVivo()].filter(Boolean))].sort();
   const empresas = ult.filter(x => !HV2.carteira || x.csm === HV2.carteira).sort((p, q) => p.nome.localeCompare(q.nome));
   const empSel = HV2.empresa ? ult.find(x => x.id === HV2.empresa) : null;
   let h = `<div class="heatctl"><label>Carteira: <select data-h2f="carteira"><option value="">Todas</option>${carteiras.map(c => `<option${c === HV2.carteira ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
@@ -2318,6 +2329,8 @@ function histElite(H) {
   const filtra = arr => arr.filter(x => (!HV2.carteira || x.csm === HV2.carteira) && (!HV2.empresa || x.id === HV2.empresa));
   const P = H.per.map(p => metricas(filtra(H.snap[p])));
   const k = P.length - 1, prev = P[k - 1] || null, pk = P[k];
+  if (HV2.carteira && !H.per.some(p => H.snap[p].some(x => x.csm === HV2.carteira)))
+    h += `<p class="note">A carteira <b>${esc(HV2.carteira)}</b> é nova: já está nos dados de hoje (${fmtInt(ALL.filter(a => a.csm === HV2.carteira).length)} empresas), mas ainda não entrou em nenhuma foto gravada do histórico. Os números dela aparecem aqui a partir da próxima foto, sem precisar fazer nada. Enquanto isso, veja a carteira em Gestão de Carteira escolhendo ${esc(HV2.carteira)} no seletor do topo.</p>`;
   const nomePer = HV2.gran === 'mes' ? 'o mês anterior' : 'a semana anterior';
   h += `<p class="lead">${empSel ? esc(empSel.nome) : (HV2.carteira ? 'Carteira ' + esc(HV2.carteira) : 'Todo o plano Elite')} · último período: <b>${rotulo(H.per[k])}</b>${prev ? ' · setas comparam com ' + nomePer : ''}</p>`;
   h += `<div class="kpis">${[
@@ -2380,6 +2393,7 @@ function comparador(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas.</p>';
   const ult = H.snap[H.per[H.per.length - 1]];
   const tam = {}; ult.forEach(x => { if (x.csm) tam[x.csm] = (tam[x.csm] || 0) + 1; });
+  carteirasAoVivo().forEach(c => { if (!(c in tam)) tam[c] = 0; });   // carteira nova, ainda sem foto gravada
   const carteiras = Object.keys(tam).sort();
   if (!CMP.cart) CMP.cart = ['__todas__', ...Object.entries(tam).sort((p, q) => q[1] - p[1]).slice(0, 3).map(x => x[0])];
   const ops = v => METRICAS.map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -2404,10 +2418,11 @@ function histCsm(H) {
   const pers = Object.keys(tab || {}).sort().slice(HV2.gran === 'mes' ? -12 : -16);
   const ultSnap = H.per.length ? H.snap[H.per[H.per.length - 1]] : [];
   // usuários que são responsáveis por alguma empresa Elite vêm primeiro
-  const respEmails = new Set(ultSnap.map(x => x.resp).filter(Boolean));
+  const respEmails = new Set([...ultSnap.map(x => x.resp), ...ALL.map(respDe)].filter(Boolean));   // fotos + dados de hoje
   const users = Object.entries(T.usuarios || {}).map(([id, u]) => ({ id, nome: u.nome || u.email, email: S(u.email).toLowerCase() }))
-    .filter(u => pers.some(p => tab[p][u.id])).sort((p, q) => (respEmails.has(q.email) - respEmails.has(p.email)) || p.nome.localeCompare(q.nome));
-  const carteiraDe = u => { const cont = {}; ultSnap.filter(x => x.resp === u.email).forEach(x => { cont[x.csm] = (cont[x.csm] || 0) + 1; }); const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : ''; };
+    .filter(u => pers.some(p => tab[p][u.id]) || respEmails.has(u.email)).sort((p, q) => (respEmails.has(q.email) - respEmails.has(p.email)) || p.nome.localeCompare(q.nome));
+  // carteira do CSM: primeiro pelos dados de hoje (responsável atual); se não houver, pela última foto
+  const carteiraDe = u => { const vivo = carteiraAoVivoDe(u.email); if (vivo) return vivo; const cont = {}; ultSnap.filter(x => x.resp === u.email).forEach(x => { cont[x.csm] = (cont[x.csm] || 0) + 1; }); const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : ''; };
   const sel = users.find(u => u.id === HV2.csm);
   let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos (soma)</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label></div>`;
   const soma = (p, k) => (sel ? [sel] : users).reduce((s, u) => s + ((tab[p][u.id] || {})[k] || 0), 0);
