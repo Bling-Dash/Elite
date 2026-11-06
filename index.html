@@ -560,6 +560,8 @@ table.loctab td a{color:var(--link)}
 .abinhas.cidtabs select{min-width:200px;margin-left:4px;padding:4px 8px}
 .locleg .bol{display:inline-block;border-radius:50%;background:var(--ac);opacity:.6;border:1px solid var(--ac2)}
 .loc-rotulo{display:block;margin:16px 0 0;font-size:12px;font-weight:600;color:var(--mut)}
+.locwarn{margin-left:4px;color:var(--yl)!important;font-weight:700;cursor:help}
+.loc-aviso.ck:hover{outline:1px solid var(--warn-fg)}
 </style>
 </head>
 <body>
@@ -1725,18 +1727,21 @@ function ufDoCep(v) {
   let d = S(v).replace(/\D/g, ''); if (d.length === 7) d = '0' + d; if (d.length !== 8) return '';
   const n = +d.slice(0, 5), f = CEP_UF.find(([a, b]) => n >= a && n <= b); return f ? f[2] : '';
 }
-function ufDoTexto(v) {
+// UF só no FIM de um texto, escrita em sigla maiúscula depois de um separador: "Guarulhos - SP", "…, 100 - Centro/SP", "… SP 07000-000".
+// Nunca procura nome de estado dentro de endereço: "Rua Amazonas" ou "Rua Amapá" não dizem nada sobre o estado do cliente.
+function ufNoFim(v) {
   const s = S(v); if (!s) return '';
-  const m = s.match(/(?:^|[\s\-\/,(|])([A-Z]{2})\)?\s*(?:[-,]?\s*\d{5}-?\d{3})?\s*(?:[-,]?\s*Brasil)?\s*\.?$/i);
-  if (m && UF_NOME[m[1].toUpperCase()] && (m[1] === m[1].toUpperCase() || s.length <= 3)) return m[1].toUpperCase();
-  const n = locNorm(s);
-  for (const nome of UF_NOMES_LONGOS) if (new RegExp('(^|[^a-z])' + nome + '([^a-z]|$)').test(n)) return UF_POR_NOME[nome];
-  return '';
+  const m = s.match(/[\s\-–\/,(|]([A-Z]{2})\)?\s*(?:[-,]?\s*\d{5}-?\d{3})?\s*(?:[-,]?\s*Brasil)?\s*\.?$/);
+  return m && UF_NOME[m[1]] ? m[1] : '';
 }
+// valor de uma coluna de estado: "SP", "sp", "São Paulo", "SP - São Paulo", "São Paulo (SP)"
 function ufDe(v) {
   const s = S(v); if (!s) return '';
   const u = s.toUpperCase(); if (UF_NOME[u]) return u;
-  return UF_POR_NOME[locNorm(s)] || ufDoTexto(s);
+  const n = locNorm(s); if (UF_POR_NOME[n]) return UF_POR_NOME[n];
+  const ini = s.match(/^([A-Za-z]{2})\s*[-–\/:]\s*(.+)$/); if (ini && UF_NOME[ini[1].toUpperCase()]) return ini[1].toUpperCase();
+  const fim = s.match(/^(.+?)\s*(?:[-–\/:]|\()\s*([A-Za-z]{2})\s*\)?$/); if (fim && UF_NOME[fim[2].toUpperCase()]) return fim[2].toUpperCase();
+  return '';
 }
 // "Campinas/SP", "Campinas - SP", "Campinas (SP)" -> nome da cidade + UF
 function locSeparaCidade(v) {
@@ -1782,28 +1787,46 @@ function locChaves() {
   LOC_K = K; LOC_CACHE = new WeakMap(); return K;
 }
 const locTem = campo => { const k = locChaves()[campo]; return !!(k.cx || k.mt); };
+// O estado de cada cliente sai da combinação das fontes, e não da primeira que aparecer:
+//   coluna de estado (peso 3) · "Cidade/UF" na coluna de cidade (3) · CEP (2) · nome da cidade que só existe em um estado (2)
+//   · nome da cidade que existe em vários estados (1, só reforça um estado já indicado) · sigla no fim do endereço (1).
+// Quando as fontes discordam, vence a soma maior e o cliente fica marcado para conferência (⚠).
 function locInfo(a) {
   const K = locChaves(); let c = LOC_CACHE.get(a); if (c) return c;
   const r = a._r || {}, m = a._m || {};
   const dois = campo => [S(K[campo].cx ? r[K[campo].cx] : ''), S(K[campo].mt ? m[K[campo].mt] : '')];
   const val = campo => dois(campo).find(Boolean) || '';
   const [ufCx, ufMt] = dois('uf'), [logCx, logMt] = dois('logradouro'), [cepCx, cepMt] = dois('cep');
-  const sc = locSeparaCidade(val('cidade'));
-  let uf = ufDe(ufCx) || ufDe(ufMt);
-  if (!uf) uf = sc.uf;
-  if (!uf) uf = ufDoTexto(logCx) || ufDoTexto(logMt);
-  if (!uf) uf = ufDoCep(cepCx) || ufDoCep(cepMt);
-  // cidade: procura no estado do cliente; sem estado, usa a cidade se o nome for único no país
-  const I = locCidIdx(), kc = locNormCid(sc.nome); let cid = null;
-  if (kc) {
-    if (uf) cid = (I.porUf[uf] && I.porUf[uf].get(kc)) || null;
-    else { const l = I.nac[kc]; if (l && l.length === 1) { cid = l[0]; uf = cid.uf; } }
-  }
+  const sc = locSeparaCidade(val('cidade')), I = locCidIdx(), kc = locNormCid(sc.nome);
+  const fontes = {
+    col: ufDe(ufCx) || ufDe(ufMt),
+    cidUf: sc.uf,
+    cep: ufDoCep(cepCx) || ufDoCep(cepMt),
+    end: ufNoFim(logCx) || ufNoFim(logMt),
+  };
+  const cidUfs = kc && I.nac[kc] ? [...new Set(I.nac[kc].map(x => x.uf))] : [];
+  const votos = {}, ordem = [], vota = (u, w) => { if (!u) return; if (!(u in votos)) { votos[u] = 0; ordem.push(u); } votos[u] += w; };
+  vota(fontes.col, 3); vota(fontes.cidUf, 3); vota(fontes.cep, 2);
+  if (cidUfs.length === 1) vota(cidUfs[0], 2); else cidUfs.forEach(u => { if (u in votos) vota(u, 1); });
+  vota(fontes.end, 1);
+  let uf = ''; ordem.forEach(u => { if (!uf || votos[u] > votos[uf]) uf = u; });
+  const cid = uf && kc ? ((I.porUf[uf] && I.porUf[uf].get(kc)) || null) : null;
+  // de onde veio o estado e se as fontes batem
+  const NOMES = { col: 'coluna de estado', cidUf: 'coluna de cidade (Cidade/UF)', cep: 'CEP', end: 'fim do endereço' };
+  const origem = Object.keys(NOMES).filter(k => fontes[k] && fontes[k] === uf).map(k => NOMES[k]);
+  if (uf && cidUfs.includes(uf)) origem.push('nome da cidade');
+  const div = [];
+  Object.keys(NOMES).filter(k => k !== 'end').forEach(k => { if (fontes[k] && uf && fontes[k] !== uf) div.push(`${NOMES[k]} diz ${fontes[k]}`); });
+  if (uf && kc && cidUfs.length && !cidUfs.includes(uf)) div.push(`a cidade ${sc.nome} existe em ${cidUfs.join(', ')}, não em ${uf}`);
+  if (uf && kc && !cidUfs.length) div.push(`cidade “${sc.nome}” não encontrada na lista do IBGE`);
+  if (uf && !fontes.col) div.push('sem estado na coluna de estado: deduzido');
+  const conflito = div.filter(d => !/^sem estado na coluna|não encontrada/.test(d)).length > 0;
   // endereço: logradouro + número + bairro (sem repetir o que já estiver no logradouro)
   let end = val('logradouro'); const num = val('numero'), bai = val('bairro');
   if (num && !end.includes(num)) end = end ? end + ', ' + num : num;
   if (bai && !locNorm(end).includes(locNorm(bai))) end = end ? end + ' · ' + bai : bai;
-  c = { uf, cid, cidade: cid ? cid.nome : sc.nome, cidKey: cid ? cid.nome : (kc ? '~' + kc : ''), endereco: end, contato: val('contato'), tel: val('telefone'), cargo: val('cargo') };
+  c = { uf, cid, cidade: cid ? cid.nome : sc.nome, cidKey: cid ? cid.nome : (kc ? '~' + kc : ''), endereco: end, contato: val('contato'), tel: val('telefone'), cargo: val('cargo'),
+    fontes, cidUfs, cep: val('cep'), cidadeTxt: val('cidade'), origem: origem.join(' + ') || '—', obs: div, conflito, deduzido: !!uf && !fontes.col };
   LOC_CACHE.set(a, c); return c;
 }
 
@@ -1847,7 +1870,7 @@ function locTabelaHtml(lista, id) {
   return `<div class="tw"><table class="loctab"${id ? ` id="${id}"` : ''}><thead><tr><th>Estado</th><th>Cidade</th><th>Cliente</th><th>CNPJ</th>${comEnd ? '<th>Endereço</th>' : ''}<th>Contato principal</th><th>Telefone</th><th>Cargo</th>${comCart ? '<th>Carteira</th>' : ''}</tr></thead><tbody>${[...lista].sort(locOrdena).map(a => {
     const i = locInfo(a), tel = fmtTel(i.tel), dTel = tel.replace(/\D/g, '');
     const busca = locNorm([a.nome, a.razao, a.id, a.cnpjTxt, S(a.cnpjTxt).replace(/\D/g, ''), i.cidade, i.endereco, i.contato, i.cargo, i.tel, dTel, i.uf, UF_NOME[i.uf] || '', a.csm].join(' '));
-    return `<tr data-busca="${esc(busca)}"><td>${i.uf ? `<span class="locsg" title="${esc(UF_NOME[i.uf])}">${i.uf}</span>` : '<span class="mut">—</span>'}</td>`
+    return `<tr data-busca="${esc(busca)}"><td>${i.uf ? `<span class="locsg" title="${esc(UF_NOME[i.uf] + ' · origem: ' + i.origem)}">${i.uf}</span>` : '<span class="mut">—</span>'}${i.conflito ? `<span class="mut locwarn" title="${esc('Conferir: ' + i.obs.join('; '))}" data-locaud="1">⚠</span>` : ''}</td>`
       + `<td>${i.cidade ? esc(i.cidade) : '<span class="mut">—</span>'}</td>`
       + `<td><span class="lk loc-emp" data-emp="${esc(a.id)}">${esc(a.nome)}</span>${a.razao && a.razao !== a.nome ? `<span class="mut sm">${esc(a.razao)}</span>` : ''}</td>`
       + `<td>${esc(fmtCnpj(a.cnpjTxt) || '—')}</td>${comEnd ? `<td class="wrap">${esc(i.endereco || '—')}</td>` : ''}<td>${esc(i.contato || '—')}</td>`
@@ -1876,6 +1899,9 @@ function renderLocalizacao() {
   const falta = [[locTem('uf') || locTem('cep') || locTem('cidade') || locTem('logradouro'), 'Estado (UF, CEP ou cidade)'], [locTem('cidade'), 'Cidade'], [locTem('logradouro'), 'Endereço'], [locTem('contato'), 'Contato principal'], [locTem('telefone'), 'Telefone'], [locTem('cargo'), 'Cargo']].filter(f => !f[0]).map(f => `<b>${f[1]}</b>`);
   if (falta.length) h += `<p class="loc-aviso">⚠ Não encontrei na base a coluna de ${falta.join(', ')}. Se ela existir com outro nome, acrescente o nome em <code>LOC_CAMPOS</code> (bloco “LOCALIZAÇÃO” do index.html).</p>`;
 
+  const conf = base.filter(a => locInfo(a).conflito), ded = base.filter(a => locInfo(a).deduzido && !locInfo(a).conflito);
+  if (conf.length) h += `<p class="loc-aviso ck" data-locaud="1">⚠ <b>${locPl(conf.length)} com localização que não bate</b> entre coluna de estado, CEP e cidade. O painel usou a fonte mais confiável, mas vale corrigir na base. <span class="lk">Ver quais são</span></p>`;
+  if (ded.length) h += `<p class="note">${locPl(ded.length)} sem estado preenchido na base: o estado foi deduzido pelo CEP ou pela cidade. <span class="lk ck" data-locaud="2">Conferir</span></p>`;
   h += `<div class="loc-grid"><div class="card"><div class="loc-cab" id="locCab"></div>
     <div class="locmapa" id="locMapa"><div class="locz"><button type="button" data-locz="1" title="Aproximar" aria-label="Aproximar o mapa">+</button><button type="button" data-locz="-1" title="Afastar" aria-label="Afastar o mapa">−</button></div>
     <svg class="locmap" viewBox="${LOC_VB.join(' ')}" role="group" aria-label="Mapa do Brasil: clique em um estado para ver as cidades"></svg><div class="loctip" id="locTip" hidden></div></div><div id="locLeg"></div></div>
@@ -1986,6 +2012,15 @@ function locAbrirLista(uf, cid) {
   $('#mbody').scrollTop = 0;
   if (!$('#modal').open) $('#modal').showModal();
 }
+function locAbrirConferencia(soConflito) {
+  const lista = locBase().filter(a => { const i = locInfo(a); return soConflito ? i.conflito : (i.conflito || i.deduzido || !i.uf); }).sort(locOrdena);
+  $('#mtitle').textContent = `Conferência da localização · ${locPl(lista.length)}`;
+  $('#mbody').innerHTML = `<p class="note" style="margin:0 0 10px">${soConflito ? 'Clientes em que a coluna de estado, o CEP e a cidade apontam estados diferentes.' : 'Clientes com estado deduzido (sem a coluna de estado preenchida), com divergência ou sem estado.'} A coluna “Estado usado” é o que o painel considera; corrigindo a base, o aviso some.</p>`
+    + (lista.length ? `<table><thead><tr><th>Cliente</th><th>CNPJ</th><th>Estado usado</th><th>Origem</th><th>Coluna de estado</th><th>CEP</th><th>UF do CEP</th><th>Cidade na base</th><th>Estados com essa cidade</th><th>Endereço</th><th>O que conferir</th></tr></thead><tbody>${lista.map(a => { const i = locInfo(a);
+      return `<tr><td><span class="lk loc-emp" data-emp="${esc(a.id)}">${esc(a.nome)}</span></td><td>${esc(fmtCnpj(a.cnpjTxt) || '—')}</td><td><b>${esc(i.uf || '—')}</b></td><td>${esc(i.origem)}</td><td>${esc(i.fontes.col || '—')}</td><td>${esc(i.cep || '—')}</td><td>${esc(i.fontes.cep || '—')}</td><td>${esc(i.cidadeTxt || '—')}</td><td>${esc(i.cidUfs.join(', ') || '—')}</td><td class="wrap">${esc(i.endereco || '—')}</td><td class="wrap">${esc(i.obs.join('; ') || '—')}</td></tr>`; }).join('')}</tbody></table>` : '<p class="vazio">Nada para conferir.</p>');
+  $('#mbody').scrollTop = 0;
+  if (!$('#modal').open) $('#modal').showModal();
+}
 function locEscolheUf(uf) { LOC.uf = uf; LOC.cidade = '__todas__'; locResetZoom(); locAtualiza(); }
 
 // enquadramento: Brasil inteiro ou o estado aberto; zoom (+ / −) e arrastar quando aproximado
@@ -2057,6 +2092,7 @@ document.addEventListener('click', e => {
   const ct = t.closest('[data-loccidtab]'); if (ct) { LOC.cidade = ct.dataset.loccidtab; locAtualiza(); return; }
   const rk = t.closest('[data-locrank]'); if (rk) { locEscolheUf(rk.dataset.locrank); return; }
   const rc = t.closest('[data-loccid]'); if (rc) { if (rc.dataset.locuf2 !== LOC.uf) { LOC.uf = rc.dataset.locuf2; locResetZoom(); } LOC.cidade = rc.dataset.loccid; locAtualiza(); locAbrirLista(LOC.uf, LOC.cidade); return; }
+  const au = t.closest('[data-locaud]'); if (au) { locAbrirConferencia(au.dataset.locaud === '1'); return; }
   if (t.closest('[data-locsem]')) { locEscolheUf('__sem__'); locAbrirLista('__sem__', ''); return; }
   const m = t.closest('#locMapa path.uf, #locMapa circle.cid'); if (m) { if (!LOC_DRAG.moveu) locCliqueMapa(m); return; }
   if (t.closest('#modal .loc-emp')) $('#modal').close();   // o clique no nome já leva para a Visão da Empresa
@@ -2683,7 +2719,7 @@ document.getElementById('exportAll').addEventListener('click', e => {
       if (a) r.push({ k: 'ficha', l: a.nome, on: TAB === 'empresa' });
       return r;
     }
-    if (tab === 'localizacao') return [{ k: 'mapa', l: 'Clientes por estado e cidade', on: TAB === 'localizacao' }];
+    if (tab === 'localizacao') return [{ k: 'mapa', l: 'Estados e cidades', on: TAB === 'localizacao' }];
     return [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras'], ['comparar', 'Comparador']].map(([k, l]) => ({ k, l, on: TAB === 'historico' && HV2.sub === k }));
   }
   const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização']];
