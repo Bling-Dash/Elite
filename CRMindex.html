@@ -184,7 +184,7 @@ const COR_ESTADO = { 'Crítico': 't-red', 'Em Atenção': 't-org', 'Sem Resposta
 
 const SCHEMAS = {
   usuarios: ['id', 'nome', 'email', 'perfil', 'ativo', 'carteira', 'solicitado_em'],
-  oficiais: ['id_cliente', 'razao_social', 'nome_fantasia', 'cnpj', 'data_entrada_elite', 'data_contratacao_bling', 'plano', 'periodicidade', 'mrr', 'gmv', 'pedidos_periodo', 'faixa_apurada', 'hs_dados', 'hs_data_calculo', 'pedidos_mes', 'importacoes_mes', 'consumo_limite_pct', 'inadimplente', 'dias_atraso', 'valor_atraso', 'data_cancelamento', 'atualizado_em'],
+  oficiais: ['id_cliente', 'razao_social', 'nome_fantasia', 'cnpj', 'data_entrada_elite', 'data_contratacao_bling', 'plano', 'periodicidade', 'mrr', 'gmv', 'pedidos_periodo', 'faixa_apurada', 'hs_dados', 'hs_data_calculo', 'pedidos_mes', 'importacoes_mes', 'consumo_limite_pct', 'inadimplente', 'dias_atraso', 'valor_atraso', 'data_cancelamento', 'atualizado_em', 'carteira_cx', 'responsavel_cx'],
   clientes: ['id_cliente', 'jornada', 'status', 'objetivos', 'faixa_atendimento', 'key_account', 'key_account_origem', 'key_account_justificativa', 'prioridade_abc', 'csm_ongoing', 'csm_onboarding', 'data_atribuicao', 'if_atual', 'if_desde', 'if_motivo', 'if_detalhamento', 'if_pendente', 'if3_inicio', 'excecao_validade', 'gatilho', 'gatilho_descricao', 'gatilho_desde', 'criado_em'],
   contatos: ['id', 'id_cliente', 'nome', 'papel', 'telefone', 'whatsapp', 'email', 'canal_preferido', 'sponsor', 'ativo', 'observacoes', 'confirmado_em'],
   interacoes: ['id', 'id_cliente', 'data', 'tipo', 'canal', 'participantes', 'resultado', 'resumo', 'compromissos', 'relevancia', 'chk_abertura', 'chk_cenario', 'chk_uso', 'chk_riscos', 'chk_acao', 'proxima_tarefa_id', 'registrado_por', 'registrado_em'],
@@ -300,6 +300,7 @@ Object.keys(SCHEMAS).forEach(t => (DB[t] = []));
 const MODO_DEMO = !WEBAPP_URL;
 const CHAVE_DEMO = 'crmElite_demo_v1';
 let EMAIL_SERVIDOR = '';
+let SYNC = null; // última busca automática da Meta e do CX
 let EU_SERVIDOR = null; // cadastro de quem abriu o CRM, conforme o e-mail Google
 let ULTIMA_CARGA = 0;
 let VERSAO = 0; // muda a cada alteração: invalida a visão calculada
@@ -332,6 +333,7 @@ async function carregarDados() {
     const d = await jsonp({ acao: 'carregar', token: token() });
     EMAIL_SERVIDOR = S(d.email).toLowerCase();
     EU_SERVIDOR = d.eu || null;
+    SYNC = d.sync || null;
     Object.keys(SCHEMAS).forEach(t => {
       const cols = (d.colunas && d.colunas[t]) || SCHEMAS[t];
       DB[t] = (d.tabelas[t] || []).map(l => { const o = linhaVazia(t); cols.forEach((c, i) => { if (c in o) o[c] = S(l[i]); }); return o; });
@@ -340,6 +342,12 @@ async function carregarDados() {
   ULTIMA_CARGA = Date.now(); VERSAO++;
 }
 
+async function sincronizarAgora() {
+  const d = await jsonp({ acao: 'sincronizar', token: token() }, 180000);
+  SYNC = d.sync || SYNC;
+  await carregarDados();
+  return SYNC;
+}
 async function solicitarAcesso(tipo, carteira, nome) {
   await jsonp({ acao: 'solicitar', token: token(), tipo, carteira, nome });
 }
@@ -916,6 +924,7 @@ function executarAutomacoes(tx) {
   if (!usuarioAtivo(u) || ehVisitante(u)) return log;
   const n = master ? aprovacoesTacitas(tx, d) : 0; if (n) log.push(`${n} aprovação(ões) por decurso de prazo`);
   VERSAO++;
+  const resumo = {}; // uma notificação por pessoa por dia, em vez de uma por cliente
   carteira().filter(c => master || podeEditar(u, c)).forEach(c => {
     const cid = c.id_cliente, nome = c.nome, csm = respPadrao(c.csm);
     const canc = data(c.data_cancelamento);
@@ -939,9 +948,13 @@ function executarAutomacoes(tx) {
       if (ch && criarTarefa(tx, cid, 'Revisar IF', desc, csm, somaUteis(d, 2), 'Regra: HS abaixo de 60', ch)) evento(tx, cid, 'Tarefa automática', desc);
     }
     if (divergenciaHS(hs, c.hs_final) >= 2) notificarCoord(tx, 'Divergência de HS', `${nome}: HS de dados ${fnum(hs)} e HS final ${fnum(c.hs_final)}`, cid, `div:${cid}:${c.hs_data_calculo}:${c.if_atual}`);
-    if (!c.prox_acao) notificar(tx, csm, 'Sem próxima ação', `${nome} está sem próxima ação agendada.`, cid, `semprox:${cid}:${iso(somaDias(d, -c.dias_sem_prox))}`);
-    if (c.dias_sem_efetivo != null && c.dias_sem_efetivo >= DIAS_SEM_EFETIVO) notificar(tx, csm, 'Sem contato efetivo', `${nome}: ${c.dias_sem_efetivo} dias sem resposta do cliente.`, cid, `sce:${cid}:${c.ultimo_efetivo}`);
+    if (!c.prox_acao) (resumo[csm] = resumo[csm] || { semProx: 0, semEf: 0 }).semProx++;
+    if (c.dias_sem_efetivo != null && c.dias_sem_efetivo >= DIAS_SEM_EFETIVO) (resumo[csm] = resumo[csm] || { semProx: 0, semEf: 0 }).semEf++;
     if (c.sem_resposta && (c.prioridade_abc === 'A' || c.key_account)) notificarCoord(tx, 'Sem resposta', `${nome} (conta A ou Key Account) concluiu a régua sem resposta.`, cid, `semresp:${cid}:${c.ultimo_efetivo}`);
+  });
+  Object.entries(resumo).forEach(([pessoa, r]) => {
+    if (r.semProx) notificar(tx, pessoa, 'Sem próxima ação', `${r.semProx} cliente(s) da sua carteira sem próxima ação agendada. Veja a página Sem próxima ação.`, '', `semprox:${iso(d)}`);
+    if (r.semEf) notificar(tx, pessoa, 'Sem contato efetivo', `${r.semEf} cliente(s) há ${DIAS_SEM_EFETIVO} dias ou mais sem contato efetivo.`, '', `sce:${iso(d)}`);
   });
   DB.descontos.forEach(ds => { const f = data(ds.fim); if (f && f >= d && f <= somaDias(d, 7)) { const c = obter('clientes', ds.id_cliente); if (c && (master || podeEditar(u, c))) notificar(tx, c.csm_ongoing, 'Fim de desconto', `Desconto de ${ds.pct}% termina em ${fdata(f)}.`, ds.id_cliente, `desc:${ds.id}`); } });
   tarefasSituacao().filter(t => t.situacao === 'Vencida' && (master || t.responsavel === u.nome)).forEach(t => notificar(tx, t.responsavel, 'Tarefa vencida', `${t.tipo}: ${t.descricao} (prazo ${fdata(t.prazo)})`, t.id_cliente, `venc:${t.id}`));
@@ -1223,6 +1236,7 @@ function desenharMenu() {
     <div class="rodape">
       <span id="sinc" class="sinc"></span>
       ${MODO_DEMO ? '' : '<button class="btn peq" id="recarregar" type="button">Atualizar dados</button>'}
+      ${SYNC ? `<span>Dados oficiais: ${fdh(SYNC.quando)}</span>` : ''}
       <span>Data de referência: ${fdata(hoje())}</span>
       <button class="btn peq" id="tema" type="button">Alternar tema</button>
     </div>`;
@@ -1308,10 +1322,23 @@ function ligarPrimeiroUsuario() {
   $('#pu_demo') && ($('#pu_demo').onclick = () => { criarBaseExemplo(); iniciar(); });
 }
 function telaVazia() {
-  return `<div class="topo"><div><h1>CRM CS Elite</h1><p class="lead">A base ainda está vazia. Importe a planilha do Metabase em Configurações para começar${MODO_DEMO ? ' ou crie uma base de exemplo para conhecer o CRM' : ''}.</p></div></div>
-  <div class="acoes">${ehGestao() ? '<button class="btn pri" data-ir="config">Ir para Configurações</button>' : ''}${MODO_DEMO ? '<button class="btn" id="criarExemplo" type="button">Criar base de exemplo</button>' : ''}</div>`;
+  if (!MODO_DEMO) return `<div class="topo"><div><h1>CRM CS Elite</h1><p class="lead">${ehGestao()
+    ? 'Ainda não há clientes. O CRM busca os dados sozinho na planilha Meta e no CustomerX (as mesmas fontes do dashboard). Clique abaixo para fazer a primeira busca agora; leva cerca de um minuto.'
+    : 'Ainda não há clientes. A primeira busca dos dados da Meta e do CustomerX está sendo feita pelo CS Ops; volte em alguns minutos.'}</p></div></div>
+    <div id="vzErro"></div>${ehGestao() ? '<div class="acoes"><button class="btn pri" id="buscarAgora" type="button">Buscar dados agora</button></div>' : ''}`;
+  return `<div class="topo"><div><h1>CRM CS Elite</h1><p class="lead">A base ainda está vazia. Importe a planilha do Metabase em Configurações para começar ou crie uma base de exemplo para conhecer o CRM.</p></div></div>
+  <div class="acoes">${ehGestao() ? '<button class="btn pri" data-ir="config">Ir para Configurações</button>' : ''}<button class="btn" id="criarExemplo" type="button">Criar base de exemplo</button></div>`;
 }
-function ligarTelaVazia() { $('#criarExemplo') && ($('#criarExemplo').onclick = () => { criarBaseExemplo(); iniciar(); }); ligarComuns($('#conteudo')); }
+function ligarTelaVazia() {
+  $('#criarExemplo') && ($('#criarExemplo').onclick = () => { criarBaseExemplo(); iniciar(); });
+  $('#buscarAgora') && ($('#buscarAgora').onclick = () => buscarAgora($('#buscarAgora'), $('#vzErro')));
+  ligarComuns($('#conteudo'));
+}
+async function buscarAgora(btn, errEl) {
+  btn.disabled = true; const rot = btn.textContent; btn.textContent = 'Buscando na Meta e no CustomerX…';
+  try { const r = await sincronizarAgora(); aviso(`Dados atualizados: ${r.novos} clientes novos e ${r.atualizados} atualizados.`); localStorage.removeItem('crmAuto'); render(); }
+  catch (e) { if (errEl) errEl.innerHTML = `<div class="aviso a-err">${esc(e.message)}</div>`; else aviso(e.message, 'err'); btn.disabled = false; btn.textContent = rot; }
+}
 
 function garantirConfiguracao(tx) {
   if (!DB.listas.length) {
@@ -1677,12 +1704,29 @@ function pgConfig() {
   return `<div class="topo"><div><h1>Configurações</h1></div></div><div class="abas" role="tablist">${abas.map(([k, r]) => `<button type="button" role="tab" aria-selected="${aba === k}" data-abacfg="${k}">${r}</button>`).join('')}</div><div id="cfgErro"></div>${corpo}`;
 }
 let LINHAS_CARGA = null;
+function blocoSync() {
+  if (MODO_DEMO) return '';
+  const y = SYNC;
+  const linhas = y ? `<div class="grade g3 peq" style="margin:10px 0">
+      <div><b>Última busca</b><br>${fdh(y.quando)} (${esc(y.origem)})</div>
+      <div><b>Planilha Meta</b><br>${esc(y.meta?.arquivo || '—')}<br>${fnum(y.meta?.linhas)} empresas · atualizada ${fdh(y.meta?.atualizada)}</div>
+      <div><b>CustomerX (cx_atual.json)</b><br>${y.cx ? `${fnum(y.cx.linhas)} clientes · arquivo de ${fdh(y.cx.atualizado)}` : 'não encontrado'}</div></div>
+    <p class="peq">Na última busca: ${fnum(y.novos)} clientes novos, ${fnum(y.atualizados)} atualizados, ${fnum(y.trocasCsm)} trocas de CSM vindas do CustomerX, ${fnum(y.cancelados)} cancelamentos.</p>
+    ${y.cx && y.cx.faltando && y.cx.faltando.length ? `<div class="aviso a-warn">Colunas do CustomerX não encontradas: ${esc(y.cx.faltando.join(', '))}.</div>` : ''}
+    ${(y.semUsuario || []).length ? `<div class="aviso a-warn">${y.semUsuario.length} carteira(s) do CustomerX ainda sem usuário no CRM. Cadastre as pessoas em Usuários para os clientes entrarem na carteira certa.</div>` : ''}` : '<p class="mut">Ainda não houve busca.</p>';
+  return `<div class="card"><h3>Dados oficiais automáticos</h3>
+    <p>O CRM busca sozinho, a cada 4 horas, a planilha Meta (cadastro, plano, MRR, GMV, pedidos) e o arquivo do CustomerX publicado pelo dashboard (HS, IF e faixa nas Tags, carteira e responsável, status, cancelamento e datas de onboarding). O IF vem do CustomerX só na entrada do cliente; depois disso, quem manda é o CRM. Se o responsável mudar no CustomerX, o CRM acompanha.</p>
+    ${linhas}<div id="syncErro"></div><div class="acoes"><button class="btn pri" id="syncAgora" type="button">Buscar agora</button></div></div>`;
+}
 function cfgCarga() {
-  return `<div class="card"><p>Envie a planilha exportada do Metabase (CSV ou Excel). O CRM aceita os nomes de coluna do CRM ou os do Metabase v3 (${Object.keys(MAPA_METABASE).map(esc).join(', ')}). Células vazias não apagam o valor que já existe. Clientes novos entram com IF4; vão para o onboarding quando a contratação do Bling tem menos de 3 meses.</p>
+  return `${blocoSync()}
+  <details class="card" style="margin-top:14px" ${MODO_DEMO ? 'open' : ''}><summary style="cursor:pointer;font-weight:600;color:var(--tx2)">Carga manual de planilha (alternativa)</summary>
+  <p style="margin-top:10px">Envie uma planilha exportada do Metabase (CSV ou Excel). O CRM aceita os nomes de coluna do CRM ou os do Metabase v3 (${Object.keys(MAPA_METABASE).map(esc).join(', ')}). Células vazias não apagam o valor que já existe.</p>
   <div class="acoes"><label class="btn" for="arqCarga">Escolher arquivo</label><input type="file" id="arqCarga" accept=".csv,.xlsx,.xls" hidden><button class="btn" id="modeloCarga" type="button">Baixar modelo de planilha</button></div>
-  <div id="previaCarga" style="margin-top:12px"></div></div>`;
+  <div id="previaCarga" style="margin-top:12px"></div></details>`;
 }
 function ligarCarga() {
+  $('#syncAgora') && ($('#syncAgora').onclick = () => buscarAgora($('#syncAgora'), $('#syncErro')));
   $('#modeloCarga').onclick = () => baixarCSV('modelo_dados_oficiais.csv', [Object.fromEntries(SCHEMAS.oficiais.filter(c => c !== 'atualizado_em').map(c => [c, '']))]);
   $('#arqCarga').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1745,6 +1789,7 @@ function pgUsuarios() {
   const podeMexer = u => coord || !CARGOS_SUPERIORES.includes(u.perfil);
   depois(() => {
     $('#novoUsu').onclick = () => janelaUsuario();
+    $$('[data-cadcx]').forEach(b => b.onclick = () => { const [carteira, email] = b.dataset.cadcx.split('|'); janelaUsuario(null, { nome: carteira, email, perfil: 'CSM', carteira: 'Ongoing' }); });
     $$('[data-editusu]').forEach(b => b.onclick = () => janelaUsuario(b.dataset.editusu));
     $$('[data-aprovar]').forEach(b => b.onclick = () => janelaAprovar(b.dataset.aprovar));
     $$('[data-recusar]').forEach(b => b.onclick = () => { if (confirm('Recusar este pedido de acesso?')) acaoPagina(tx => recusarAcesso(tx, b.dataset.recusar)); });
@@ -1755,6 +1800,8 @@ function pgUsuarios() {
   ${pend.length ? pend.map(u => `<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
     <div><b>${esc(u.nome)}</b> · ${esc(u.email)}<br><small class="mut">Pediu acesso como CSM de ${esc(u.carteira || 'Ongoing')} em ${fdh(u.solicitado_em)}</small></div>
     <div class="acoes" style="margin:0"><button class="btn" type="button" data-recusar="${esc(u.id)}">Recusar</button><button class="btn pri" type="button" data-aprovar="${esc(u.id)}">Aprovar e vincular carteira</button></div></div>`).join('') : '<p class="mut">Nenhum pedido aguardando aprovação.</p>'}
+  ${(SYNC?.semUsuario || []).length ? `<h2>Carteiras do CustomerX sem usuário no CRM</h2><p class="mut peq">Estes responsáveis aparecem no CustomerX, mas não têm cadastro no CRM. Ao cadastrar com o mesmo e-mail, a próxima busca coloca os clientes na carteira da pessoa.</p>
+  ${tabelaSimples(SYNC.semUsuario, [['Carteira no CustomerX', 'carteira'], ['E-mail do responsável', x => esc(x.email || '—')], ['Clientes', 'clientes'], ['', x => `<button class="btn peq pri" type="button" data-cadcx="${esc(x.carteira)}|${esc(x.email)}">Cadastrar</button>`]])}` : ''}
   <h2>Carteiras</h2>
   ${tabelaSimples(donos.map(u => ({ u, cls: cart.filter(c => c.status === 'Ativo' && (u.carteira === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing) === u.nome) })), [
     ['CSM', x => `<b>${esc(x.u.nome)}</b>`], ['Carteira', x => esc(x.u.carteira)], ['Clientes ativos', x => x.cls.length],
@@ -1767,10 +1814,10 @@ function pgUsuarios() {
     ['', u => podeMexer(u) ? `<button class="btn peq" type="button" data-editusu="${esc(u.id)}">Editar</button>` : '<span class="mut peq">Só a coordenação altera</span>']])}`;
 }
 function opcoesCargo() { return USUARIO().perfil === 'Coordenação' ? CARGOS : CARGOS.filter(c => !CARGOS_SUPERIORES.includes(c)); }
-function janelaUsuario(id) {
-  const u = id ? obter('usuarios', id) : { nome: '', email: '', perfil: 'CSM', carteira: 'Ongoing', ativo: 'Sim' };
+function janelaUsuario(id, pre) {
+  const u = id ? obter('usuarios', id) : { nome: '', email: '', perfil: 'CSM', carteira: 'Ongoing', ativo: 'Sim', ...(pre || {}) };
   janela(id ? `Editar ${u.nome}` : 'Novo usuário', `
-    ${id ? `<p><b>${esc(u.nome)}</b></p>` : campo('Nome completo', txt('nome'))}
+    ${id ? `<p><b>${esc(u.nome)}</b></p>` : campo('Nome completo', txt('nome', u.nome))}
     <div class="linha" style="margin-top:10px">${campo('E-mail Google', `<input type="email" name="email" value="${esc(u.email)}" placeholder="nome@bling.com.br">`)}${campo('Cargo', sel('perfil', opcoesCargo(), u.perfil))}</div>
     <div class="linha">${campo('Carteira', sel('carteira', [['', 'Sem carteira'], ['Ongoing', 'Ongoing'], ['Onboarding', 'Onboarding']], u.carteira), 'Obrigatória para CSM. CS Ops ou superior também pode ter carteira.')}
     ${id ? campo('Situação', sel('ativo', [['Sim', 'Ativo'], ['Não', 'Inativo']], ['Sim', 'Não'].includes(u.ativo) ? u.ativo : 'Sim')) : ''}</div>
@@ -1829,7 +1876,7 @@ function pgFicha(arg) {
 // ---------- visão geral ----------
 function fGeral(c, edita) {
   const g = ehGestao(), dis = edita ? '' : 'disabled', disG = g ? '' : 'disabled';
-  const ofi = [['Razão social', c.razao_social], ['Entrada no Elite', fdata(c.data_entrada_elite)], ['Plano', c.plano], ['Periodicidade', c.periodicidade], ['MRR', fmoeda(c.mrr)], ['GMV', fmoeda(c.gmv)], ['Faixa apurada', c.faixa_apurada], ['Pedidos no período', fnum(c.pedidos_periodo)], ['Pedidos no mês', fnum(c.pedidos_mes)], ['Importações no mês', fnum(c.importacoes_mes)], ['Maior consumo de limite', c.consumo != null ? fpct(c.consumo) : '—'], ['Inadimplência', sim(c.inadimplente) ? 'Em atraso' : 'Em dia']];
+  const ofi = [['Razão social', c.razao_social], ['Entrada no Elite', fdata(c.data_entrada_elite)], ['Plano', c.plano], ['Periodicidade', c.periodicidade], ['MRR', fmoeda(c.mrr)], ['GMV', fmoeda(c.gmv)], ['Faixa apurada', c.faixa_apurada], ['Pedidos no período', fnum(c.pedidos_periodo)], ['Pedidos no mês', fnum(c.pedidos_mes)], ['Importações no mês', fnum(c.importacoes_mes)], ['Maior consumo de limite', c.consumo != null ? fpct(c.consumo) : '—'], ['Inadimplência', sim(c.inadimplente) ? 'Em atraso' : 'Em dia'], ['Carteira no CustomerX', [c.carteira_cx, c.responsavel_cx].filter(Boolean).join(' · ')]];
   const desc = DB.descontos.filter(d => d.id_cliente === c.id_cliente && (data(d.fim) || hoje()) >= hoje());
   const csms = nomesCSM('Ongoing'), onbs = nomesCSM('Onboarding');
   const kaMarca = c.key_account && c.key_account_origem === 'Peso de marca';
