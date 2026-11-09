@@ -171,10 +171,12 @@ const CARGOS_MASTER = ['Coordenação', 'Gerente executivo', 'Diretor geral', 'C
 const CARGOS_SUPERIORES = ['Coordenação', 'Gerente executivo', 'Diretor geral'];
 const PERFIS_GESTAO = CARGOS_MASTER;
 const TIPOS_CARTEIRA = ['Ongoing', 'Onboarding'];
+const CARTEIRA_CANCELADOS = 'Cancelados'; // carteira de registro dos clientes em IF0
 const IFS = ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5'];
 const IF_NOME = { IF0: 'Cancelamento concluído', IF1: 'Verbalizou cancelamento', IF2: 'Atritado (risco)', IF3: 'Em recuperação', IF4: 'Saudável', IF5: 'Pronto para expansão' };
 const TETO_IF = { IF1: 39, IF2: 59, IF3: 59 };
-const IF3_ALERTA = 30, IF3_LIMITE = 40, HS_MIN_IF45 = 60, VALIDADE_EXCECAO = 30, DIAS_TACITA = 2, DIAS_SEM_EFETIVO = 60, TAM_LISTA = 10, TETO_A = 10;
+// Valores padrão; o CS Ops pode mudar em Configurações › Parâmetros (aba parametros)
+let IF3_ALERTA = 30, IF3_LIMITE = 40, HS_MIN_IF45 = 60, VALIDADE_EXCECAO = 30, DIAS_TACITA = 2, DIAS_SEM_EFETIVO = 60, TAM_LISTA = 10, TETO_A = 10;
 const ESTADOS = ['Crítico', 'Em Atenção', 'Sem Resposta', 'Oportunidade', 'Saudável'];
 const MODELOS = ['Escala', 'Híbrido', 'Consultivo', 'Key Account'];
 const JORNADAS = ['Onboarding', 'Ongoing'];
@@ -183,9 +185,9 @@ const COR_IF = { IF0: '', IF1: 't-red', IF2: 't-org', IF3: 't-vio', IF4: 't-grn'
 const COR_ESTADO = { 'Crítico': 't-red', 'Em Atenção': 't-org', 'Sem Resposta': '', 'Oportunidade': 't-blu', 'Saudável': 't-grn', 'Cancelado': '' };
 
 const SCHEMAS = {
-  usuarios: ['id', 'nome', 'email', 'perfil', 'ativo', 'carteira', 'solicitado_em'],
-  oficiais: ['id_cliente', 'razao_social', 'nome_fantasia', 'cnpj', 'data_entrada_elite', 'data_contratacao_bling', 'plano', 'periodicidade', 'mrr', 'gmv', 'pedidos_periodo', 'faixa_apurada', 'hs_dados', 'hs_data_calculo', 'pedidos_mes', 'importacoes_mes', 'consumo_limite_pct', 'inadimplente', 'dias_atraso', 'valor_atraso', 'data_cancelamento', 'atualizado_em', 'carteira_cx', 'responsavel_cx'],
-  clientes: ['id_cliente', 'jornada', 'status', 'objetivos', 'faixa_atendimento', 'key_account', 'key_account_origem', 'key_account_justificativa', 'prioridade_abc', 'csm_ongoing', 'csm_onboarding', 'data_atribuicao', 'if_atual', 'if_desde', 'if_motivo', 'if_detalhamento', 'if_pendente', 'if3_inicio', 'excecao_validade', 'gatilho', 'gatilho_descricao', 'gatilho_desde', 'criado_em'],
+  usuarios: ['id', 'nome', 'email', 'perfil', 'ativo', 'carteira', 'solicitado_em', 'capacidade_mensal'],
+  oficiais: ['id_cliente', 'razao_social', 'nome_fantasia', 'cnpj', 'data_entrada_elite', 'data_contratacao_bling', 'plano', 'periodicidade', 'mrr', 'gmv', 'pedidos_periodo', 'faixa_apurada', 'hs_dados', 'hs_data_calculo', 'pedidos_mes', 'importacoes_mes', 'consumo_limite_pct', 'inadimplente', 'dias_atraso', 'valor_atraso', 'data_cancelamento', 'atualizado_em', 'carteira_cx', 'responsavel_cx', 'if_cx', 'tags_cx', 'motivo_risco_cx', 'ultima_tarefa_cx', 'espaco_gb', 'ultimo_login', 'tickets_90d', 'req_api_7d', 'marketplaces', 'ecommerces', 'usou_api', 'situacao_meta', 'na_meta', 'onboarding_inicio_cx', 'onboarding_fim_cx'],
+  clientes: ['id_cliente', 'jornada', 'status', 'objetivos', 'faixa_atendimento', 'key_account', 'key_account_origem', 'key_account_justificativa', 'prioridade_abc', 'csm_ongoing', 'csm_onboarding', 'data_atribuicao', 'if_atual', 'if_desde', 'if_motivo', 'if_detalhamento', 'if_pendente', 'if3_inicio', 'excecao_validade', 'gatilho', 'gatilho_descricao', 'gatilho_desde', 'criado_em', 'gatilho_tipo', 'key_account_revisao', 'csm_cancelamento', 'cancelado_em'],
   contatos: ['id', 'id_cliente', 'nome', 'papel', 'telefone', 'whatsapp', 'email', 'canal_preferido', 'sponsor', 'ativo', 'observacoes', 'confirmado_em'],
   interacoes: ['id', 'id_cliente', 'data', 'tipo', 'canal', 'participantes', 'resultado', 'resumo', 'compromissos', 'relevancia', 'chk_abertura', 'chk_cenario', 'chk_uso', 'chk_riscos', 'chk_acao', 'proxima_tarefa_id', 'registrado_por', 'registrado_em'],
   tarefas: ['id', 'id_cliente', 'tipo', 'descricao', 'responsavel', 'prazo', 'status', 'origem', 'chave_regra', 'evidencia', 'concluida_em', 'criada_por', 'criada_em'],
@@ -193,7 +195,7 @@ const SCHEMAS = {
   aprovacoes: ['id', 'tipo', 'id_cliente', 'solicitante', 'data_pedido', 'previa', 'decisao', 'aprovador', 'data_decisao', 'comentario', 'dados'],
   retencao: ['id', 'id_cliente', 'aberto_em', 'gatilho', 'causa', 'acoes', 'oferta_tipo', 'oferta_pct', 'oferta_meses', 'oferta_situacao', 'aprovacao_id', 'desfecho', 'desfecho_em', 'decidido_por', 'base_decisao'],
   descontos: ['id', 'id_cliente', 'pct', 'valor_anterior', 'valor_novo', 'inicio', 'fim', 'retencao_id', 'aprovado_por'],
-  churn: ['id', 'id_cliente', 'data_cancelamento', 'origem', 'motivo', 'detalhamento', 'mrr_perdido', 'churn_surpresa', 'observacao', 'registrado_por', 'registrado_em'],
+  churn: ['id', 'id_cliente', 'data_cancelamento', 'origem', 'motivo', 'detalhamento', 'mrr_perdido', 'churn_surpresa', 'observacao', 'registrado_por', 'registrado_em', 'csm'],
   notas: ['id', 'id_cliente', 'tipo', 'tipo_marco', 'data', 'texto', 'fixada', 'autor', 'criada_em'],
   eventos: ['id', 'id_cliente', 'data', 'tipo', 'descricao', 'usuario'],
   lista_semanal: ['id', 'semana', 'csm', 'posicao', 'id_cliente', 'motivo', 'prazo_reacao', 'status', 'motivo_status', 'atualizado_em'],
@@ -203,9 +205,16 @@ const SCHEMAS = {
   auditoria: ['id', 'data', 'usuario', 'tabela', 'registro_id', 'id_cliente', 'campo', 'valor_anterior', 'valor_novo'],
   listas: ['id', 'lista', 'valor', 'pai', 'ativo'],
   cadencias: ['id', 'modelo', 'estado', 'prioridade', 'dias'],
+  parametros: ['id', 'chave', 'valor', 'descricao'],
+  faixa_historico: ['id', 'id_cliente', 'mes', 'faixa'],
+  oportunidades: ['id', 'id_cliente', 'tipo', 'produto', 'descricao', 'valor_mrr', 'status', 'motivo_perda', 'desconto_pct', 'aprovacao_id', 'responsavel', 'criada_por', 'criada_em', 'atualizada_em'],
+  plano_itens: ['id', 'id_cliente', 'tipo', 'titulo', 'prazo', 'status', 'observacao', 'criado_por', 'criado_em'],
+  priorizacoes: ['id', 'id_cliente', 'time', 'chamado', 'descricao', 'prazo', 'status', 'resultado', 'aprovacao_id', 'criado_por', 'criado_em'],
+  onboarding_etapas: ['id', 'id_cliente', 'etapa', 'status', 'data', 'observacao', 'atualizado_por'],
+  divergencias: ['id', 'id_cliente', 'campo', 'valor_oficial', 'valor_correto', 'descricao', 'status', 'criado_por', 'criado_em', 'resolucao', 'resolvido_por'],
 };
 const CHAVE = { oficiais: 'id_cliente', clientes: 'id_cliente' };
-const SEM_AUDITORIA = new Set(['auditoria', 'notificacoes', 'eventos', 'hs_historico', 'listas', 'cadencias', 'oficiais', 'lista_semanal']);
+const SEM_AUDITORIA = new Set(['auditoria', 'notificacoes', 'eventos', 'hs_historico', 'listas', 'cadencias', 'oficiais', 'lista_semanal', 'faixa_historico', 'parametros']);
 const chaveDe = t => CHAVE[t] || 'id';
 
 const LISTAS_PADRAO = {
@@ -223,6 +232,15 @@ const LISTAS_PADRAO = {
   motivo_adiamento: ['Cliente pediu outra data', 'Aguardando retorno de outro time', 'Já tratado por outro canal', 'Outro'],
   criterio_recuperacao: ['Uso voltou ao patamar anterior', 'Problema que causou o risco foi resolvido', 'Cliente confirmou satisfação no último contato'],
 };
+LISTAS_PADRAO.tipo_gatilho = ['Ticket crítico', 'Feedback negativo', 'Queda de uso', 'NPS detrator', 'Troca de sponsor', 'Pedido de downgrade', 'Outro'];
+LISTAS_PADRAO.time_priorizacao = ['Suporte', 'Produto', 'Sistemas', 'Financeiro', 'Logística', 'Comercial', 'Outro'];
+LISTAS_PADRAO.tipo_oportunidade = ['Upsell: importação de pedidos', 'Upsell: requisições de API', 'Upsell: armazenamento de dados', 'Indicação: Bling Conta', 'Indicação: Bling Envios'];
+LISTAS_PADRAO.motivo_perda_oportunidade = ['Preço', 'Sem necessidade agora', 'Escolheu concorrente', 'Sem retorno do cliente', 'Outro'];
+LISTAS_PADRAO.etapa_onboarding = ['Kickoff', 'Implantação e configurações iniciais', 'Cadastro de produtos e estoque', 'Integrações', 'Cadastro de emissão fiscal', 'Cadastro e integração financeira', 'Treinamento de usuários'];
+LISTAS_PADRAO.etapa_ciclo_venda = ['Pedido de venda entra no Bling', 'Empresa confere pedido e estoque', 'Emite nota fiscal', 'Registra saída do estoque', 'Pedido segue para separação'];
+// nível padrão de cada tipo de gatilho (coluna "Pai" da lista; editável em Configurações)
+const LISTAS_PAI = { tipo_gatilho: { 'Ticket crítico': 'Imediato', 'Feedback negativo': 'Alto', 'Queda de uso': 'Alto', 'NPS detrator': 'Alto', 'Troca de sponsor': 'Alto', 'Pedido de downgrade': 'Imediato', 'Outro': 'Alto' } };
+const SEM_TACITA = ['Desconto acima do limite', 'Desconto em API ou armazenamento', 'Priorização com outro time'];
 const MOTIVOS_RISCO = {
   'Preço': ['Achou caro', 'Concorrente mais barato', 'Corte de custos'],
   'Produto': ['Falta de funcionalidade', 'Instabilidade', 'Integração com problema'],
@@ -340,6 +358,7 @@ async function carregarDados() {
     });
   }
   ULTIMA_CARGA = Date.now(); VERSAO++;
+  aplicarParametros();
 }
 
 async function sincronizarAgora() {
@@ -488,6 +507,10 @@ const cmpArr = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i])
 
 // ===================== visão consolidada =====================
 let _cart = null, _cartVer = -1;
+// Conta ativa na Meta: está na planilha e a situação não indica cancelamento (inadimplente continua ativa)
+const metaAtiva = c => c.na_meta !== 'Não' && !/cancel|desativ|inativ|exclu|encerr/i.test(c.situacao_meta || '');
+const uhCrm = id => _ultH && _ultH.has(id);
+let _ultH = null;
 function carteira() {
   if (_cart && _cartVer === VERSAO) return _cart;
   const d = hoje();
@@ -497,7 +520,7 @@ function carteira() {
     if (t.status === 'Aberta') { if (!prox.has(t.id_cliente)) prox.set(t.id_cliente, t); }
     else { const f = S(t.concluida_em).slice(0, 10); if (f > (ultFech.get(t.id_cliente) || '')) ultFech.set(t.id_cliente, f); }
   });
-  const ultH = new Map(), ultE = new Map(), tent = new Map();
+  const ultH = new Map(), ultE = new Map(), tent = new Map(); _ultH = ultH;
   [...DB.interacoes].sort((a, b) => a.data.localeCompare(b.data)).forEach(i => {
     const dt = S(i.data).slice(0, 10); if (!dt) return;
     ultH.set(i.id_cliente, dt);
@@ -513,14 +536,17 @@ function carteira() {
     const modelo = modeloAtendimento(faixaAt, ka);
     const consumo = num(c.consumo_limite_pct);
     const t0 = tent.get(c.id_cliente);
-    const semResp = !!t0 && difDias(d, data(t0)) >= 30;
+    // régua concluída no CRM, ou o CustomerX marca o cliente como sem contato e o CRM ainda não tem contato registrado
+    const semResp = (!!t0 && difDias(d, data(t0)) >= 30) || (!uhCrm(c.id_cliente) && /SEM CONTATO|TENTANDO CONTATO/i.test(c.tags_cx || ''));
     const ativo = c.status === 'Ativo';
     const estado = ativo ? estadoConta(c.if_atual, hsf, c.gatilho, semResp, consumo) : 'Cancelado';
     const uh = ultH.get(c.id_cliente), ue = ultE.get(c.id_cliente);
-    const baseC = data(ue) || data(c.data_entrada_elite) || data(c.criado_em);
+    const uCx = data(c.ultima_tarefa_cx); // último contato registrado no CustomerX, antes do CRM
+    // sem contato no CRM nem no CustomerX, conta desde a entrada do cliente no CRM (não desde a entrada no Elite, que pode ter anos)
+    const baseC = data(ue) || uCx || data(c.criado_em) || data(c.data_entrada_elite);
     const diasSemEf = baseC ? difDias(d, baseC) : null;
     const dCad = c.jornada === 'Ongoing' && ativo ? diasCadencia(modelo, estado, c.prioridade_abc) : null;
-    const baseCad = data(uh) || data(c.data_atribuicao) || data(c.criado_em);
+    const baseCad = data(uh) || uCx || data(c.data_atribuicao) || data(c.criado_em);
     const proxContato = dCad && baseCad ? somaDias(baseCad, dCad) : null;
     const cadVenc = !!proxContato && proxContato < d;
     const t = prox.get(c.id_cliente);
@@ -539,10 +565,11 @@ function carteira() {
     return Object.assign(c, {
       nome: c.nome_fantasia || c.razao_social || `Cliente ${c.id_cliente}`, key_account: ka, hs_num: hs, hs_final: hsf,
       faixa_hs: faixaHS(hs), faixa_hsf: faixaHS(hsf), faixa_at: faixaAt, modelo, estado, mrr: num(c.mrr) || 0, consumo,
-      ultimo_humano: uh || '', ultimo_efetivo: ue || '', dias_sem_efetivo: diasSemEf, cadencia_dias: dCad,
+      ultimo_humano: uh || c.ultima_tarefa_cx || '', ultimo_efetivo: ue || c.ultima_tarefa_cx || '', contato_do_cx: !uh && !!uCx, dias_sem_efetivo: diasSemEf, cadencia_dias: dCad,
       proximo_contato: proxContato, cadencia_vencida: cadVenc && ativo, prox_acao: t ? `${t.tipo}: ${t.descricao}`.replace(/: $/, '') : '',
       prox_prazo: t ? t.prazo : '', prox_resp: t ? t.responsavel : '', dias_sem_prox: t ? 0 : difDias(d, desde),
-      dias_if3: diasIf3, sem_resposta: semResp, alertas, csm: c.jornada === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing,
+      dias_if3: diasIf3, sem_resposta: semResp, alertas, csm: c.if_atual === 'IF0' ? CARTEIRA_CANCELADOS : c.jornada === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing,
+      meta_ativa: metaAtiva(c),
     });
   });
   _cartVer = VERSAO;
@@ -557,7 +584,8 @@ function podeEditar(u, c) {
   if (!u) return false;
   if (ehMaster(u)) return true;
   if (!usuarioAtivo(u) || ehVisitante(u)) return false;
-  return [c.csm_ongoing, c.csm_onboarding].includes(u.nome);
+  // o CSM do cancelamento continua editando o cliente cancelado (motivo do churn, contato de reversão)
+  return [c.csm_ongoing, c.csm_onboarding, c.csm_cancelamento].includes(u.nome);
 }
 const respPadrao = csm => csm || nomesUsuarios(['Coordenação'])[0] || 'Coordenação';
 
@@ -604,6 +632,7 @@ function registrarInteracao(tx, cid, d, proxima, confirmar = false) {
   if (tid) { const t = obter('tarefas', tid); exigir(t && t.status === 'Aberta' && t.id_cliente === cid, 'A próxima ação escolhida não é uma tarefa aberta deste cliente.'); }
   else tid = criarTarefa(tx, cid, proxima.tipo, proxima.descricao, proxima.responsavel, proxima.prazo, 'Interação');
   const iid = tx.inserir('interacoes', { ...d, id_cliente: cid, data: iso(data(d.data)), proxima_tarefa_id: tid, registrado_por: tx.usuario, registrado_em: agora() });
+  reguaSemResposta(tx, cid, d);
   if (confirmar) DB.contatos.filter(c => c.id_cliente === cid && c.ativo !== 'Não').forEach(c => tx.atualizar('contatos', c.id, { confirmado_em: iso(hoje()) }));
   const sem = iso(segunda(hoje()));
   DB.lista_semanal.filter(l => l.id_cliente === cid && l.semana === sem && l.status === 'Pendente')
@@ -633,14 +662,14 @@ function salvarContato(tx, cid, d, contatoId) {
     const outros = anteriores.filter(c => c.id !== id);
     outros.forEach(c => tx.atualizar('contatos', c.id, { sponsor: 'Não' }));
     if (outros.length) {
-      sinalizarGatilho(tx, cid, 'Alto', `Troca de sponsor (${outros[0].nome} → ${d.nome})`);
+      sinalizarGatilho(tx, cid, 'Alto', `Troca de sponsor (${outros[0].nome} → ${d.nome})`, 'Troca de sponsor');
       adicionarNota(tx, cid, 'Marco', `Sponsor passou de ${outros[0].nome} para ${d.nome}`, 'Troca de sponsor');
     }
   }
 }
-function sinalizarGatilho(tx, cid, nivel, desc) {
+function sinalizarGatilho(tx, cid, nivel, desc, tipo = '') {
   exigir(['Imediato', 'Alto'].includes(nivel), 'Escolha o nível do gatilho.'); exigir(S(desc), 'Descreva o gatilho (ex.: número do ticket crítico).');
-  tx.atualizar('clientes', cid, { gatilho: nivel, gatilho_descricao: desc, gatilho_desde: iso(hoje()) });
+  tx.atualizar('clientes', cid, { gatilho: nivel, gatilho_descricao: desc, gatilho_desde: iso(hoje()), gatilho_tipo: tipo });
   evento(tx, cid, `Gatilho ${nivel.toLowerCase()}`, desc);
   const c = obter('clientes', cid);
   const motivo = `Gatilho ${nivel.toLowerCase()}: ${desc}`;
@@ -650,8 +679,9 @@ function sinalizarGatilho(tx, cid, nivel, desc) {
 function encerrarGatilho(tx, cid, res) {
   exigir(S(res), 'Descreva como o gatilho foi tratado.');
   const c = obter('clientes', cid);
-  tx.atualizar('clientes', cid, { gatilho: '', gatilho_descricao: '', gatilho_desde: '' });
+  tx.atualizar('clientes', cid, { gatilho: '', gatilho_descricao: '', gatilho_desde: '', gatilho_tipo: '' });
   evento(tx, cid, 'Gatilho encerrado', `${c.gatilho_descricao} — ${res}`);
+  if (/ticket/i.test(c.gatilho_tipo || c.gatilho_descricao)) posTicket(tx, cid, c.gatilho_descricao);
 }
 function adicionarNota(tx, cid, tipo, texto, tipoMarco = '', dt = null, fixada = false) {
   exigir(S(texto), 'Escreva o conteúdo da nota.'); if (tipo === 'Marco') exigir(tipoMarco, 'Escolha o tipo do marco.');
@@ -713,12 +743,20 @@ function aplicarIF(tx, cid, ifAnt, ifNovo, just, ev, motivo, det, origem = 'Manu
   const m = { if_atual: ifNovo, if_desde: iso(h), if_pendente: '', if3_inicio: ifNovo === 'IF3' ? iso(h) : '', excecao_validade: excecao ? iso(somaDias(h, VALIDADE_EXCECAO)) : '' };
   if (['IF1', 'IF2', 'IF3'].includes(ifNovo)) Object.assign(m, { if_motivo: motivo, if_detalhamento: det });
   else if (['IF4', 'IF5'].includes(ifNovo)) Object.assign(m, { if_motivo: '', if_detalhamento: '' });
+  const antes = obter('clientes', cid);
+  if (ifNovo === 'IF0' && antes.csm_ongoing !== CARTEIRA_CANCELADOS) {
+    // cliente cancelado vai para a carteira Cancelados; o CSM fica registrado
+    const cartCx = S((obter('oficiais', cid) || {}).carteira_cx);
+    Object.assign(m, { csm_cancelamento: antes.csm_ongoing || antes.csm_onboarding || (cartCx ? cartCx + ' (CustomerX)' : ''), cancelado_em: iso(h), csm_ongoing: CARTEIRA_CANCELADOS, csm_onboarding: '' });
+  } else if (ifAnt === 'IF0' && ifNovo !== 'IF0' && antes.csm_ongoing === CARTEIRA_CANCELADOS) {
+    Object.assign(m, { csm_ongoing: antes.csm_cancelamento || '', cancelado_em: '' }); // churn revertido: volta para o CSM
+  }
   tx.atualizar('clientes', cid, m);
   const pend = aid && DB.if_historico.find(r => r.aprovacao_id === aid && r.situacao === 'Pendente de aprovação');
   if (pend) tx.atualizar('if_historico', pend.id, { situacao: 'Vigente', data: agora() });
   else tx.inserir('if_historico', { id_cliente: cid, if_anterior: ifAnt, if_novo: ifNovo, data: agora(), usuario: tx.usuario, justificativa: just, evidencia: ev, motivo, detalhamento: det, origem, situacao: 'Vigente', aprovacao_id: aid });
   evento(tx, cid, 'Alteração de IF', `${ifAnt} → ${ifNovo}: ${just}`);
-  const c = obter('clientes', cid), csm = c.csm_ongoing || c.csm_onboarding, nome = nomeCliente(cid);
+  const c = obter('clientes', cid), csm = (c.csm_ongoing !== CARTEIRA_CANCELADOS && (c.csm_ongoing || c.csm_onboarding)) || c.csm_cancelamento, nome = nomeCliente(cid);
   if (ifNovo === 'IF1') {
     notificarCoord(tx, 'Novo IF1', `${nome} verbalizou cancelamento (${motivo}).`, cid);
     inserirNaLista(tx, cid, 'IF1: cliente verbalizou cancelamento', h, true);
@@ -737,7 +775,7 @@ function abrirRetencaoSePreciso(tx, cid, gatilho, csm, prazo) {
   const ab = DB.retencao.filter(r => r.id_cliente === cid && ['', 'Em negociação'].includes(r.desfecho));
   if (ab.length) return ab[ab.length - 1].id;
   const rid = tx.inserir('retencao', { id_cliente: cid, aberto_em: agora(), gatilho });
-  criarTarefa(tx, cid, 'Plano de retenção', `Registrar diagnóstico e plano de retenção (${gatilho})`, respPadrao(csm), prazo, `Regra: ${gatilho}`, `ret:${rid}`);
+  criarTarefa(tx, cid, 'Plano de retenção', `Registrar diagnóstico e plano de retenção (${gatilho})`, csm || tx.usuario, prazo, `Regra: ${gatilho}`, `ret:${rid}`);
   evento(tx, cid, 'Retenção aberta', `Caso de retenção aberto por ${gatilho}`);
   return rid;
 }
@@ -765,7 +803,8 @@ function decidirAprovacao(tx, aid, decisao, coment) {
 function registrarDecisao(tx, a, decisao, coment) {
   const dados = JSON.parse(a.dados || '{}'), cid = a.id_cliente, ok = decisao.startsWith('Aprovada');
   tx.atualizar('aprovacoes', a.id, { decisao, aprovador: tx.usuario, data_decisao: agora(), comentario: coment });
-  if (a.tipo === 'Desconto acima do limite') {
+  if (decisaoFase2(tx, a, dados, ok)) { /* oportunidade ou priorização */ }
+  else if (a.tipo === 'Desconto acima do limite') {
     tx.atualizar('retencao', dados.retencao_id, { oferta_situacao: decisao });
     if (ok) criarDesconto(tx, cid, dados, tx.usuario);
   } else if (ok) {
@@ -782,7 +821,7 @@ function registrarDecisao(tx, a, decisao, coment) {
 }
 function aprovacoesTacitas(tx, d) {
   let n = 0;
-  DB.aprovacoes.filter(a => a.decisao === 'Pendente' && a.previa === 'Sim' && a.tipo !== 'Desconto acima do limite').forEach(a => {
+  DB.aprovacoes.filter(a => a.decisao === 'Pendente' && a.previa === 'Sim' && !SEM_TACITA.includes(a.tipo)).forEach(a => {
     if (uteisEntre(data(a.data_pedido), d) >= DIAS_TACITA) { registrarDecisao(tx, a, 'Aprovada por decurso de prazo', 'Sem resposta em 2 dias úteis; entra na revisão semanal.'); n++; }
   });
   return n;
@@ -846,7 +885,7 @@ function registrarChurn(tx, cid, dt, origem, motivo, det = '', obs = '', origemI
   if (origemIF === 'Manual') { exigir(origem, 'Escolha a origem do churn.'); exigir(motivo, 'O motivo do churn é obrigatório.'); }
   const c = cliente(cid);
   const passou = DB.if_historico.some(h => h.id_cliente === cid && h.situacao === 'Vigente' && ['IF1', 'IF2'].includes(h.if_novo)) || ['IF1', 'IF2'].includes(c.if_atual);
-  tx.inserir('churn', { id_cliente: cid, data_cancelamento: iso(d), origem, motivo, detalhamento: det, mrr_perdido: c.mrr, churn_surpresa: passou ? 'Não' : 'Sim', observacao: obs, registrado_por: tx.usuario, registrado_em: agora() });
+  tx.inserir('churn', { id_cliente: cid, data_cancelamento: iso(d), origem, motivo, detalhamento: det, mrr_perdido: c.mrr, churn_surpresa: passou ? 'Não' : 'Sim', observacao: obs, registrado_por: tx.usuario, registrado_em: agora(), csm: (c.csm_ongoing && c.csm_ongoing !== CARTEIRA_CANCELADOS ? c.csm_ongoing : c.csm_onboarding) || c.csm_cancelamento || (c.carteira_cx ? c.carteira_cx + ' (CustomerX)' : '') });
   tx.atualizar('clientes', cid, { status: hoje() <= fimDoMes(d) ? 'Janela de reversão' : 'Cancelado' });
   aplicarIF(tx, cid, c.if_atual, 'IF0', `Cancelamento em ${fdata(d)}` + (motivo ? `: ${motivo}` : ''), 'Registro de churn', motivo, det, origemIF);
   notificarCoord(tx, 'Cancelamento', `${c.nome} cancelou (MRR ${fmoeda(c.mrr)}).`, cid);
@@ -926,16 +965,17 @@ function executarAutomacoes(tx) {
   VERSAO++;
   const resumo = {}; // uma notificação por pessoa por dia, em vez de uma por cliente
   carteira().filter(c => master || podeEditar(u, c)).forEach(c => {
-    const cid = c.id_cliente, nome = c.nome, csm = respPadrao(c.csm);
+    const cid = c.id_cliente, nome = c.nome, csm = c.csm; // cliente sem CSM não recebe tarefas automáticas (aparece em Qualidade de dados)
     const canc = data(c.data_cancelamento);
     if (canc && c.if_atual !== 'IF0' && c.status === 'Ativo' && canc <= d) {
       registrarChurn(tx, cid, canc, '', '', '', '', 'Dado oficial');
-      criarTarefa(tx, cid, 'Registrar churn', 'Registrar origem e motivo do churn', csm, somaUteis(d, 5), 'Regra: IF0 automático', `churn:${cid}:${iso(canc)}`);
-      if (d <= fimDoMes(canc)) { const p = somaUteis(d, 2); criarTarefa(tx, cid, 'Contato de reversão', 'Contato de reversão até o fim do mês', csm, p < fimDoMes(canc) ? p : fimDoMes(canc), 'Regra: IF0 automático', `rev:${cid}:${iso(canc)}`); }
+      if (csm) criarTarefa(tx, cid, 'Registrar churn', 'Registrar origem e motivo do churn', csm, somaUteis(d, 5), 'Regra: IF0 automático', `churn:${cid}:${iso(canc)}`);
+      if (csm && d <= fimDoMes(canc)) { const p = somaUteis(d, 2); criarTarefa(tx, cid, 'Contato de reversão', 'Contato de reversão até o fim do mês', csm, p < fimDoMes(canc) ? p : fimDoMes(canc), 'Regra: IF0 automático', `rev:${cid}:${iso(canc)}`); }
       log.push(`IF0 automático: ${nome}`); return;
     }
     if (c.status === 'Janela de reversão' && canc && d > fimDoMes(canc)) { tx.atualizar('clientes', cid, { status: 'Cancelado' }); evento(tx, cid, 'Janela de reversão encerrada', 'Cliente sai da carteira ativa'); }
-    if (c.status !== 'Ativo') return;
+    if (c.status !== 'Ativo' || !csm) return;
+    automacoesFase2(tx, c, d, csm);
     if (c.dias_if3 != null) {
       if (c.dias_if3 >= IF3_ALERTA && notificar(tx, csm, 'IF3 no dia 30', `${nome} está há ${c.dias_if3} dias em IF3. Revise os critérios de recuperação.`, cid, `if3d30:${cid}:${c.if3_inicio}`)) evento(tx, cid, 'Alerta automático', 'IF3 chegou ao dia 30');
       if (c.dias_if3 >= IF3_LIMITE && criarTarefa(tx, cid, 'Reclassificar IF', 'IF3 chegou ao dia 40: reclassificar', csm, somaUteis(d, 3), 'Regra: IF3 dia 40', `if3d40:${cid}:${c.if3_inicio}`)) evento(tx, cid, 'Tarefa automática', 'Reclassificação do IF3 (dia 40)');
@@ -958,6 +998,7 @@ function executarAutomacoes(tx) {
   });
   DB.descontos.forEach(ds => { const f = data(ds.fim); if (f && f >= d && f <= somaDias(d, 7)) { const c = obter('clientes', ds.id_cliente); if (c && (master || podeEditar(u, c))) notificar(tx, c.csm_ongoing, 'Fim de desconto', `Desconto de ${ds.pct}% termina em ${fdata(f)}.`, ds.id_cliente, `desc:${ds.id}`); } });
   tarefasSituacao().filter(t => t.situacao === 'Vencida' && (master || t.responsavel === u.nome)).forEach(t => notificar(tx, t.responsavel, 'Tarefa vencida', `${t.tipo}: ${t.descricao} (prazo ${fdata(t.prazo)})`, t.id_cliente, `venc:${t.id}`));
+  if (master) automacoesGerais(tx, d);
   return log;
 }
 
@@ -983,18 +1024,19 @@ function salvarUsuario(tx, d, id) {
     const n = clientesDaCarteira(atual.nome, atual.carteira).length;
     exigir(!n, `${atual.nome} ainda tem ${n} clientes na carteira de ${atual.carteira}. Transfira a carteira antes.`);
   }
-  if (atual) { tx.atualizar('usuarios', id, { email, perfil: d.perfil, carteira, ativo }); return 'Usuário atualizado.'; }
-  tx.inserir('usuarios', { nome, email, perfil: d.perfil, carteira, ativo: 'Sim', solicitado_em: agora() });
+  const cap = num(d.capacidade_mensal) || '';
+  if (atual) { tx.atualizar('usuarios', id, { email, perfil: d.perfil, carteira, ativo, capacidade_mensal: cap }); return 'Usuário atualizado.'; }
+  tx.inserir('usuarios', { nome, email, perfil: d.perfil, carteira, ativo: 'Sim', solicitado_em: agora(), capacidade_mensal: cap });
   return `${nome} cadastrado. Quando entrar com ${email}, o CRM reconhece a pessoa${carteira ? ' e a carteira' : ''}.`;
 }
-function transferirCarteira(tx, de, para, tipo) {
+function transferirCarteira(tx, de, para, tipo, nota = '') {
   exigirMaster();
   exigir(de && para && de !== para, 'Escolha para quem transferir.');
   exigir(TIPOS_CARTEIRA.includes(tipo), 'Escolha a carteira.');
   const cls = clientesDaCarteira(de, tipo);
   exigir(cls.length, `${de} não tem clientes na carteira de ${tipo}.`);
   const ids = new Set(cls.map(c => c.id_cliente));
-  cls.forEach(c => atribuirCSM(tx, c.id_cliente, tipo, para));
+  cls.forEach(c => { atribuirCSM(tx, c.id_cliente, tipo, para); if (S(nota)) adicionarNota(tx, c.id_cliente, 'Marco', `Registro de passagem de ${de} para ${para}: ${nota}`, 'Registro de passagem', hoje(), true); });
   DB.tarefas.filter(t => t.status === 'Aberta' && t.responsavel === de && ids.has(t.id_cliente)).forEach(t => tx.atualizar('tarefas', t.id, { responsavel: para }));
   notificar(tx, para, 'Carteira recebida', `Você recebeu ${cls.length} clientes da carteira de ${de}.`);
   return `${cls.length} clientes transferidos de ${de} para ${para}.`;
@@ -1035,6 +1077,8 @@ const PAGINAS = {
   onboarding: { nome: 'Onboarding', fn: () => pgOnboarding(), pode: u => ehMaster(u) || ehVisitante(u) || u.carteira === 'Onboarding' },
   aprovacoes: { nome: 'Aprovações', fn: () => pgAprovacoes(), pode: u => ehMaster(u) || ehVisitante(u) },
   painel: { nome: 'Painel da coordenação', fn: () => pgPainel(), pode: u => ehMaster(u) || ehVisitante(u) },
+  rituais: { nome: 'Rituais da coordenação', fn: () => pgRituais(), pode: u => ehMaster(u) || ehVisitante(u) },
+  qualidade: { nome: 'Qualidade de dados', fn: () => pgQualidade(), pode: u => ehMaster(u) },
   usuarios: { nome: 'Usuários', fn: () => pgUsuarios(), pode: u => ehMaster(u) },
   config: { nome: 'Configurações', fn: () => pgConfig(), pode: u => ehMaster(u) },
 };
@@ -1155,6 +1199,8 @@ const COLS_CLIENTE = {
   modelo: ['Modelo', c => esc(c.modelo)],
   prioridade_abc: ['A/B/C', c => esc(c.prioridade_abc || '—')],
   csm: ['CSM', c => esc(c.csm || '—')],
+  csm_cancelamento: ['CSM no cancelamento', c => esc(c.csm_cancelamento || '—')],
+  cancelado_em: ['Cancelado em', c => fdata(c.cancelado_em || c.data_cancelamento)],
   prox_acao: ['Próxima ação', c => c.prox_acao ? `${esc(c.prox_acao)}<br><small class="mut">${fdata(c.prox_prazo)}</small>` : '<span class="tag t-red">Sem próxima ação</span>'],
   ultimo_efetivo: ['Último contato efetivo', c => fdata(c.ultimo_efetivo)],
   ultimo_humano: ['Último contato', c => fdata(c.ultimo_humano)],
@@ -1341,12 +1387,12 @@ async function buscarAgora(btn, errEl) {
 }
 
 function garantirConfiguracao(tx) {
-  if (!DB.listas.length) {
-    const rows = [];
-    Object.entries(LISTAS_PADRAO).forEach(([l, vs]) => vs.forEach(v => rows.push({ lista: l, valor: v, pai: '', ativo: 'Sim' })));
-    Object.entries(MOTIVOS_RISCO).forEach(([m, ds]) => { rows.push({ lista: 'motivo_risco', valor: m, pai: '', ativo: 'Sim' }); ds.forEach(d => rows.push({ lista: 'detalhamento_risco', valor: d, pai: m, ativo: 'Sim' })); });
-    tx.substituir('listas', rows);
-  }
+  // cria as listas e cadências que faltarem (versões novas trazem listas novas)
+  const tem = new Set(DB.listas.map(l => l.lista));
+  const novas = [];
+  Object.entries(LISTAS_PADRAO).forEach(([l, vs]) => { if (!tem.has(l)) vs.forEach(v => novas.push({ lista: l, valor: v, pai: (LISTAS_PAI[l] || {})[v] || '', ativo: 'Sim' })); });
+  if (!tem.has('motivo_risco')) Object.entries(MOTIVOS_RISCO).forEach(([m, ds]) => { novas.push({ lista: 'motivo_risco', valor: m, pai: '', ativo: 'Sim' }); ds.forEach(d => novas.push({ lista: 'detalhamento_risco', valor: d, pai: m, ativo: 'Sim' })); });
+  if (novas.length) { if (!DB.listas.length) tx.substituir('listas', novas); else novas.forEach(r => tx.inserir('listas', r)); }
   if (!DB.cadencias.length) tx.substituir('cadencias', CADENCIAS_PADRAO.map(([modelo, estado, prioridade, dias]) => ({ modelo, estado, prioridade, dias })));
 }
 // ===================== janelas reutilizáveis =====================
@@ -1497,7 +1543,7 @@ function filtrosCarteira(id) {
     ${campo('Situação', `<select data-f="status">${opts([['Ativo', 'Ativos'], ['Janela de reversão', 'Janela de reversão'], ['Cancelado', 'Cancelados']], f.status, 'Todos')}</select>`)}
     ${s('jornada', JORNADAS, 'Jornada')}${s('modelo', MODELOS, 'Modelo')}${s('if', IFS, 'IF')}${s('estado', ESTADOS, 'Estado')}
     ${s('faixa', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Faixa')}${s('hs', ['Crítico', 'Atenção', 'Saudável', 'Excelente'], 'Faixa do HS final')}${s('prio', ['A', 'B', 'C'], 'Prioridade A/B/C')}</div>`;
-  depois(() => $$('[data-f]').forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'change' : 'change', () => { f[el.dataset.f] = el.value; render(); })));
+  depois(() => $$('[data-f]').forEach(el => el.addEventListener('change', () => { f[el.dataset.f] = el.value; if (el.dataset.f === 'csm' && el.value === CARTEIRA_CANCELADOS) f.status = ''; render(); })));
   return { cart, html };
 }
 function baixarCSV(nome, linhas) {
@@ -1523,7 +1569,7 @@ function pgCarteira() {
   depois(() => { $('#baixarCart').onclick = () => baixarCSV('carteira.csv', cart.map(c => ({ id_cliente: c.id_cliente, cliente: c.nome, cnpj: c.cnpj, if: c.if_atual, estado: c.estado, hs_dados: c.hs_num ?? '', hs_final: c.hs_final ?? '', faixa: c.faixa_at, modelo: c.modelo, prioridade: c.prioridade_abc, csm: c.csm, proxima_acao: c.prox_acao, prazo: c.prox_prazo, ultimo_contato_efetivo: c.ultimo_efetivo, mrr: c.mrr }))); });
   return `<div class="topo"><div><h1>Carteira</h1><p class="lead">Clique em um cliente para abrir a ficha. Clique no título de uma coluna para ordenar.</p></div><button class="btn" id="baixarCart" type="button">Baixar CSV</button></div>${html}
   <div class="grade g5" style="margin-bottom:14px">${kpi('Clientes', cart.length)}${ESTADOS.slice(0, 4).map(e => kpi(e, cart.filter(c => c.estado === e).length)).join('')}</div>
-  ${barra}${tabelaClientes(cart, PADRAO_COLS, 'cart', master ? selecao : null)}`;
+  ${barra}${tabelaClientes(cart, (ESTADO_UI.filtros.cart || {}).csm === CARTEIRA_CANCELADOS ? ['nome', 'if_atual', 'csm_cancelamento', 'cancelado_em', 'faixa_at', 'mrr'] : PADRAO_COLS, 'cart', master ? selecao : null)}`;
 }
 
 // ===================== tarefas =====================
@@ -1607,7 +1653,7 @@ function pgOnboarding() {
   const u = USUARIO();
   let onb = carteira().filter(c => c.jornada === 'Onboarding' && c.status === 'Ativo');
   if (!ehMaster(u) && u.carteira === 'Onboarding') onb = onb.filter(c => c.csm_onboarding === u.nome);
-  onb = onb.map(c => ({ c, dias: difDias(hoje(), data(c.data_entrada_elite) || hoje()) })).sort((a, b) => b.dias - a.dias);
+  onb = onb.map(c => { const t = tempoOnboarding(c); return { c, dias: difDias(t.fimTrein || hoje(), t.ini || hoje()) }; }).sort((a, b) => b.dias - a.dias);
   depois(() => $$('[data-handoff]').forEach(b => b.onclick = () => {
     const c = cliente(b.dataset.handoff), csms = nomesCSM('Ongoing');
     janela(`Handoff para o CSM de Ongoing · ${c.nome}`, `<p class="mut peq">Só depois do treinamento de usuários e do primeiro ciclo completo de venda (D-31).</p>
@@ -1626,7 +1672,8 @@ function pgOnboarding() {
   ${onb.length ? onb.map(({ c, dias }) => `<div class="card" style="margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b>${esc(c.nome)}</b> · dia ${dias} de 45 ${dias >= 35 ? '<span class="tag t-org">passou do dia 35</span>' : ''}<br><small class="mut">${esc(c.csm_onboarding || 'Sem CSM de Onboarding')} · próxima ação: ${esc(c.prox_acao || '—')} (${fdata(c.prox_prazo)})</small></div>
     <div class="acoes" style="margin:0"><button class="btn peq" type="button" data-ir="cliente|${esc(c.id_cliente)}">Abrir ficha</button>${podeEditar(u, c) ? `<button class="btn peq pri" type="button" data-handoff="${esc(c.id_cliente)}">Concluir e passar ao CSM</button>` : ''}</div></div>
-    <div class="barra ${dias >= 45 ? 'critico' : dias >= 35 ? 'alerta' : ''}" style="margin-top:10px"><i style="width:${Math.min(100, dias / 45 * 100)}%"></i></div></div>`).join('') : vazio('Nenhum cliente em onboarding.')}`;
+    <div class="barra ${dias >= 45 ? 'critico' : dias >= 35 ? 'alerta' : ''}" style="margin-top:10px"><i style="width:${Math.min(100, dias / 45 * 100)}%"></i></div>
+    <p class="peq mut" style="margin:6px 0 0">${(() => { const et = lista('etapa_onboarding'), feitas = et.filter(e => ['Realizado', 'Não aplicável'].includes((etapaDe(c.id_cliente, e) || {}).status)).length, t = tempoOnboarding(c); return `Encontros: ${feitas} de ${et.length} · ciclo de venda ${t.cicloOk ? 'concluído' : 'pendente'}`; })()}</p></div>`).join('') : vazio('Nenhum cliente em onboarding.')}`;
 }
 
 // ===================== aprovações =====================
@@ -1641,7 +1688,7 @@ function pgAprovacoes() {
     const hs = DB.hs_historico.filter(h => h.id_cliente === a.id_cliente).map(h => [data(h.data), num(h.hs_dados)]).filter(p => p[0] && p[1] != null).sort((x, y) => x[0] - y[0]);
     const ints = DB.interacoes.filter(i => i.id_cliente === a.id_cliente).sort((x, y) => y.data.localeCompare(x.data)).slice(0, 3);
     return `<div class="card" style="margin-bottom:10px"><b>${esc(c.nome || a.id_cliente)}</b> · ${esc(a.tipo)} · pedido por ${esc(a.solicitante)} em ${fdh(a.data_pedido)}${a.decisao === 'Pendente' ? ` · ${uteisEntre(data(a.data_pedido), hoje())} dia(s) útil(eis) aguardando` : ''}
-      <div class="grade g2" style="margin-top:8px"><div class="peq">${d.if_novo ? `Proposta: <b>${d.if_anterior} → ${d.if_novo}</b><br>Justificativa: ${esc(d.justificativa)}<br>Evidência: ${esc(d.evidencia)}${(d.criterios || []).length ? `<br>Critérios marcados: ${esc(d.criterios.join('; '))}` : ''}` : `Desconto de <b>${fnum(d.pct)}%</b> por ${esc(d.meses)} meses sobre MRR ${fmoeda(d.mrr)}`}
+      <div class="grade g2" style="margin-top:8px"><div class="peq">${d.resumo ? esc(d.resumo) : d.if_novo ? `Proposta: <b>${d.if_anterior} → ${d.if_novo}</b><br>Justificativa: ${esc(d.justificativa)}<br>Evidência: ${esc(d.evidencia)}${(d.criterios || []).length ? `<br>Critérios marcados: ${esc(d.criterios.join('; '))}` : ''}` : `Desconto de <b>${fnum(d.pct)}%</b> por ${esc(d.meses)} meses sobre MRR ${fmoeda(d.mrr)}`}
         ${c.nome ? `<br><span class="mut">HS de dados ${fnum(c.hs_num)} · HS final ${fnum(c.hs_final)} · MRR ${fmoeda(c.mrr)} · ${c.key_account ? 'Key Account · ' : ''}Prioridade ${esc(c.prioridade_abc || '—')}</span>` : ''}</div>
         <div>${linhaSvg(hs, 100)}${ints.map(i => `<div class="peq mut">${fdata(i.data)} · ${esc(i.tipo)}: ${esc(S(i.resumo).slice(0, 80))}</div>`).join('')}</div></div>
       ${pode ? `<div class="acoes"><input type="text" placeholder="Comentário (obrigatório para recusar ou reverter)" data-com="${esc(a.id)}" style="flex:1;min-width:220px">${botoes.map(([dec, rot, pri]) => `<button class="btn ${pri ? 'pri' : ''}" type="button" data-decidir="${esc(a.id)}|${dec}">${rot}</button>`).join('')}<button class="btn" type="button" data-ir="cliente|${esc(a.id_cliente)}">Abrir ficha</button></div>` : ''}</div>`;
@@ -1679,14 +1726,15 @@ function pgPainel() {
     const m = at.filter(c => c.csm === n), lst = DB.lista_semanal.filter(l => l.csm === n && l.semana === sem);
     return { n, cli: m.length, mrr: m.reduce((a, c) => a + c.mrr, 0), if1: m.filter(c => c.if_atual === 'IF1').length, if2: m.filter(c => c.if_atual === 'IF2').length, if3: m.filter(c => c.if_atual === 'IF3').length,
       semProx: m.filter(c => !c.prox_acao).length, cad: m.filter(c => c.cadencia_vencida).length, venc: ts.filter(t => t.responsavel === n && t.situacao === 'Vencida').length,
-      lista: lst.length ? `${lst.filter(l => l.status !== 'Pendente').length}/${lst.length}` : '—', comp: m.length ? fpct(m.filter(c => c.objetivos && c.prox_acao).length / m.length * 100) : '—' };
+      lista: lst.length ? `${lst.filter(l => l.status !== 'Pendente').length}/${lst.length}` : '—', comp: m.length ? fpct(m.filter(c => c.objetivos && c.prox_acao).length / m.length * 100) : '—',
+      ...(() => { const x = indicadoresCSM(n, lim30, iso(h)), k = cargaCSM(n); return { sla: fpct(x.sla), exp: fmoeda(x.upsell), carga: `${k.semanas[0]}/${fnum(k.semanal, 1)}${k.sobrecarga ? ' ⚠' : ''}` }; })() };
   });
   return `<div class="topo"><div><h1>Painel da coordenação</h1><p class="lead">Fórmulas provisórias até a definição oficial dos indicadores (Q-03 e Q-25). Metas de referência entre parênteses.</p></div></div>
   <div class="grade g4">${kpi('Retenção de clientes no mês (96%)', fpct(retC, 1))}${kpi('Retenção de MRR no mês (97%)', fpct(retM, 1), `MRR perdido: ${fmoeda(perdido)}`)}${kpi('Cobertura de contato em 30 dias (80%)', fpct(cobR), `Contato efetivo: ${fpct(cobE)}`)}${kpi('SLA de tarefas em 30 dias (85%)', fpct(sla))}</div>
   <div class="grade g4" style="margin-top:14px">${kpi('Clientes ativos', at.length)}${kpi('MRR ativo', fmoeda(mrrAt))}${kpi('Churn surpresa', fpct(surpresa), 'Cancelamentos sem passagem por IF1 ou IF2')}${kpi('Aprovações pendentes', DB.aprovacoes.filter(a => a.decisao === 'Pendente').length, '', 'aprovacoes')}</div>
   <div class="grade g2" style="margin-top:14px"><div class="card"><h3>Distribuição de IF</h3>${grafBarras(IFS.slice(1).map(i => [i, at.filter(c => c.if_atual === i).length]))}</div>
   <div class="card"><h3>Estado da conta</h3>${grafBarras(ESTADOS.map(e => [e, at.filter(c => c.estado === e).length]))}</div></div>
-  <h2>Execução por CSM</h2>${tabelaSimples(linhas, [['CSM', 'n'], ['Clientes', 'cli'], ['MRR', l => fmoeda(l.mrr)], ['IF1', 'if1'], ['IF2', 'if2'], ['IF3', 'if3'], ['Sem próxima ação', 'semProx'], ['Cadência vencida', 'cad'], ['Tarefas vencidas', 'venc'], ['Lista da semana tratada', 'lista'], ['Completude', 'comp']])}
+  <h2>Execução por CSM</h2>${tabelaSimples(linhas, [['CSM', 'n'], ['Clientes', 'cli'], ['MRR', l => fmoeda(l.mrr)], ['IF1', 'if1'], ['IF2', 'if2'], ['IF3', 'if3'], ['Sem próxima ação', 'semProx'], ['Cadência vencida', 'cad'], ['Tarefas vencidas', 'venc'], ['SLA (30 dias)', 'sla'], ['Expansão (30 dias)', 'exp'], ['Carga/capacidade da semana', 'carga'], ['Lista da semana tratada', 'lista'], ['Completude', 'comp']])}
   <p class="mut peq">Completude: clientes com objetivos e próxima ação registrados.</p>
   <h2>Cancelamentos do mês</h2>${chMes.length ? tabelaSimples(chMes, [['Cliente', c => esc(nomeCliente(c.id_cliente))], ['Data', c => fdata(c.data_cancelamento)], ['Origem', c => esc(c.origem || 'pendente')], ['Motivo', c => esc(c.motivo || 'pendente')], ['MRR perdido', c => fmoeda(c.mrr_perdido)], ['Churn surpresa', 'churn_surpresa']]) : '<p class="mut">Nenhum cancelamento no mês.</p>'}`;
 }
@@ -1695,12 +1743,12 @@ function pgPainel() {
 function pgConfig() {
   if (!ehGestao()) return `<h1>Configurações</h1>${vazio('Só CS Ops, coordenação, gerência e diretoria alteram configurações.')}`;
   const aba = ESTADO_UI.abaConfig;
-  const abas = [['carga', 'Carga de dados oficiais'], ['listas', 'Listas'], ['cad', 'Cadências'], ['dados', 'Exportar e acesso']];
+  const abas = [['carga', 'Carga de dados oficiais'], ['par', 'Parâmetros'], ['listas', 'Listas'], ['cad', 'Cadências'], ['dados', 'Exportar e acesso']];
   depois(() => {
     $$('[data-abacfg]').forEach(b => b.onclick = () => { ESTADO_UI.abaConfig = b.dataset.abacfg; render(); });
-    ({ carga: ligarCarga, listas: ligarListas, cad: ligarCad, dados: ligarDados })[aba]();
+    ({ carga: ligarCarga, par: ligarParametros, listas: ligarListas, cad: ligarCad, dados: ligarDados })[aba]();
   });
-  const corpo = { carga: cfgCarga, listas: cfgListas, cad: cfgCad, dados: cfgDados }[aba]();
+  const corpo = { carga: cfgCarga, par: cfgParametros, listas: cfgListas, cad: cfgCad, dados: cfgDados }[aba]();
   return `<div class="topo"><div><h1>Configurações</h1></div></div><div class="abas" role="tablist">${abas.map(([k, r]) => `<button type="button" role="tab" aria-selected="${aba === k}" data-abacfg="${k}">${r}</button>`).join('')}</div><div id="cfgErro"></div>${corpo}`;
 }
 let LINHAS_CARGA = null;
@@ -1711,7 +1759,7 @@ function blocoSync() {
       <div><b>Última busca</b><br>${fdh(y.quando)} (${esc(y.origem)})</div>
       <div><b>Planilha Meta</b><br>${esc(y.meta?.arquivo || '—')}<br>${fnum(y.meta?.linhas)} empresas · atualizada ${fdh(y.meta?.atualizada)}</div>
       <div><b>CustomerX (cx_atual.json)</b><br>${y.cx ? `${fnum(y.cx.linhas)} clientes · arquivo de ${fdh(y.cx.atualizado)}` : 'não encontrado'}</div></div>
-    <p class="peq">Na última busca: ${fnum(y.novos)} clientes novos, ${fnum(y.atualizados)} atualizados, ${fnum(y.trocasCsm)} trocas de CSM vindas do CustomerX, ${fnum(y.cancelados)} cancelamentos.</p>
+    <p class="peq">Na última busca: ${fnum(y.novos)} clientes novos, ${fnum(y.atualizados)} atualizados, ${fnum(y.trocasCsm)} trocas de CSM vindas do CustomerX, ${fnum(y.cancelados)} cancelamentos${y.naoContataveis ? `, ${fnum(y.naoContataveis)} clientes em Não contatáveis (sem CSM)` : ''}.</p>
     ${y.cx && y.cx.faltando && y.cx.faltando.length ? `<div class="aviso a-warn">Colunas do CustomerX não encontradas: ${esc(y.cx.faltando.join(', '))}.</div>` : ''}
     ${(y.semUsuario || []).length ? `<div class="aviso a-warn">${y.semUsuario.length} carteira(s) do CustomerX ainda sem usuário no CRM. Cadastre as pessoas em Usuários para os clientes entrarem na carteira certa.</div>` : ''}` : '<p class="mut">Ainda não houve busca.</p>';
   return `<div class="card"><h3>Dados oficiais automáticos</h3>
@@ -1800,15 +1848,17 @@ function pgUsuarios() {
   ${pend.length ? pend.map(u => `<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
     <div><b>${esc(u.nome)}</b> · ${esc(u.email)}<br><small class="mut">Pediu acesso como CSM de ${esc(u.carteira || 'Ongoing')} em ${fdh(u.solicitado_em)}</small></div>
     <div class="acoes" style="margin:0"><button class="btn" type="button" data-recusar="${esc(u.id)}">Recusar</button><button class="btn pri" type="button" data-aprovar="${esc(u.id)}">Aprovar e vincular carteira</button></div></div>`).join('') : '<p class="mut">Nenhum pedido aguardando aprovação.</p>'}
-  ${(SYNC?.semUsuario || []).length ? `<h2>Carteiras do CustomerX sem usuário no CRM</h2><p class="mut peq">Estes responsáveis aparecem no CustomerX, mas não têm cadastro no CRM. Ao cadastrar com o mesmo e-mail, a próxima busca coloca os clientes na carteira da pessoa.</p>
-  ${tabelaSimples(SYNC.semUsuario, [['Carteira no CustomerX', 'carteira'], ['E-mail do responsável', x => esc(x.email || '—')], ['Clientes', 'clientes'], ['', x => `<button class="btn peq pri" type="button" data-cadcx="${esc(x.carteira)}|${esc(x.email)}">Cadastrar</button>`]])}` : ''}
+  ${(SYNC?.semUsuario || []).length || SYNC?.naoContataveis ? `<h2>Carteiras do CustomerX sem usuário no CRM</h2><p class="mut peq">A carteira do CustomerX é quem define o CSM, e o e-mail certo é o que começa com o nome da carteira. Ao cadastrar a pessoa com esse e-mail, a próxima busca coloca os clientes na carteira dela.</p>
+  ${(SYNC.semUsuario || []).length ? tabelaSimples(SYNC.semUsuario, [['Carteira no CustomerX', 'carteira'], ['E-mail', x => x.email ? esc(x.email) : '<span class="mut">não identificado no CustomerX</span>'], ['Clientes', 'clientes'], ['', x => `<button class="btn peq pri" type="button" data-cadcx="${esc(x.carteira)}|${esc(x.email)}">Cadastrar</button>`]]) : ''}
+  ${SYNC.naoContataveis ? `<p class="peq" style="margin-top:8px"><b>Não contatáveis:</b> ${fnum(SYNC.naoContataveis)} clientes sem CSM. Não precisam de cadastro; ficam fora das carteiras.</p>` : ''}` : ''}
   <h2>Carteiras</h2>
-  ${tabelaSimples(donos.map(u => ({ u, cls: cart.filter(c => c.status === 'Ativo' && (u.carteira === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing) === u.nome) })), [
-    ['CSM', x => `<b>${esc(x.u.nome)}</b>`], ['Carteira', x => esc(x.u.carteira)], ['Clientes ativos', x => x.cls.length],
-    ['MRR', x => fmoeda(x.cls.reduce((a, c) => a + c.mrr, 0))], ['IF1 e IF2', x => x.cls.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length],
-    ['Sem próxima ação', x => x.cls.filter(c => !c.prox_acao).length],
-    ['', x => x.cls.length ? `<button class="btn peq" type="button" data-transf="${esc(x.u.nome)}|${esc(x.u.carteira)}">Transferir carteira</button>` : '<span class="mut peq">Atribua clientes pela Carteira</span>']])}
+  <p class="mut peq">Clientes ativos: IF1 a IF5 e conta ativa na Meta (inadimplente conta como ativa; empresa cancelada ou fora da Meta, não). Clientes em IF0 ficam na carteira Cancelados, com o CSM do cancelamento registrado.</p>
+  ${tabelaCarteiras(donos, cart)}
   <p class="mut peq">Para montar uma carteira, use a página Carteira: selecione os clientes e atribua ao CSM.</p>
+  <h2>Carga x capacidade</h2><p class="mut peq">Contatos previstos pela cadência em cada semana contra a capacidade semanal (contatos humanos por mês ÷ 4,33, descontada a reserva para mensagens). Acima da capacidade nas duas próximas semanas, a coordenação recebe alerta de sobrecarga.</p>
+  ${tabelaSimples(nomesCSM().map(cargaCSM), [['CSM', 'nome'], ['Clientes', 'clientes'], ['Capacidade', k => `${k.mensal}/mês · ${fnum(k.semanal, 1)}/semana`],
+    ...[0, 1, 2, 3].map(i => [i === 0 ? 'Esta semana' : `Semana +${i}`, k => `<span class="${k.semanas[i] > k.semanal ? 'tag t-red' : ''}">${k.semanas[i]}</span>`]), ['', k => k.sobrecarga ? '<span class="tag t-red">sobrecarga</span>' : '']])}
+  ${blocoTransferencias()}
   <h2>Todos os usuários</h2>
   ${tabelaSimples(lista, [['Nome', u => `<b>${esc(u.nome)}</b>`], ['E-mail', 'email'], ['Cargo', 'perfil'], ['Carteira', u => esc(u.carteira || '—')], ['Situação', sit],
     ['', u => podeMexer(u) ? `<button class="btn peq" type="button" data-editusu="${esc(u.id)}">Editar</button>` : '<span class="mut peq">Só a coordenação altera</span>']])}`;
@@ -1820,6 +1870,7 @@ function janelaUsuario(id, pre) {
     ${id ? `<p><b>${esc(u.nome)}</b></p>` : campo('Nome completo', txt('nome', u.nome))}
     <div class="linha" style="margin-top:10px">${campo('E-mail Google', `<input type="email" name="email" value="${esc(u.email)}" placeholder="nome@bling.com.br">`)}${campo('Cargo', sel('perfil', opcoesCargo(), u.perfil))}</div>
     <div class="linha">${campo('Carteira', sel('carteira', [['', 'Sem carteira'], ['Ongoing', 'Ongoing'], ['Onboarding', 'Onboarding']], u.carteira), 'Obrigatória para CSM. CS Ops ou superior também pode ter carteira.')}
+    ${campo('Contatos humanos por mês', `<input type="number" name="capacidade_mensal" min="0" value="${esc(u.capacidade_mensal || '')}" placeholder="${esc(P('capacidade_mensal'))}">`, 'Vazio usa o padrão dos parâmetros.')}
     ${id ? campo('Situação', sel('ativo', [['Sim', 'Ativo'], ['Não', 'Inativo']], ['Sim', 'Não'].includes(u.ativo) ? u.ativo : 'Sim')) : ''}</div>
     ${USUARIO().perfil !== 'Coordenação' ? '<p class="mut peq">Os cargos de Coordenação, Gerente executivo e Diretor geral só são concedidos pela coordenação.</p>' : ''}`,
     [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarUsuario(tx, d, id || null) }]);
@@ -1838,8 +1889,51 @@ function janelaAprovar(id) {
 function janelaTransferir(nome, tipo) {
   const destinos = nomesCSM(tipo).filter(n => n !== nome);
   janela(`Transferir carteira de ${nome}`, `<p>${clientesDaCarteira(nome, tipo).length} clientes da carteira de ${esc(tipo)}. As tarefas abertas de ${esc(nome)} nesses clientes também passam para o novo CSM, e cada cliente recebe as tarefas de apresentação de transição.</p>
-    ${destinos.length ? campo('Transferir para', sel('para', destinos)) : '<div class="aviso a-warn">Não há outro CSM com carteira de ' + esc(tipo) + '. Cadastre a pessoa antes.</div>'}`,
-    destinos.length ? [{ rotulo: 'Transferir', pri: true, acao: (d, tx) => transferirCarteira(tx, nome, d.para, tipo) }] : []);
+    ${destinos.length ? campo('Transferir para', sel('para', destinos)) + '<div style="margin-top:10px">' + campo('Registro de passagem (vai para cada cliente)', area('nota', '', 'placeholder="Contexto da carteira, riscos e pendências"')) + '</div>' : '<div class="aviso a-warn">Não há outro CSM com carteira de ' + esc(tipo) + '. Cadastre a pessoa antes.</div>'}`,
+    destinos.length ? [{ rotulo: 'Transferir', pri: true, acao: (d, tx) => transferirCarteira(tx, nome, d.para, tipo, d.nota) }] : []);
+}
+
+function blocoTransferencias() {
+  const trs = transferencias(), eleg = trs.filter(x => !x.adiado), adiados = trs.filter(x => x.adiado);
+  depois(() => {
+    $$('[data-transfcli]').forEach(b => b.onclick = () => {
+      const c = cliente(b.dataset.transfcli), destinos = nomesCSM('Ongoing').filter(n => n !== c.csm_ongoing);
+      const sugest = destinos.map(n => ({ n, m: modeloDaCarteira(n), k: cargaCSM(n) })).sort((a, b) => (a.m === c.modelo || (c.modelo === 'Key Account' && a.m === 'Consultivo') ? 0 : 1) - (b.m === c.modelo || (c.modelo === 'Key Account' && b.m === 'Consultivo') ? 0 : 1) || a.k.semanas[0] / a.k.semanal - b.k.semanas[0] / b.k.semanal);
+      janela(`Transferir ${c.nome}`, `<p class="peq">Faixa de atendimento ${esc(c.faixa_at)} (${esc(c.modelo)}). Hoje com ${esc(c.csm_ongoing)}.</p>
+        ${campo('Para', sel('para', sugest.map(x => [x.n, `${x.n} · carteira ${x.m || '—'} · ${x.k.semanas[0]}/${fnum(x.k.semanal, 1)} esta semana`])))}
+        <div style="margin-top:10px">${campo('Registro de passagem', area('nota', '', 'style="min-height:110px" placeholder="Contexto, objetivos, sponsor e contatos, riscos, pendências e próximos passos"'))}</div>
+        <p class="mut peq">O novo CSM recebe a mensagem de apresentação e o kickoff de transição; as tarefas abertas do CSM anterior passam junto. Prazo de referência: 10 dias úteis (H-49).</p>`,
+        [{ rotulo: 'Transferir', pri: true, acao: (d, tx) => transferirCliente(tx, c.id_cliente, d.para, d.nota) }]);
+    });
+  });
+  const cols = [['Cliente', x => `<a href="#cliente/${encodeURIComponent(x.c.id_cliente)}">${esc(x.c.nome)}</a>`], ['CSM', x => esc(x.c.csm_ongoing)], ['Modelo do cliente', x => `${esc(x.c.modelo)} (Faixa ${esc(x.c.faixa_at)})`], ['Carteira do CSM', 'modeloCsm']];
+  return `<h2>Transferências</h2><p class="mut peq">Clientes cuja faixa de atendimento (que muda depois de três meses na nova faixa) não combina com o modelo da carteira do CSM (D-40). Ficam adiados os que estão em IF1, IF2 ou IF3, em retenção, com desconto vigente ou com expansão em negociação (H-48).</p>
+  <h3>Elegíveis (${eleg.length})</h3>${eleg.length ? tabelaSimples(eleg, [...cols, ['', x => `<button class="btn peq pri" type="button" data-transfcli="${esc(x.c.id_cliente)}">Transferir</button>`]]) : '<p class="mut">Nenhum.</p>'}
+  <h3 style="margin-top:14px">Adiados (${adiados.length})</h3>${adiados.length ? tabelaSimples(adiados, [...cols, ['Motivo do adiamento', x => esc(x.motivos.join(', '))]]) : '<p class="mut">Nenhum.</p>'}`;
+}
+
+function tabelaCarteiras(donos, cart) {
+  const ativoCart = c => c.status === 'Ativo' && ['IF1', 'IF2', 'IF3', 'IF4', 'IF5'].includes(c.if_atual) && c.meta_ativa;
+  const faixas = [...new Set(cart.filter(ativoCart).map(c => String(c.faixa_at || '')))].sort((a, b) => (a || '9').localeCompare(b || '9'));
+  const cancelados = cart.filter(c => c.if_atual === 'IF0');
+  const linhas = donos.map(u => {
+    const doCsm = cart.filter(c => (u.carteira === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing) === u.nome);
+    return { u, cls: doCsm.filter(ativoCart), foraMeta: doCsm.filter(c => c.status === 'Ativo' && c.if_atual !== 'IF0' && !c.meta_ativa).length,
+      canc: cancelados.filter(c => c.csm_cancelamento === u.nome).length };
+  });
+  const totalFaixa = f => linhas.reduce((a, x) => a + x.cls.filter(c => String(c.faixa_at || '') === f).length, 0);
+  const cols = [['CSM', x => `<b>${esc(x.u.nome)}</b>`], ['Carteira', x => esc(x.u.carteira)], ['Clientes ativos', x => `<b>${x.cls.length}</b>`],
+    ['MRR', x => fmoeda(x.cls.reduce((a, c) => a + c.mrr, 0))], ['IF1 e IF2', x => x.cls.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length],
+    ...faixas.map(f => [f ? `Faixa ${f}` : 'Sem faixa', x => x.cls.filter(c => String(c.faixa_at || '') === f).length || '—']),
+    ['Sem próxima ação', x => x.cls.filter(c => !c.prox_acao).length],
+    ['Cancelados (IF0)', x => x.canc || '—'],
+    ['', x => x.cls.length ? `<button class="btn peq" type="button" data-transf="${esc(x.u.nome)}|${esc(x.u.carteira)}">Transferir carteira</button>` : '<span class="mut peq">Atribua clientes pela Carteira</span>']];
+  const foraMeta = linhas.reduce((a, x) => a + x.foraMeta, 0);
+  const totais = `<tr style="font-weight:600;background:var(--card2)"><td>Total</td><td></td><td>${linhas.reduce((a, x) => a + x.cls.length, 0)}</td><td>${fmoeda(linhas.reduce((a, x) => a + x.cls.reduce((s, c) => s + c.mrr, 0), 0))}</td><td>${linhas.reduce((a, x) => a + x.cls.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length, 0)}</td>${faixas.map(f => `<td>${totalFaixa(f)}</td>`).join('')}<td>${linhas.reduce((a, x) => a + x.cls.filter(c => !c.prox_acao).length, 0)}</td><td>${linhas.reduce((a, x) => a + x.canc, 0)}</td><td></td></tr>`;
+  const canc = `<tr><td><b>Cancelados</b></td><td>Registro</td><td colspan="${3 + faixas.length + 1}" class="mut">${cancelados.length} clientes em IF0 · MRR perdido ${fmoeda(DB.churn.reduce((a, x) => a + (num(x.mrr_perdido) || 0), 0))}</td><td>${cancelados.length}</td><td><button class="btn peq" type="button" data-ir="carteira" id="verCancelados">Ver clientes</button></td></tr>`;
+  depois(() => { const b = $('#verCancelados'); if (b) b.onclick = e => { e.stopPropagation(); ESTADO_UI.filtros.cart = { ...(ESTADO_UI.filtros.cart || {}), ver: 'todos', csm: CARTEIRA_CANCELADOS, status: '' }; ir('carteira'); }; });
+  return tabelaSimples(linhas, cols).replace('</tbody>', totais + canc + '</tbody>') +
+    (foraMeta ? `<p class="peq" style="margin-top:6px"><span class="tag t-org">${foraMeta}</span> cliente(s) ainda marcados como ativos no CRM, mas com a conta cancelada ou fora da Meta: não entram na contagem e vão para IF0 na próxima automação.</p>` : '');
 }
 // ===================== ficha do cliente =====================
 function pgFicha(arg) {
@@ -1852,18 +1946,19 @@ function pgFicha(arg) {
   if (!c) return `<div class="topo"><h1>Ficha do cliente</h1>${busca}</div>${vazio('Escolha um cliente.')}`;
   ESTADO_UI.ultimoCliente = c.id_cliente;
   const u = USUARIO(), edita = podeEditar(u, c), aba = ESTADO_UI.abaFicha[c.id_cliente] || 'geral';
-  const abas = [['geral', 'Visão geral'], ['tempo', 'Linha do tempo'], ['tarefas', 'Tarefas'], ['if', 'IF e saúde'], ['ret', 'Retenção e churn'], ['contatos', 'Contatos'], ['notas', 'Notas e marcos'], ['aud', 'Alterações']];
+  const abas = [['geral', 'Visão geral'], ['tempo', 'Linha do tempo'], ['tarefas', 'Tarefas'], ['if', 'IF e saúde'], ['ret', 'Retenção e churn'], ['exp', 'Expansão e plano'],
+    ...(c.jornada === 'Onboarding' || DB.onboarding_etapas.some(e => e.id_cliente === c.id_cliente) ? [['onb', 'Onboarding']] : []), ['contatos', 'Contatos'], ['notas', 'Notas e marcos'], ['aud', 'Alterações']];
   const fix = DB.notas.filter(n => n.id_cliente === c.id_cliente && n.fixada === 'Sim');
   depois(() => {
     $$('[data-abaf]').forEach(b => b.onclick = () => { ESTADO_UI.abaFicha[c.id_cliente] = b.dataset.abaf; render(); });
     $$('[data-reg]').forEach(b => b.onclick = () => janelaContato(c.id_cliente, b.dataset.reg));
-    ({ geral: ligarGeral, tarefas: ligarTarefasF, if: ligarIF, ret: ligarRet, contatos: ligarContatos, notas: ligarNotas, tempo: ligarTempo })[aba]?.(c, edita);
+    ({ geral: ligarGeral, tarefas: ligarTarefasF, if: ligarIF, ret: ligarRet, contatos: ligarContatos, notas: ligarNotas, tempo: ligarTempo, exp: ligarExp, onb: ligarOnb })[aba]?.(c, edita);
   });
   const tags = [tagIF(c.if_atual), tagEstado(c.estado), c.modelo && `<span class="tag">${esc(c.modelo)}</span>`, c.faixa_at && `<span class="tag">Faixa ${esc(c.faixa_at)}</span>`, `<span class="tag">${esc(c.jornada)}</span>`,
     c.prioridade_abc && `<span class="tag">Prioridade ${esc(c.prioridade_abc)}</span>`, c.key_account && '<span class="tag t-vio">Key Account</span>', c.status !== 'Ativo' && `<span class="tag t-red">${esc(c.status)}</span>`, sim(c.if_pendente) && '<span class="tag t-org">Classificação pendente</span>'].filter(Boolean).join('');
-  const corpo = { geral: fGeral, tempo: fTempo, tarefas: fTarefas, if: fIF, ret: fRet, contatos: fContatos, notas: fNotas, aud: fAud }[aba](c, edita);
+  const corpo = ({ geral: fGeral, tempo: fTempo, tarefas: fTarefas, if: fIF, ret: fRet, contatos: fContatos, notas: fNotas, aud: fAud, exp: fExp, onb: fOnb }[aba] || fGeral)(c, edita);
   return `<div class="topo"><div><h1>${esc(c.nome)}</h1><div class="tags">${tags}</div>
-    <p class="lead peq">CSM de Ongoing: <b>${esc(c.csm_ongoing || '—')}</b>${c.csm_onboarding ? ` · CSM de Onboarding: <b>${esc(c.csm_onboarding)}</b>` : ''} · CNPJ ${esc(fcnpj(c.cnpj) || '—')} · ID ${esc(c.id_cliente)}</p></div>${busca}</div>
+    <p class="lead peq">${c.if_atual === 'IF0' ? `Carteira: <b>Cancelados</b> · CSM no cancelamento: <b>${esc(c.csm_cancelamento || '—')}</b> · cancelado em ${fdata(c.cancelado_em || c.data_cancelamento)} · ` : ''}CSM de Ongoing: <b>${esc(c.csm_ongoing || '—')}</b>${c.csm_onboarding ? ` · CSM de Onboarding: <b>${esc(c.csm_onboarding)}</b>` : ''} · CNPJ ${esc(fcnpj(c.cnpj) || '—')} · ID ${esc(c.id_cliente)}</p></div>${busca}</div>
   <div class="grade g5">${kpi('HS de dados', fnum(c.hs_num), `${c.faixa_hs || '—'} · calculado em ${fdata(c.hs_data_calculo)}`)}${kpi('HS final', fnum(c.hs_final), `${c.faixa_hsf || '—'} · após a trava do IF`)}${kpi('MRR', fmoeda(c.mrr), esc(c.periodicidade || ''))}${kpi('Dias sem contato efetivo', fnum(c.dias_sem_efetivo), `Último: ${fdata(c.ultimo_efetivo)}`)}
     ${kpi('Próxima ação', c.prox_acao ? fdata(c.prox_prazo) : '—', c.prox_acao ? esc(c.prox_acao) : '<span class="tag t-red">Sem próxima ação</span>')}</div>
   ${c.alertas.map(a => `<div class="aviso a-warn">${esc(a)}</div>`).join('')}
@@ -1882,16 +1977,17 @@ function fGeral(c, edita) {
   const kaMarca = c.key_account && c.key_account_origem === 'Peso de marca';
   return `<div class="grade g2"><div><div class="card"><h3>Dados oficiais</h3><p class="mut peq">Somente leitura. Última carga: ${fdh(c.atualizado_em)}</p>
     <div class="tw"><table><tbody>${ofi.map(([k, v]) => `<tr><td class="mut">${k}</td><td>${esc(v || '—')}</td></tr>`).join('')}</tbody></table></div></div>
+    ${blocoUso(c)}
     <div class="card" style="margin-top:14px"><h3>Descontos vigentes</h3>${desc.length ? desc.map(d => `<p><b>${fnum(d.pct)}%</b> de ${fdata(d.inicio)} a ${fdata(d.fim)}: ${fmoeda(d.valor_anterior)} → ${fmoeda(d.valor_novo)} <span class="mut">(aprovado por ${esc(d.aprovado_por)})</span></p>`).join('') : '<p class="mut">Nenhum desconto vigente.</p>'}</div></div>
   <div><form class="card" id="formCrm" onsubmit="return false"><h3>Dados do CRM</h3>
     ${campo('Objetivos do cliente', area('objetivos', c.objetivos, dis), 'Obrigatório depois do kickoff de ongoing.')}
     <div class="linha" style="margin-top:10px">${campo('Prioridade A/B/C', sel('prioridade_abc', [['', 'Sem prioridade'], 'A', 'B', 'C'], c.prioridade_abc, undefined, ['Consultivo', 'Key Account'].includes(c.modelo) && edita ? '' : 'disabled'), 'Só Faixa 3+. Até 10 contas A por CSM.')}
       ${campo('Faixa de atendimento', sel('faixa_atendimento', [['', 'Igual à faixa apurada'], ...'12345678'.split('')], c.faixa_atendimento, undefined, disG))}</div>
     <div class="linha">${campo('Jornada', sel('jornada', JORNADAS, c.jornada, undefined, disG))}${campo('CSM de Ongoing', sel('csm_ongoing', [['', 'Sem CSM'], ...csms], c.csm_ongoing, undefined, disG))}${campo('CSM de Onboarding', sel('csm_onboarding', [['', 'Sem CSM'], ...onbs], c.csm_onboarding, undefined, disG))}</div>
-    ${chk('ka', 'Key Account por peso de marca', kaMarca, disG)}${campo('Justificativa do Key Account', txt('key_account_justificativa', c.key_account_justificativa, disG))}
+    ${chk('ka', 'Key Account por peso de marca', kaMarca, disG)}<div class="linha">${campo('Justificativa do Key Account', txt('key_account_justificativa', c.key_account_justificativa, disG))}${campo('Revisar Key Account em', dt('key_account_revisao', c.key_account_revisao, disG))}</div>
     <div class="acoes"><button class="btn pri" id="salvarCrm" type="button" ${dis}>Salvar dados do CRM</button></div></form>
   <div class="card" style="margin-top:14px"><h3>Gatilhos</h3>${c.gatilho ? `<p>Gatilho <b>${esc(c.gatilho.toLowerCase())}</b> desde ${fdata(c.gatilho_desde)}: ${esc(c.gatilho_descricao)}</p>${campo('Como foi tratado', '<input type="text" id="gatRes">')}<div class="acoes"><button class="btn" id="encGat" type="button" ${dis}>Encerrar gatilho</button></div>` :
-    `<p class="mut peq">Ticket crítico, feedback negativo, queda de uso ou outro sinal que pede ação.</p><div id="gatForm">${radios('nivel', [['Imediato', 'Imediato (mesmo dia útil)'], ['Alto', 'Alto (até 2 dias úteis)']], 'Imediato')}<div style="margin-top:8px">${campo('Descrição', '<input type="text" id="gatDesc" placeholder="Ex.: ticket crítico nº 48213 sem solução">')}</div></div><div class="acoes"><button class="btn" id="novoGat" type="button" ${dis}>Sinalizar gatilho</button></div>`}</div></div></div>`;
+    `<p class="mut peq">Ticket crítico, feedback negativo, queda de uso ou outro sinal que pede ação.</p><div id="gatForm"><div style="margin-bottom:8px">${campo('Tipo de sinal', `<select id="gatTipo">${opts(lista('tipo_gatilho'))}</select>`, 'Ticket crítico gera o acompanhamento pós-ticket quando o gatilho é encerrado.')}</div>${radios('nivel', [['Imediato', 'Imediato (mesmo dia útil)'], ['Alto', 'Alto (até 2 dias úteis)']], 'Imediato')}<div style="margin-top:8px">${campo('Descrição', '<input type="text" id="gatDesc" placeholder="Ex.: ticket crítico nº 48213 sem solução">')}</div></div><div class="acoes"><button class="btn" id="novoGat" type="button" ${dis}>Sinalizar gatilho</button></div>`}</div></div></div>`;
 }
 function ligarGeral(c) {
   const err = $('#fichaErro');
@@ -1901,13 +1997,16 @@ function ligarGeral(c) {
     if ('prioridade_abc' in d && !$('[name=prioridade_abc]').disabled) mud.prioridade_abc = d.prioridade_abc;
     if (g) {
       const f = num(d.faixa_atendimento || c.faixa_apurada) || 0;
-      Object.assign(mud, { faixa_atendimento: d.faixa_atendimento, key_account: d.ka || f >= 7 ? 'Sim' : 'Não', key_account_origem: d.ka ? 'Peso de marca' : f >= 7 ? 'Faixa' : '', key_account_justificativa: d.key_account_justificativa });
+      const rev = d.ka && !d.key_account_revisao ? iso(somaDias(hoje(), 30 * (Pn('revisao_key_account_meses') || 6))) : d.key_account_revisao;
+      Object.assign(mud, { faixa_atendimento: d.faixa_atendimento, key_account: d.ka || f >= 7 ? 'Sim' : 'Não', key_account_origem: d.ka ? 'Peso de marca' : f >= 7 ? 'Faixa' : '', key_account_justificativa: d.key_account_justificativa, key_account_revisao: d.ka ? rev : '' });
     }
     salvarCamposCliente(tx, c.id_cliente, mud);
     if (g) { atribuirCSM(tx, c.id_cliente, 'Ongoing', d.csm_ongoing); atribuirCSM(tx, c.id_cliente, 'Onboarding', d.csm_onboarding); mudarJornada(tx, c.id_cliente, d.jornada); }
   }, 'Dados do CRM salvos.', err);
   $('#encGat') && ($('#encGat').onclick = () => acaoPagina(tx => encerrarGatilho(tx, c.id_cliente, $('#gatRes').value), 'Gatilho encerrado.', err));
-  $('#novoGat') && ($('#novoGat').onclick = () => acaoPagina(tx => sinalizarGatilho(tx, c.id_cliente, $('#gatForm [name=nivel]:checked').value, $('#gatDesc').value), 'Gatilho sinalizado e incluído na lista da semana.', err));
+  $('#novoGat') && ($('#novoGat').onclick = () => acaoPagina(tx => sinalizarGatilho(tx, c.id_cliente, $('#gatForm [name=nivel]:checked').value, $('#gatDesc').value, $('#gatTipo').value), 'Gatilho sinalizado e incluído na lista da semana.', err));
+  $('#gatTipo') && ($('#gatTipo').onchange = e => { const nv = (DB.listas.find(l => l.lista === 'tipo_gatilho' && l.valor === e.target.value) || {}).pai; if (nv) { const r = $(`#gatForm [name=nivel][value="${nv}"]`); if (r) r.checked = true; } });
+  ligarUso(c);
 }
 
 // ---------- linha do tempo ----------
@@ -1997,6 +2096,7 @@ function fRet(c, edita) {
   if (churns.length) h += `<h2>Cancelamentos</h2>${churns.map(x => `<div class="card" style="margin-bottom:8px">Cancelado em <b>${fdata(x.data_cancelamento)}</b> · MRR perdido ${fmoeda(x.mrr_perdido)} · churn surpresa: ${esc(x.churn_surpresa)} · origem: ${esc(x.origem || 'pendente')} · motivo: ${esc(x.motivo || 'pendente')}
     ${edita && !(x.origem && x.motivo) ? `<div class="acoes"><button class="btn pri peq" type="button" data-churn="${esc(x.id)}">Completar origem e motivo</button></div>` : ''}</div>`).join('')}`;
   const enc = rets.filter(r => r !== ab);
+  h += fPriorizacoes(c, edita);
   if (enc.length) h += `<h2>Casos encerrados</h2>${tabelaSimples(enc, [['Aberto em', r => fdh(r.aberto_em)], ['Gatilho', 'gatilho'], ['Causa', 'causa'], ['Oferta', r => esc([r.oferta_tipo, r.oferta_pct && r.oferta_pct + '%'].filter(Boolean).join(' '))], ['Desfecho', 'desfecho'], ['Quem decidiu', 'decidido_por'], ['Base', 'base_decisao']])}`;
   return h;
 }
@@ -2006,6 +2106,7 @@ function camposChurn() {
 }
 function ligarRet(c) {
   const cid = c.id_cliente;
+  ligarPriorizacoes(c);
   $('#abrirRet') && ($('#abrirRet').onclick = () => acaoPagina(tx => { abrirRetencaoSePreciso(tx, cid, 'Manual', c.csm_ongoing, hoje()); }, 'Caso de retenção aberto.', $('#fichaErro')));
   $('#downgrade') && ($('#downgrade').onclick = () => janela(`Pedido de downgrade · ${c.nome}`, `<p class="mut peq">O pedido leva o cliente a IF1 e abre o fluxo de retenção. Downgrade concluído é IF0.</p>${campo('Motivo do pedido', txt('motivo'))}`,
     [{ rotulo: 'Registrar pedido de downgrade', pri: true, acao: (d, tx) => registrarDowngrade(tx, cid, d.motivo) }]));
@@ -2070,6 +2171,492 @@ function fAud(c) {
   const a = DB.auditoria.filter(x => x.id_cliente === c.id_cliente).sort((x, y) => y.data.localeCompare(x.data)).slice(0, 400);
   return `<p class="mut peq">Registro de toda alteração relevante: campo, valor anterior, valor novo, quem e quando.</p>${tabelaSimples(a, [['Quando', x => fdh(x.data)], ['Quem', 'usuario'], ['Tabela', 'tabela'], ['Campo', 'campo'], ['Antes', 'valor_anterior'], ['Depois', 'valor_novo']])}`;
 }
+// =====================================================================
+// Requisitos da Fase 2 (virada) que faltavam no MVP
+// =====================================================================
+
+// ---------- parâmetros configuráveis (R0.04, R12.02) ----------
+const PARAMS = [
+  ['if3_alerta', '30', 'Dia do alerta do IF3'], ['if3_limite', '40', 'Limite de dias em IF3'],
+  ['hs_min_if45', '60', 'HS de dados mínimo para IF4 e IF5'], ['validade_excecao', '30', 'Dias de validade da exceção de IF'],
+  ['dias_tacita', '2', 'Dias úteis para a aprovação tácita'], ['dias_sem_efetivo', '60', 'Dias sem contato efetivo para alerta'],
+  ['tam_lista', '10', 'Clientes na lista da semana'], ['teto_a', '10', 'Teto de contas A por CSM'],
+  ['desconto_mensal', '20', 'Desconto máximo do CSM no plano mensal (%)'], ['desconto_semestral', '20', 'Desconto máximo do CSM no semestral (%)'],
+  ['desconto_anual', '25', 'Desconto máximo do CSM no anual (%)'],
+  ['capacidade_mensal', '30', 'Contatos humanos por mês de cada CSM (padrão; pode mudar por pessoa em Usuários)'],
+  ['reserva_reativa', '0', 'Parte da capacidade reservada para mensagens (%, H-35)'],
+  ['regua_sem_resposta', '3,7,15,30', 'Dias da régua de sem resposta, depois da tentativa (H-18)'],
+  ['pos_ticket', '2,7,15,30', 'Acompanhamento pós-ticket: o primeiro em dias úteis, os demais em dias (H-19)'],
+  ['onboarding_alerta', '35', 'Dia do alerta do onboarding'], ['onboarding_limite', '45', 'Limite de dias do onboarding'],
+  ['ciclo_venda_dias', '15', 'Dias depois do treinamento para alertar ciclo de venda não concluído (H-32)'],
+  ['dados_desatualizados_horas', '24', 'Horas sem busca dos dados oficiais para alertar (R14.08)'],
+  ['revisao_key_account_meses', '6', 'Meses até revisar a marcação de Key Account por peso de marca'],
+];
+const P = k => { const r = DB.parametros.find(x => x.chave === k); return r && S(r.valor) !== '' ? r.valor : (PARAMS.find(p => p[0] === k) || [])[1]; };
+const Pn = k => num(P(k));
+const Plista = k => String(P(k) || '').split(/[,;\s]+/).map(num).filter(x => x > 0);
+function aplicarParametros() {
+  IF3_ALERTA = Pn('if3_alerta') || 30; IF3_LIMITE = Pn('if3_limite') || 40; HS_MIN_IF45 = Pn('hs_min_if45') || 60;
+  VALIDADE_EXCECAO = Pn('validade_excecao') || 30; DIAS_TACITA = Pn('dias_tacita') || 2; DIAS_SEM_EFETIVO = Pn('dias_sem_efetivo') || 60;
+  TAM_LISTA = Pn('tam_lista') || 10; TETO_A = Pn('teto_a') || 10;
+  LIMITE_DESCONTO.Mensal = Pn('desconto_mensal') || 20; LIMITE_DESCONTO.Semestral = Pn('desconto_semestral') || 20; LIMITE_DESCONTO.Anual = Pn('desconto_anual') || 25;
+}
+
+// ---------- régua de sem resposta e pós-ticket (R6.05) ----------
+function reguaSemResposta(tx, cid, d) {
+  const abertas = DB.tarefas.filter(t => t.id_cliente === cid && t.status === 'Aberta' && t.origem === 'Régua sem resposta');
+  if (S(d.resultado).startsWith('Efetivo')) { abertas.forEach(t => tx.atualizar('tarefas', t.id, { status: 'Cancelada', evidencia: 'Cliente respondeu', concluida_em: agora() })); return; }
+  if (d.resultado !== 'Sem resposta' || abertas.length) return;
+  const c = cliente(cid), resp = (c && c.csm) || tx.usuario, base = data(d.data) || hoje(), dias = Plista('regua_sem_resposta');
+  dias.forEach(n => criarTarefa(tx, cid, 'Contato', `Régua de sem resposta: nova tentativa (D+${n})`, resp, somaDias(base, n), 'Régua sem resposta', `regua:${cid}:${iso(base)}:${n}`));
+  if (dias.length) evento(tx, cid, 'Régua de sem resposta', `Tentativas agendadas em D+${dias.join(', D+')}. Se o cliente responder, as tentativas abertas são canceladas.`);
+}
+function posTicket(tx, cid, desc) {
+  const c = cliente(cid), resp = (c && c.csm) || tx.usuario, h = hoje(), dias = Plista('pos_ticket');
+  dias.forEach((n, i) => criarTarefa(tx, cid, 'Follow-up', `Pós-ticket (${i === 0 ? n + ' dias úteis' : 'D+' + n}): ${desc}`, resp, i === 0 ? somaUteis(h, n) : somaDias(h, n), 'Pós-ticket', `pos:${cid}:${iso(h)}:${n}`));
+  if (dias.length) evento(tx, cid, 'Acompanhamento pós-ticket', `Contatos agendados depois do ticket: ${desc}`);
+}
+
+// ---------- transferências e carga (R2.03, R2.04, R2.05, R5.05) ----------
+function modeloDaCarteira(nome) {
+  const cont = {};
+  carteira().filter(c => c.status === 'Ativo' && c.csm_ongoing === nome && c.modelo).forEach(c => { const m = c.modelo === 'Key Account' ? 'Consultivo' : c.modelo; cont[m] = (cont[m] || 0) + 1; });
+  return Object.keys(cont).sort((a, b) => cont[b] - cont[a])[0] || '';
+}
+function transferencias() {
+  const modos = {}; nomesCSM('Ongoing').forEach(n => (modos[n] = modeloDaCarteira(n)));
+  const retAberta = new Set(DB.retencao.filter(r => ['', 'Em negociação'].includes(r.desfecho)).map(r => r.id_cliente));
+  const descVig = new Set(DB.descontos.filter(x => (data(x.fim) || hoje()) >= hoje()).map(x => x.id_cliente));
+  const opAberta = new Set(DB.oportunidades.filter(o => ['Aberta', 'Em negociação', 'Indicada', 'Recebida'].includes(o.status)).map(o => o.id_cliente));
+  return carteira().filter(c => {
+    if (c.status !== 'Ativo' || c.jornada !== 'Ongoing' || !c.csm_ongoing || !c.modelo || !modos[c.csm_ongoing]) return false;
+    const m = c.modelo === 'Key Account' ? 'Consultivo' : c.modelo;
+    return m !== modos[c.csm_ongoing];
+  }).map(c => {
+    const motivos = [];
+    if (['IF1', 'IF2', 'IF3'].includes(c.if_atual)) motivos.push(c.if_atual);
+    if (retAberta.has(c.id_cliente)) motivos.push('Retenção em andamento');
+    if (descVig.has(c.id_cliente)) motivos.push('Desconto vigente');
+    if (opAberta.has(c.id_cliente)) motivos.push('Expansão em negociação');
+    return { c, modeloCsm: modos[c.csm_ongoing], adiado: motivos.length > 0, motivos };
+  });
+}
+function transferirCliente(tx, cid, para, nota) {
+  exigirMaster(); exigir(para, 'Escolha o CSM de destino.');
+  exigir(S(nota).length >= 20, 'Escreva o registro de passagem: contexto, objetivos, riscos, pendências e próximos passos.');
+  const c = obter('clientes', cid), campo = c.jornada === 'Onboarding' ? 'Onboarding' : 'Ongoing';
+  const de = campo === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing;
+  exigir(de !== para, 'O cliente já está com essa pessoa.');
+  atribuirCSM(tx, cid, campo, para);
+  DB.tarefas.filter(t => t.status === 'Aberta' && t.responsavel === de && t.id_cliente === cid).forEach(t => tx.atualizar('tarefas', t.id, { responsavel: para }));
+  adicionarNota(tx, cid, 'Marco', `Registro de passagem de ${de || '—'} para ${para}: ${nota}`, 'Registro de passagem', hoje(), true);
+  return `${nomeCliente(cid)} transferido para ${para}.`;
+}
+function cargaCSM(nome) {
+  const u = DB.usuarios.find(x => x.nome === nome) || {};
+  const mensal = num(u.capacidade_mensal) || Pn('capacidade_mensal') || 30;
+  const semanal = (mensal * (1 - (Pn('reserva_reativa') || 0) / 100)) / 4.33;
+  const cs = carteira().filter(c => c.status === 'Ativo' && c.csm === nome);
+  const seg = segunda(hoje());
+  const semanas = [0, 1, 2, 3].map(k => {
+    const ini = somaDias(seg, 7 * k), fim = somaDias(ini, 6);
+    return cs.filter(c => c.proximo_contato && (k === 0 ? c.proximo_contato <= fim : c.proximo_contato >= ini && c.proximo_contato <= fim)).length;
+  });
+  return { nome, clientes: cs.length, mensal, semanal: Math.round(semanal * 10) / 10, semanas, sobrecarga: semanas[0] > semanal && semanas[1] > semanal };
+}
+
+// ---------- expansão (R11.01, R11.03, R11.05, R11.06) ----------
+const STATUS_UPSELL = ['Aberta', 'Em negociação', 'Ganha', 'Perdida'];
+const STATUS_INDICACAO = ['Indicada', 'Recebida', 'Em negociação', 'Convertida', 'Não convertida'];
+const ehIndicacao = tipo => /^Indica/.test(tipo || '');
+function salvarOportunidade(tx, cid, d, id) {
+  exigir(d.tipo, 'Escolha o tipo de oportunidade.');
+  const status = d.status || (ehIndicacao(d.tipo) ? 'Indicada' : 'Aberta');
+  exigir((ehIndicacao(d.tipo) ? STATUS_INDICACAO : STATUS_UPSELL).includes(status), 'Situação inválida para esse tipo.');
+  if (['Perdida', 'Não convertida'].includes(status)) exigir(d.motivo_perda, 'Informe o motivo da perda.');
+  if (status === 'Ganha') exigir(num(d.valor_mrr) > 0, 'Informe o aumento de MRR da venda ganha.');
+  const pct = num(d.desconto_pct) || 0;
+  const reg = { tipo: d.tipo, produto: d.produto || '', descricao: d.descricao || '', valor_mrr: num(d.valor_mrr) || '', status, motivo_perda: d.motivo_perda || '', desconto_pct: pct || '', responsavel: d.responsavel || tx.usuario, atualizada_em: agora() };
+  const atual = id ? obter('oportunidades', id) : null;
+  if (atual) tx.atualizar('oportunidades', id, reg); else id = tx.inserir('oportunidades', { ...reg, id_cliente: cid, criada_por: tx.usuario, criada_em: agora() });
+  // D-38: qualquer desconto em API ou armazenamento passa pela coordenação
+  if (pct > 0 && /API|armazenamento/i.test(d.tipo) && (!atual || num(atual.desconto_pct) !== pct)) {
+    const aid = tx.inserir('aprovacoes', { tipo: 'Desconto em API ou armazenamento', id_cliente: cid, solicitante: tx.usuario, data_pedido: agora(), previa: 'Sim', decisao: 'Pendente',
+      dados: JSON.stringify({ oportunidade_id: id, pct, resumo: `${d.tipo}: desconto de ${pct}% (D-38)` }) });
+    tx.atualizar('oportunidades', id, { aprovacao_id: aid });
+    notificarCoord(tx, 'Aprovação de desconto', `${nomeCliente(cid)}: ${d.tipo} com desconto de ${pct}%.`, cid);
+  }
+  evento(tx, cid, 'Oportunidade', `${d.tipo}: ${status}${num(d.valor_mrr) ? ' · ' + fmoeda(d.valor_mrr) + ' de MRR' : ''}`);
+  return atual ? 'Oportunidade atualizada.' : 'Oportunidade registrada.';
+}
+
+// ---------- plano de evolução (R9.04) ----------
+const STATUS_PLANO = ['Planejado', 'Em andamento', 'Concluído', 'Cancelado'];
+function salvarItemPlano(tx, cid, d, id) {
+  exigir(['Objetivo', 'Marco'].includes(d.tipo), 'Escolha objetivo ou marco.'); exigir(S(d.titulo), 'Descreva o item.');
+  exigir(STATUS_PLANO.includes(d.status), 'Escolha a situação.');
+  const reg = { tipo: d.tipo, titulo: d.titulo, prazo: d.prazo ? iso(data(d.prazo)) : '', status: d.status, observacao: d.observacao || '' };
+  if (id) tx.atualizar('plano_itens', id, reg); else tx.inserir('plano_itens', { ...reg, id_cliente: cid, criado_por: tx.usuario, criado_em: agora() });
+  evento(tx, cid, 'Plano de Evolução', `${d.tipo}: ${d.titulo} (${d.status})`);
+}
+
+// ---------- pedidos de priorização a outros times (R10.04, H-39) ----------
+function salvarPriorizacao(tx, cid, d, id) {
+  if (!id) {
+    exigir(d.time, 'Escolha o time.'); exigir(S(d.descricao), 'Descreva o pedido.'); exigir(data(d.prazo), 'Informe o prazo desejado.');
+    id = tx.inserir('priorizacoes', { id_cliente: cid, time: d.time, chamado: d.chamado || '', descricao: d.descricao, prazo: iso(data(d.prazo)), status: 'Aguardando aprovação', criado_por: tx.usuario, criado_em: agora() });
+    const aid = tx.inserir('aprovacoes', { tipo: 'Priorização com outro time', id_cliente: cid, solicitante: tx.usuario, data_pedido: agora(), previa: 'Sim', decisao: 'Pendente',
+      dados: JSON.stringify({ priorizacao_id: id, resumo: `Priorizar com ${d.time}${d.chamado ? ' (chamado ' + d.chamado + ')' : ''}: ${d.descricao}` }) });
+    tx.atualizar('priorizacoes', id, { aprovacao_id: aid });
+    notificarCoord(tx, 'Pedido de priorização', `${nomeCliente(cid)}: ${d.time} — ${d.descricao}`, cid);
+    evento(tx, cid, 'Pedido de priorização', `${d.time}: ${d.descricao}`);
+    return 'Pedido enviado para a coordenação.';
+  }
+  exigir(['Em andamento', 'Atendido', 'Não atendido'].includes(d.status), 'Escolha a situação.');
+  if (d.status !== 'Em andamento') exigir(S(d.resultado), 'Registre o resultado.');
+  tx.atualizar('priorizacoes', id, { status: d.status, resultado: d.resultado || '' });
+  evento(tx, cid, 'Pedido de priorização', `${d.status}: ${d.resultado || ''}`);
+  return 'Pedido atualizado.';
+}
+// Decisões das aprovações novas (chamada por registrarDecisao)
+function decisaoFase2(tx, a, dados, ok) {
+  if (a.tipo === 'Desconto em API ou armazenamento' && dados.oportunidade_id) {
+    const o = obter('oportunidades', dados.oportunidade_id);
+    if (o) tx.atualizar('oportunidades', o.id, { descricao: `${o.descricao || ''} [desconto ${ok ? 'aprovado' : 'recusado'}]`.trim(), desconto_pct: ok ? o.desconto_pct : '' });
+    return true;
+  }
+  if (a.tipo === 'Priorização com outro time' && dados.priorizacao_id) {
+    tx.atualizar('priorizacoes', dados.priorizacao_id, { status: ok ? 'Em andamento' : 'Recusado' });
+    return true;
+  }
+  return false;
+}
+
+// ---------- onboarding (R8.02 a R8.07) ----------
+const STATUS_ETAPA = ['Planejado', 'Realizado', 'Remarcado', 'Não aplicável'];
+const etapaDe = (cid, etapa) => DB.onboarding_etapas.find(e => e.id_cliente === cid && e.etapa === etapa);
+function salvarEtapa(tx, cid, etapa, status, dt, obs) {
+  exigir(STATUS_ETAPA.includes(status), 'Escolha a situação da etapa.');
+  if (status === 'Realizado') exigir(data(dt), 'Informe a data em que a etapa foi realizada.');
+  const e = etapaDe(cid, etapa), reg = { status, data: dt ? iso(data(dt)) : '', observacao: obs || '', atualizado_por: tx.usuario };
+  if (e) tx.atualizar('onboarding_etapas', e.id, reg); else tx.inserir('onboarding_etapas', { ...reg, id: `${cid}|${etapa}`, id_cliente: cid, etapa });
+  evento(tx, cid, 'Onboarding', `${etapa}: ${status}${dt ? ' em ' + fdata(dt) : ''}`);
+}
+function registrarHandoffVendas(tx, cid, d) {
+  exigir(data(d.data), 'Informe a data do handoff.'); exigir(S(d.contexto), 'Descreva o contexto da venda.');
+  salvarEtapa(tx, cid, 'Handoff de Vendas', 'Realizado', d.data, `Vendedor: ${d.vendedor || '—'}`);
+  adicionarNota(tx, cid, 'Marco', `Handoff de Vendas (${d.vendedor || 'vendedor não informado'}): ${d.contexto}${d.objetivos ? ' · Objetivos: ' + d.objetivos : ''}`, 'Handoff de Vendas', d.data, true);
+}
+function tempoOnboarding(c) {
+  const ini = data((etapaDe(c.id_cliente, 'Handoff de Vendas') || {}).data) || data(c.onboarding_inicio_cx) || data(c.data_entrada_elite);
+  const trein = etapaDe(c.id_cliente, 'Treinamento de usuários');
+  const fimTrein = trein && trein.status === 'Realizado' ? data(trein.data) : data(c.onboarding_fim_cx);
+  const passagem = DB.notas.filter(n => n.id_cliente === c.id_cliente && n.tipo_marco === 'Registro de passagem').map(n => data(n.data)).sort((a, b) => a - b)[0];
+  const ciclo = lista('etapa_ciclo_venda').map(e => etapaDe(c.id_cliente, e));
+  return { ini, fimTrein, passagem, diasOnboarding: ini ? difDias(fimTrein || hoje(), ini) : null, diasAteOngoing: ini && passagem ? difDias(passagem, ini) : null,
+    cicloOk: ciclo.length > 0 && ciclo.every(e => e && ['Realizado', 'Não aplicável'].includes(e.status)) };
+}
+
+// ---------- divergências em dado oficial (R1.10) ----------
+function sinalizarDivergencia(tx, cid, d) {
+  exigir(d.campo, 'Escolha o campo.'); exigir(S(d.descricao), 'Explique a divergência.');
+  tx.inserir('divergencias', { id_cliente: cid, campo: d.campo, valor_oficial: d.valor_oficial || '', valor_correto: d.valor_correto || '', descricao: d.descricao, status: 'Aberta', criado_por: tx.usuario, criado_em: agora() });
+  notificarCoord(tx, 'Divergência em dado oficial', `${nomeCliente(cid)}: ${d.campo} — ${d.descricao}`, cid);
+  return 'Divergência registrada. O CS Ops verifica a fonte.';
+}
+function resolverDivergencia(tx, id, resolucao) {
+  exigirMaster(); exigir(S(resolucao), 'Descreva como foi resolvida.');
+  tx.atualizar('divergencias', id, { status: 'Resolvida', resolucao, resolvido_por: tx.usuario });
+}
+
+// ---------- automações novas ----------
+function automacoesFase2(tx, c, d, csm) {
+  const cid = c.id_cliente, mes = iso(d).slice(0, 7);
+  if (c.jornada === 'Onboarding') {
+    const t = tempoOnboarding(c), lim = Pn('onboarding_limite') || 45, al = Pn('onboarding_alerta') || 35;
+    if (t.ini && !t.fimTrein) {
+      const dias = difDias(d, t.ini);
+      if (dias >= al) { notificar(tx, csm, 'Onboarding no dia ' + al, `${c.nome} está no dia ${dias} do onboarding (limite ${lim}).`, cid, `onb${al}:${cid}:${iso(t.ini)}`); notificarCoord(tx, 'Onboarding no dia ' + al, `${c.nome} (${csm}) está no dia ${dias}.`, cid, `onb${al}:${cid}:${iso(t.ini)}`); }
+      if (dias >= lim) notificarCoord(tx, 'Onboarding passou do limite', `${c.nome} passou de ${lim} dias de onboarding.`, cid, `onb${lim}:${cid}:${iso(t.ini)}`);
+    }
+    if (t.fimTrein && !t.cicloOk && difDias(d, t.fimTrein) >= (Pn('ciclo_venda_dias') || 15)) {
+      notificar(tx, csm, 'Ciclo de venda pendente', `${c.nome}: primeiro ciclo de venda não concluído ${Pn('ciclo_venda_dias')} dias após o treinamento.`, cid, `ciclo:${cid}:${iso(t.fimTrein)}`);
+      notificarCoord(tx, 'Ciclo de venda pendente', `${c.nome} (${csm}).`, cid, `ciclo:${cid}:${iso(t.fimTrein)}`);
+    }
+  }
+  const temOp = DB.oportunidades.some(o => o.id_cliente === cid && ['Aberta', 'Em negociação', 'Indicada', 'Recebida'].includes(o.status));
+  if (!temOp && c.consumo != null && c.consumo > 80) notificar(tx, csm, 'Oportunidade', `${c.nome} usa ${fnum(c.consumo)}% do armazenamento: avalie oferecer mais espaço.`, cid, `consumo80:${cid}:${mes}`);
+  const rev = data(c.key_account_revisao);
+  if (c.key_account && c.key_account_origem === 'Peso de marca' && rev && rev <= d) notificarCoord(tx, 'Revisar Key Account', `${c.nome}: revisar a marcação de Key Account por peso de marca.`, cid, `karev:${cid}:${iso(rev)}`);
+}
+function automacoesGerais(tx, d) {
+  const sem = iso(segunda(d));
+  nomesCSM().forEach(n => { const k = cargaCSM(n); if (k.sobrecarga) notificarCoord(tx, 'Sobrecarga', `${n}: carga prevista acima da capacidade nas duas próximas semanas (${k.semanas[0]} e ${k.semanas[1]} contatos para ${fnum(k.semanal, 1)} por semana).`, '', `sobrecarga:${n}:${sem}`); });
+  if (!MODO_DEMO && SYNC && SYNC.quando) {
+    const horas = (Date.now() - new Date(SYNC.quando.replace(' ', 'T'))) / 36e5;
+    if (horas > (Pn('dados_desatualizados_horas') || 24)) notificarCoord(tx, 'Dados oficiais desatualizados', `A última busca da Meta e do CustomerX foi em ${fdh(SYNC.quando)}. Veja os acionadores do Apps Script.`, '', `desat:${SYNC.quando}`);
+  }
+}
+
+// =====================================================================
+// Telas
+// =====================================================================
+
+// ---------- ficha: expansão e plano ----------
+function fExp(c, edita) {
+  const ops = DB.oportunidades.filter(o => o.id_cliente === c.id_cliente).sort((a, b) => b.criada_em.localeCompare(a.criada_em));
+  const itens = DB.plano_itens.filter(i => i.id_cliente === c.id_cliente).sort((a, b) => (a.prazo || '9').localeCompare(b.prazo || '9'));
+  const sugestao = (c.if_atual === 'IF5' || (c.consumo != null && c.consumo > 80)) && !ops.some(o => ['Aberta', 'Em negociação', 'Indicada', 'Recebida'].includes(o.status));
+  const atrasado = i => i.prazo && i.prazo < iso(hoje()) && !['Concluído', 'Cancelado'].includes(i.status);
+  return `${sugestao ? `<div class="aviso a-info">${c.if_atual === 'IF5' ? 'Cliente em IF5' : `Armazenamento em ${fnum(c.consumo)}%`}: avalie abrir uma oportunidade.</div>` : ''}
+  <h2>Oportunidades e indicações</h2>
+  ${edita ? '<div class="acoes" style="margin:0 0 10px"><button class="btn pri" type="button" data-op="">Nova oportunidade</button></div>' : ''}
+  ${ops.length ? tabelaSimples(ops, [['Tipo', 'tipo'], ['Descrição', 'descricao'], ['MRR', o => o.valor_mrr ? fmoeda(o.valor_mrr) : '—'], ['Situação', o => `<span class="tag ${['Ganha', 'Convertida'].includes(o.status) ? 't-grn' : ['Perdida', 'Não convertida'].includes(o.status) ? 't-red' : 't-blu'}">${esc(o.status)}</span>`],
+    ['Motivo da perda', 'motivo_perda'], ['Desconto', o => o.desconto_pct ? o.desconto_pct + '%' : '—'], ['Desde', o => fdata(o.criada_em)], ['', o => edita ? `<button class="btn peq" type="button" data-op="${esc(o.id)}">Atualizar</button>` : '']]) : '<p class="mut">Nenhuma oportunidade registrada.</p>'}
+  <h2>Plano de Evolução</h2>
+  <p class="mut peq">Objetivos e marcos combinados com o cliente. Recomendado para contas A e Key Account, com revisão semestral.</p>
+  ${edita ? '<div class="acoes" style="margin:0 0 10px"><button class="btn" type="button" data-plano="">Novo objetivo ou marco</button></div>' : ''}
+  ${itens.length ? tabelaSimples(itens, [['Tipo', 'tipo'], ['Item', 'titulo'], ['Prazo', i => `${fdata(i.prazo)}${atrasado(i) ? ' <span class="tag t-red">atrasado</span>' : ''}`], ['Situação', 'status'], ['Observação', 'observacao'], ['', i => edita ? `<button class="btn peq" type="button" data-plano="${esc(i.id)}">Atualizar</button>` : '']]) : '<p class="mut">Nenhum item no plano.</p>'}`;
+}
+function ligarExp(c) {
+  $$('[data-op]').forEach(b => b.onclick = () => {
+    const o = b.dataset.op ? obter('oportunidades', b.dataset.op) : { tipo: lista('tipo_oportunidade')[0], status: '' };
+    const sts = t => ehIndicacao(t) ? STATUS_INDICACAO : STATUS_UPSELL;
+    janela(b.dataset.op ? 'Atualizar oportunidade' : 'Nova oportunidade', `
+      <div class="linha">${campo('Tipo', sel('tipo', lista('tipo_oportunidade'), o.tipo, undefined, b.dataset.op ? 'disabled' : ''))}${campo('Situação', sel('status', sts(o.tipo), o.status))}</div>
+      ${campo('Descrição', txt('descricao', o.descricao))}
+      <div class="linha" style="margin-top:10px">${campo('Aumento de MRR (R$)', `<input type="number" name="valor_mrr" step="0.01" min="0" value="${esc(o.valor_mrr)}">`)}${campo('Desconto (%)', `<input type="number" name="desconto_pct" min="0" max="100" value="${esc(o.desconto_pct)}">`, 'Em API ou armazenamento, qualquer desconto vai para a coordenação (D-38).')}</div>
+      ${campo('Motivo da perda', sel('motivo_perda', lista('motivo_perda_oportunidade'), o.motivo_perda, 'Só para perdida ou não convertida'))}
+      <p class="mut peq">Upsell de capacidade é vendido pelo CSM; Bling Conta e Bling Envios são indicações, conduzidas por outro time (D-37).</p>`,
+      [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarOportunidade(tx, c.id_cliente, { ...d, tipo: d.tipo || o.tipo }, b.dataset.op || null) }],
+      raiz => { const t = $('[name=tipo]', raiz); t.onchange = () => { $('[name=status]', raiz).innerHTML = opts(sts(t.value)); }; });
+  });
+  $$('[data-plano]').forEach(b => b.onclick = () => {
+    const i = b.dataset.plano ? obter('plano_itens', b.dataset.plano) : { tipo: 'Objetivo', status: 'Planejado' };
+    janela(b.dataset.plano ? 'Atualizar item do plano' : 'Novo item do Plano de Evolução', `
+      <div class="linha">${campo('Tipo', sel('tipo', ['Objetivo', 'Marco'], i.tipo))}${campo('Situação', sel('status', STATUS_PLANO, i.status))}${campo('Prazo', dt('prazo', i.prazo))}</div>
+      ${campo('Objetivo ou marco', txt('titulo', i.titulo))}<div style="margin-top:10px">${campo('Observação', area('observacao', i.observacao))}</div>`,
+      [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarItemPlano(tx, c.id_cliente, d, b.dataset.plano || null), sucesso: 'Plano atualizado.' }]);
+  });
+}
+
+// ---------- ficha: onboarding ----------
+function fOnb(c, edita) {
+  const t = tempoOnboarding(c), etapas = lista('etapa_onboarding'), ciclo = lista('etapa_ciclo_venda');
+  const hv = etapaDe(c.id_cliente, 'Handoff de Vendas');
+  const bloqueios = DB.notas.filter(n => n.id_cliente === c.id_cliente && n.tipo === 'Bloqueio');
+  const linha = e => { const x = etapaDe(c.id_cliente, e) || {}; return { etapa: e, status: x.status || 'Pendente', data: x.data, obs: x.observacao }; };
+  const tab = lst => tabelaSimples(lst.map(linha), [['Etapa', 'etapa'], ['Situação', x => `<span class="tag ${x.status === 'Realizado' ? 't-grn' : x.status === 'Não aplicável' ? '' : x.status === 'Remarcado' ? 't-org' : 't-blu'}">${esc(x.status)}</span>`], ['Data', x => fdata(x.data)], ['Observação', 'obs'],
+    ['', x => edita ? `<button class="btn peq" type="button" data-etapa="${esc(x.etapa)}">Atualizar</button>` : '']]);
+  return `<div class="grade g4">${kpi('Início (handoff)', fdata(t.ini), hv ? 'Handoff de Vendas registrado' : 'Data do CustomerX ou de entrada')}${kpi('Tempo de onboarding', t.diasOnboarding != null ? t.diasOnboarding + ' dias' : '—', t.fimTrein ? 'até o treinamento' : `em andamento · limite ${Pn('onboarding_limite')}`)}${kpi('Treinamento', fdata(t.fimTrein))}${kpi('Tempo até o ongoing', t.diasAteOngoing != null ? t.diasAteOngoing + ' dias' : '—')}</div>
+  ${edita ? `<div class="acoes">${hv ? '' : '<button class="btn" type="button" id="hvendas">Registrar handoff de Vendas</button>'}<button class="btn" type="button" id="bloqueio">Registrar bloqueio</button></div>` : ''}
+  <h2>Encontros de implantação</h2>${tab(etapas)}
+  <h2>Primeiro ciclo completo de venda</h2><p class="mut peq">O handoff para o CSM de Ongoing acontece depois do ciclo completo (D-31). ${t.cicloOk ? '<span class="tag t-grn">Ciclo concluído</span>' : ''}</p>${tab(ciclo)}
+  ${bloqueios.length ? `<h2>Bloqueios</h2>${tabelaSimples(bloqueios, [['Data', n => fdata(n.data)], ['Bloqueio', 'texto'], ['Quem', 'autor']])}` : ''}`;
+}
+function ligarOnb(c) {
+  $$('[data-etapa]').forEach(b => b.onclick = () => {
+    const e = etapaDe(c.id_cliente, b.dataset.etapa) || {};
+    janela(b.dataset.etapa, `<div class="linha">${campo('Situação', sel('status', STATUS_ETAPA, e.status || 'Realizado'))}${campo('Data', dt('data', e.data || hoje()))}</div>${campo('Observação', txt('obs', e.observacao))}`,
+      [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarEtapa(tx, c.id_cliente, b.dataset.etapa, d.status, d.data, d.obs), sucesso: 'Etapa atualizada.' }]);
+  });
+  $('#hvendas') && ($('#hvendas').onclick = () => janela('Handoff de Vendas', `<div class="linha">${campo('Data do handoff', dt('data', hoje()))}${campo('Vendedor', txt('vendedor'))}</div>${campo('Contexto da venda', area('contexto'))}<div style="margin-top:10px">${campo('Objetivos do cliente', txt('objetivos'))}</div>`,
+    [{ rotulo: 'Registrar', pri: true, acao: (d, tx) => registrarHandoffVendas(tx, c.id_cliente, d), sucesso: 'Handoff registrado.' }]));
+  $('#bloqueio') && ($('#bloqueio').onclick = () => janela('Bloqueio do onboarding', `${campo('O que está bloqueando', area('texto'))}${chk('cliente', 'Atraso causado pelo cliente (aparece separado no tempo de onboarding)')}`,
+    [{ rotulo: 'Registrar', pri: true, acao: (d, tx) => { adicionarNota(tx, c.id_cliente, 'Bloqueio', (d.cliente ? '[Atraso do cliente] ' : '') + d.texto); }, sucesso: 'Bloqueio registrado.' }]));
+}
+
+// ---------- ficha: priorizações (na aba de retenção) ----------
+function fPriorizacoes(c, edita) {
+  const ps = DB.priorizacoes.filter(p => p.id_cliente === c.id_cliente).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+  return `<h2>Pedidos de priorização a outros times</h2><p class="mut peq">Registro do pedido (time, chamado, prazo e resultado); a gestão do chamado continua no sistema do outro time. A coordenação aprova o pedido.</p>
+  ${edita ? '<div class="acoes" style="margin:0 0 10px"><button class="btn" type="button" data-prio="">Novo pedido</button></div>' : ''}
+  ${ps.length ? tabelaSimples(ps, [['Time', 'time'], ['Chamado', 'chamado'], ['Pedido', 'descricao'], ['Prazo', p => fdata(p.prazo)], ['Situação', 'status'], ['Resultado', 'resultado'], ['', p => edita && ['Em andamento'].includes(p.status) ? `<button class="btn peq" type="button" data-prio="${esc(p.id)}">Registrar resultado</button>` : '']]) : ''}`;
+}
+function ligarPriorizacoes(c) {
+  $$('[data-prio]').forEach(b => b.onclick = () => {
+    if (!b.dataset.prio) janela('Pedido de priorização', `<div class="linha">${campo('Time', sel('time', lista('time_priorizacao')))}${campo('Chamado', txt('chamado'))}${campo('Prazo desejado', dt('prazo', somaUteis(hoje(), 3)))}</div>${campo('O que precisa ser priorizado e por quê', area('descricao'))}`,
+      [{ rotulo: 'Enviar para a coordenação', pri: true, acao: (d, tx) => salvarPriorizacao(tx, c.id_cliente, d) }]);
+    else janela('Resultado do pedido', `${campo('Situação', sel('status', ['Em andamento', 'Atendido', 'Não atendido'], 'Atendido'))}<div style="margin-top:10px">${campo('Resultado', area('resultado'))}</div>`,
+      [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarPriorizacao(tx, c.id_cliente, d, b.dataset.prio) }]);
+  });
+}
+
+// ---------- ficha: uso da plataforma e sinais (visão geral) ----------
+function blocoUso(c) {
+  const tags = String(c.tags_cx || '').split('|').map(t => t.trim()).filter(t => t && !/^Faixa|^IF\d/.test(t));
+  const div = c.if_cx && c.if_cx !== c.if_atual;
+  return `<div class="card" style="margin-top:14px"><h3>Uso da plataforma (Meta)</h3>
+    <div class="grade g3 peq">
+      <div><b>Armazenamento</b><br>${c.consumo != null ? fpct(c.consumo) : '—'}${c.espaco_gb ? ` de ${fnum(c.espaco_gb)} GB` : ''}</div>
+      <div><b>Requisições de API (7 dias)</b><br>${fnum(c.req_api_7d)}${c.usou_api ? ` · usou API: ${esc(c.usou_api)}` : ''}</div>
+      <div><b>Último login</b><br>${fdata(c.ultimo_login)}</div>
+      <div><b>Tickets em 90 dias</b><br>${fnum(c.tickets_90d)}</div>
+      <div><b>Marketplaces</b><br>${esc(c.marketplaces || '—')}</div>
+      <div><b>E-commerces</b><br>${esc(c.ecommerces || '—')}</div>
+    </div></div>
+  <div class="card" style="margin-top:14px"><h3>Sinais do CustomerX</h3>
+    <p class="peq">IF no CustomerX: <b>${esc(c.if_cx || '—')}</b>${div ? ' <span class="tag t-org">diferente do CRM</span>' : ''}${c.motivo_risco_cx ? ` · Motivo do risco: ${esc(c.motivo_risco_cx)}` : ''}${c.contato_do_cx ? ` · Último contato (tarefa no CustomerX): ${fdata(c.ultima_tarefa_cx)}` : ''}</p>
+    <div class="tags">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('') || '<span class="mut peq">Sem tags.</span>'}</div>
+    <div class="acoes"><button class="btn peq" type="button" id="divergencia">Sinalizar divergência em dado oficial</button></div></div>`;
+}
+function ligarUso(c) {
+  $('#divergencia') && ($('#divergencia').onclick = () => janela('Divergência em dado oficial', `
+    ${campo('Campo', sel('campo', ['MRR', 'Plano', 'Faixa', 'HS', 'CNPJ ou cadastro', 'Carteira no CustomerX', 'Data de entrada', 'Outro']))}
+    <div class="linha" style="margin-top:10px">${campo('Valor que aparece', txt('valor_oficial'))}${campo('Valor correto', txt('valor_correto'))}</div>
+    ${campo('Explique', area('descricao'))}<p class="mut peq">O CRM não altera dado oficial: o CS Ops corrige na fonte (Meta ou CustomerX).</p>`,
+    [{ rotulo: 'Sinalizar', pri: true, acao: (d, tx) => sinalizarDivergencia(tx, c.id_cliente, d) }]));
+}
+
+// ---------- página: rituais da coordenação (R13.01, R13.02, R13.03, H-57) ----------
+function pgRituais() {
+  const aba = ESTADO_UI.abaRit || 'semanal';
+  const abas = [['semanal', 'Reunião semanal de carteira'], ['um', '1:1 com CSM'], ['mensal', 'Report mensal']];
+  depois(() => {
+    $$('[data-abarit]').forEach(b => b.onclick = () => { ESTADO_UI.abaRit = b.dataset.abarit; render(); });
+    $('#ritCsm') && ($('#ritCsm').onchange = e => { ESTADO_UI.ritCsm = e.target.value; render(); });
+    $('#ritMes') && ($('#ritMes').onchange = e => { ESTADO_UI.ritMes = e.target.value; render(); });
+    $('#baixarReport') && ($('#baixarReport').onclick = () => baixarCSV(`report_${ESTADO_UI.ritMes || iso(hoje()).slice(0, 7)}.csv`, LINHAS_REPORT));
+  });
+  const corpo = { semanal: ritSemanal, um: ritUm, mensal: ritMensal }[aba]();
+  return `<div class="topo"><div><h1>Rituais da coordenação</h1><p class="lead">Visões prontas para a reunião de segunda-feira, o 1:1 e o report mensal, sem montar planilha.</p></div></div>
+  <div class="abas" role="tablist">${abas.map(([k, r]) => `<button type="button" role="tab" aria-selected="${aba === k}" data-abarit="${k}">${r}</button>`).join('')}</div>${corpo}`;
+}
+function ritSemanal() {
+  const cart = carteira(), at = cart.filter(c => c.status === 'Ativo'), sem = iso(segunda(hoje())), lim7 = iso(somaDias(hoje(), -7));
+  const novos = new Set(DB.if_historico.filter(h => h.situacao === 'Vigente' && ['IF1', 'IF2'].includes(h.if_novo) && h.data >= lim7).map(h => h.id_cliente));
+  const trs = transferencias().filter(x => !x.adiado);
+  return nomesCSM().map(n => {
+    const m = at.filter(c => c.csm === n), lst = DB.lista_semanal.filter(l => l.csm === n && l.semana === sem), k = cargaCSM(n);
+    const onb = m.filter(c => c.jornada === 'Onboarding').map(c => ({ c, t: tempoOnboarding(c) })).filter(x => x.t.ini && !x.t.fimTrein && difDias(hoje(), x.t.ini) >= (Pn('onboarding_alerta') || 35));
+    const linhas = [
+      ['Lista da semana', lst.length ? `${lst.filter(l => l.status !== 'Pendente').length} de ${lst.length} tratados` : 'não gerada'],
+      ['Novos IF1 e IF2 (7 dias)', m.filter(c => novos.has(c.id_cliente)).map(c => esc(c.nome)).join(', ') || '—'],
+      ['IF3 perto dos 40 dias', m.filter(c => c.dias_if3 != null && c.dias_if3 >= IF3_ALERTA).map(c => `${esc(c.nome)} (dia ${c.dias_if3})`).join(', ') || '—'],
+      ['Janela de reversão', cart.filter(c => c.status === 'Janela de reversão' && c.csm === n).map(c => esc(c.nome)).join(', ') || '—'],
+      ['Aprovações e revisão em lote', `${DB.aprovacoes.filter(a => a.solicitante === n && ['Pendente', 'Revisão semanal'].includes(a.decisao)).length}`],
+      ['Sem próxima ação / cadência vencida', `${m.filter(c => !c.prox_acao).length} / ${m.filter(c => c.cadencia_vencida).length}`],
+      ['Carga x capacidade (semana)', `${k.semanas[0]} contatos para ${fnum(k.semanal, 1)}${k.sobrecarga ? ' <span class="tag t-red">sobrecarga</span>' : ''}`],
+      ['Transferências pendentes', trs.filter(x => x.c.csm_ongoing === n).map(x => esc(x.c.nome)).join(', ') || '—'],
+      ['Onboardings perto dos 45 dias', onb.map(x => `${esc(x.c.nome)} (dia ${difDias(hoje(), x.t.ini)})`).join(', ') || '—'],
+    ];
+    return `<details class="item"><summary><div><div class="tit">${esc(n)}</div><div class="sub">${m.length} clientes · ${m.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length} em IF1/IF2 · ${m.filter(c => !c.prox_acao).length} sem próxima ação</div></div></summary>
+      <div class="corpo">${tabelaSimples(linhas.map(([a, b]) => ({ a, b })), [['Item', 'a'], ['Situação', x => x.b]])}</div></details>`;
+  }).join('') || vazio('Nenhum CSM com carteira.');
+}
+function indicadoresCSM(n, ini, fim) {
+  const at = carteira().filter(c => c.status === 'Ativo' && c.csm === n), ids = new Set(carteira().filter(c => c.csm === n).map(c => c.id_cliente));
+  const i30 = DB.interacoes.filter(i => ids.has(i.id_cliente) && i.data >= ini && i.data <= fim);
+  const real = new Set(i30.map(i => i.id_cliente)), efet = new Set(i30.filter(i => i.resultado.startsWith('Efetivo')).map(i => i.id_cliente));
+  const tconc = DB.tarefas.filter(t => t.responsavel === n && t.status === 'Concluída' && S(t.concluida_em).slice(0, 10) >= ini && S(t.concluida_em).slice(0, 10) <= fim);
+  const movs = DB.if_historico.filter(h => ids.has(h.id_cliente) && h.situacao === 'Vigente' && h.data.slice(0, 10) >= ini && h.data.slice(0, 10) <= fim && h.origem !== 'CustomerX');
+  const ch = DB.churn.filter(x => ids.has(x.id_cliente) && x.data_cancelamento >= ini && x.data_cancelamento <= fim);
+  const ops = DB.oportunidades.filter(o => ids.has(o.id_cliente) && S(o.atualizada_em).slice(0, 10) >= ini && S(o.atualizada_em).slice(0, 10) <= fim);
+  const pct = (a, b) => b ? a / b * 100 : null;
+  return {
+    clientes: at.length, cobR: pct(at.filter(c => real.has(c.id_cliente)).length, at.length), cobE: pct(at.filter(c => efet.has(c.id_cliente)).length, at.length),
+    sla: pct(tconc.filter(t => S(t.concluida_em).slice(0, 10) <= t.prazo).length, tconc.length), movimentos: movs.length,
+    melhoras: movs.filter(h => h.if_novo > h.if_anterior).length, pioras: movs.filter(h => h.if_novo < h.if_anterior).length,
+    churn: ch.length, mrrPerdido: ch.reduce((a, x) => a + (num(x.mrr_perdido) || 0), 0),
+    upsell: ops.filter(o => o.status === 'Ganha').reduce((a, o) => a + (num(o.valor_mrr) || 0), 0),
+    indicacoes: ops.filter(o => ehIndicacao(o.tipo)).length, convertidas: ops.filter(o => o.status === 'Convertida').length,
+    excecoes: DB.aprovacoes.filter(a => a.solicitante === n && a.data_pedido.slice(0, 10) >= ini && a.data_pedido.slice(0, 10) <= fim).length,
+    semObjetivo: at.filter(c => !c.objetivos).length, semSponsor: at.filter(c => !DB.contatos.some(k => k.id_cliente === c.id_cliente && k.sponsor === 'Sim' && k.ativo !== 'Não')).length,
+    riscoSemMotivo: at.filter(c => ['IF1', 'IF2', 'IF3'].includes(c.if_atual) && !c.if_motivo).length, semProx: at.filter(c => !c.prox_acao).length,
+  };
+}
+function ritUm() {
+  const csms = nomesCSM(), n = ESTADO_UI.ritCsm || csms[0];
+  if (!n) return vazio('Nenhum CSM com carteira.');
+  const ini = iso(somaDias(hoje(), -30)), fim = iso(hoje()), x = indicadoresCSM(n, ini, fim), k = cargaCSM(n);
+  return `<div style="max-width:280px;margin-bottom:14px">${campo('CSM', `<select id="ritCsm">${opts(csms, n)}</select>`)}</div>
+  <p class="mut peq">Últimos 30 dias. Anotações sobre desenvolvimento do CSM ficam fora do CRM (H-58).</p>
+  <div class="grade g4">${kpi('Clientes ativos', x.clientes)}${kpi('Cobertura realizada', fpct(x.cobR), `Efetiva: ${fpct(x.cobE)}`)}${kpi('SLA de tarefas', fpct(x.sla))}${kpi('Carga desta semana', `${k.semanas[0]} / ${fnum(k.semanal, 1)}`, k.sobrecarga ? 'sobrecarga nas duas próximas semanas' : 'contatos previstos / capacidade')}</div>
+  <div class="grade g4" style="margin-top:14px">${kpi('Movimentos de IF', x.movimentos, `${x.melhoras} melhoras · ${x.pioras} pioras`)}${kpi('Churn', x.churn, `MRR perdido ${fmoeda(x.mrrPerdido)}`)}${kpi('Expansão', fmoeda(x.upsell), `${x.convertidas} de ${x.indicacoes} indicações convertidas`)}${kpi('Exceções e aprovações pedidas', x.excecoes)}</div>
+  <h2>Qualidade dos registros</h2>${tabelaSimples([{ a: 'Sem próxima ação', b: x.semProx }, { a: 'Sem objetivos registrados', b: x.semObjetivo }, { a: 'Sem sponsor', b: x.semSponsor }, { a: 'IF1 a IF3 sem motivo do risco', b: x.riscoSemMotivo }], [['Item', 'a'], ['Clientes', 'b']])}`;
+}
+let LINHAS_REPORT = [];
+function ritMensal() {
+  const meses = [0, 1, 2, 3, 4, 5].map(k => { const d = new Date(hoje().getFullYear(), hoje().getMonth() - k, 1); return iso(d).slice(0, 7); });
+  const mes = ESTADO_UI.ritMes || meses[0], ini = mes + '-01', fim = iso(fimDoMes(data(ini)));
+  const cart = carteira(), at = cart.filter(c => c.status === 'Ativo');
+  const ch = DB.churn.filter(x => x.data_cancelamento >= ini && x.data_cancelamento <= fim);
+  const perdido = ch.reduce((a, x) => a + (num(x.mrr_perdido) || 0), 0), mrr = at.reduce((a, c) => a + c.mrr, 0);
+  const porMotivo = {}; ch.forEach(x => (porMotivo[x.motivo || 'Sem motivo'] = (porMotivo[x.motivo || 'Sem motivo'] || 0) + 1));
+  const rec = DB.if_historico.filter(h => h.situacao === 'Vigente' && h.if_anterior === 'IF3' && h.data.slice(0, 10) >= ini && h.data.slice(0, 10) <= fim);
+  const desc = DB.descontos.filter(x => x.inicio >= ini && x.inicio <= fim);
+  const ops = DB.oportunidades.filter(o => S(o.atualizada_em).slice(0, 10) >= ini && S(o.atualizada_em).slice(0, 10) <= fim);
+  const onbs = cart.map(c => ({ c, t: tempoOnboarding(c) })).filter(x => x.t.fimTrein && iso(x.t.fimTrein) >= ini && iso(x.t.fimTrein) <= fim && x.t.diasOnboarding != null);
+  const geral = { cobR: 0, cobE: 0, sla: 0 }; const ix = nomesCSM().map(n => indicadoresCSM(n, ini, fim));
+  const media = k => { const v = ix.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const ka = at.filter(c => c.key_account);
+  const L = [
+    ['Retenção de clientes (meta 96%)', fpct((1 - ch.length / Math.max(1, at.length + ch.length)) * 100, 1)],
+    ['Retenção de MRR (meta 97%)', fpct((1 - perdido / Math.max(1, mrr + perdido)) * 100, 1)],
+    ['Cancelamentos', `${ch.length} · MRR perdido ${fmoeda(perdido)}`],
+    ['Churn por motivo', Object.entries(porMotivo).map(([k, v]) => `${k}: ${v}`).join('; ') || '—'],
+    ['Churn por CSM', Object.entries(ch.reduce((m, x) => (m[x.csm || 'Sem CSM'] = (m[x.csm || 'Sem CSM'] || 0) + 1, m), {})).map(([k, v]) => `${k}: ${v}`).join('; ') || '—'],
+    ['Churn surpresa', fpct(ch.length ? ch.filter(x => x.churn_surpresa === 'Sim').length / ch.length * 100 : null)],
+    ['Recuperação (saídas do IF3 para IF4 ou IF5)', `${rec.filter(h => ['IF4', 'IF5'].includes(h.if_novo)).length} de ${rec.length}`],
+    ['Descontos concedidos', `${desc.length} · ${fmoeda(desc.reduce((a, x) => a + ((num(x.valor_anterior) || 0) - (num(x.valor_novo) || 0)), 0))} por mês`],
+    ['Expansão: upsell ganho', fmoeda(ops.filter(o => o.status === 'Ganha').reduce((a, o) => a + (num(o.valor_mrr) || 0), 0))],
+    ['Expansão: indicações convertidas', `${ops.filter(o => o.status === 'Convertida').length} de ${ops.filter(o => ehIndicacao(o.tipo)).length}`],
+    ['Onboarding: tempo médio', onbs.length ? fnum(onbs.reduce((a, x) => a + x.t.diasOnboarding, 0) / onbs.length) + ' dias' : '—'],
+    ['Onboarding: dentro de 45 dias', fpct(onbs.length ? onbs.filter(x => x.t.diasOnboarding <= (Pn('onboarding_limite') || 45)).length / onbs.length * 100 : null)],
+    ['Cobertura média (realizada / efetiva)', `${fpct(media('cobR'))} / ${fpct(media('cobE'))}`],
+    ['SLA de tarefas (média dos CSMs)', fpct(media('sla'))],
+    ['Key Accounts', `${ka.length} contas · ${ka.filter(c => ['IF1', 'IF2', 'IF3'].includes(c.if_atual)).length} em risco · MRR ${fmoeda(ka.reduce((a, c) => a + c.mrr, 0))}`],
+  ];
+  LINHAS_REPORT = L.map(([indicador, valor]) => ({ mes, indicador, valor: String(valor).replace(/<[^>]+>/g, '') }));
+  return `<div class="acoes" style="margin:0 0 14px"><div style="min-width:200px">${campo('Mês', `<select id="ritMes">${opts(meses, mes)}</select>`)}</div><button class="btn" id="baixarReport" type="button">Baixar report (CSV)</button></div>
+  <p class="mut peq">Fórmulas provisórias até a definição oficial dos indicadores (Q-03 e Q-25).</p>${tabelaSimples(L.map(([a, b]) => ({ a, b })), [['Indicador', 'a'], ['Valor', x => x.b]])}`;
+}
+
+// ---------- página: qualidade de dados (R14.03, R1.10, R14.08) ----------
+function pgQualidade() {
+  const cart = carteira(), at = cart.filter(c => c.status === 'Ativo');
+  const naoCont = c => /^n[aã]o contat/i.test(S(c.carteira_cx));
+  const grupos = [
+    ['Sem CSM (fora de Não contatáveis)', at.filter(c => !c.csm && !naoCont(c))],
+    ['Em Não contatáveis', at.filter(naoCont)],
+    ['Sem dados do CustomerX', at.filter(c => !c.carteira_cx && !c.if_cx && !c.tags_cx)],
+    ['Sem faixa', at.filter(c => !c.faixa_at)],
+    ['Sem HS', at.filter(c => c.hs_num == null)],
+    ['IF diferente do CustomerX', at.filter(c => c.if_cx && c.if_cx !== c.if_atual)],
+    ['Sem sponsor', at.filter(c => !DB.contatos.some(k => k.id_cliente === c.id_cliente && k.sponsor === 'Sim' && k.ativo !== 'Não'))],
+    ['IF1 a IF3 sem motivo do risco', at.filter(c => ['IF1', 'IF2', 'IF3'].includes(c.if_atual) && !c.if_motivo)],
+    ['Ongoing sem objetivos', at.filter(c => c.jornada === 'Ongoing' && !c.objetivos)],
+  ];
+  const sel = ESTADO_UI.qualSel;
+  const divs = DB.divergencias.filter(x => x.status === 'Aberta');
+  const horas = SYNC && SYNC.quando ? (Date.now() - new Date(SYNC.quando.replace(' ', 'T'))) / 36e5 : null;
+  depois(() => {
+    $$('[data-qual]').forEach(b => b.onclick = () => { ESTADO_UI.qualSel = ESTADO_UI.qualSel === b.dataset.qual ? '' : b.dataset.qual; render(); });
+    $$('[data-resdiv]').forEach(b => b.onclick = () => janela('Resolver divergência', campo('Como foi resolvida', area('res')), [{ rotulo: 'Resolver', pri: true, acao: (d, tx) => resolverDivergencia(tx, b.dataset.resdiv, d.res), sucesso: 'Divergência resolvida.' }]));
+  });
+  return `<div class="topo"><div><h1>Qualidade de dados</h1><p class="lead">O que falta ou não bate entre o CRM, a Meta e o CustomerX. Clique num item para ver os clientes.</p></div></div>
+  ${horas != null && horas > (Pn('dados_desatualizados_horas') || 24) ? `<div class="aviso a-warn">Dados oficiais desatualizados: a última busca foi em ${fdh(SYNC.quando)}.</div>` : ''}
+  <div class="grade g3">${grupos.map(([n, l]) => `<div class="kpi clica" data-qual="${esc(n)}"><span>${esc(n)}</span><b>${l.length}</b></div>`).join('')}</div>
+  ${sel ? `<h2>${esc(sel)}</h2>${tabelaClientes((grupos.find(g => g[0] === sel) || [0, []])[1], ['nome', 'if_atual', 'estado', 'faixa_at', 'csm', 'mrr'], 'qual')}` : ''}
+  <h2>Divergências sinalizadas em dado oficial</h2>
+  ${divs.length ? tabelaSimples(divs, [['Cliente', x => `<a href="#cliente/${encodeURIComponent(x.id_cliente)}">${esc(nomeCliente(x.id_cliente))}</a>`], ['Campo', 'campo'], ['Aparece', 'valor_oficial'], ['Correto', 'valor_correto'], ['Explicação', 'descricao'], ['Quem', 'criado_por'], ['', x => ehGestao() ? `<button class="btn peq" type="button" data-resdiv="${esc(x.id)}">Resolver</button>` : '']]) : '<p class="mut">Nenhuma divergência aberta.</p>'}`;
+}
+
+// ---------- configurações: parâmetros ----------
+function cfgParametros() {
+  return `<div class="card"><p class="mut peq">Prazos, limites e réguas usados pelas regras. Vazio usa o valor padrão.</p>
+  <div class="tw"><table id="tabPar"><thead><tr><th>Parâmetro</th><th>Valor</th><th>Padrão</th></tr></thead><tbody>${PARAMS.map(([k, v, d]) => { const r = DB.parametros.find(x => x.chave === k); return `<tr data-k="${k}"><td>${esc(d)}</td><td><input type="text" value="${esc(r ? r.valor : '')}" placeholder="${esc(v)}"></td><td class="mut">${esc(v)}</td></tr>`; }).join('')}</tbody></table></div>
+  <div class="acoes"><button class="btn pri" id="salvarPar" type="button">Salvar parâmetros</button></div></div>`;
+}
+function ligarParametros() {
+  $('#salvarPar').onclick = () => acaoPagina(tx => {
+    $$('#tabPar tbody tr').forEach(tr => {
+      const k = tr.dataset.k, v = S($('input', tr).value), r = DB.parametros.find(x => x.chave === k), desc = (PARAMS.find(p => p[0] === k) || [])[2];
+      if (r) tx.atualizar('parametros', r.id, { valor: v }); else if (v) tx.inserir('parametros', { id: 'p_' + k, chave: k, valor: v, descricao: desc });
+    });
+    aplicarParametros();
+  }, 'Parâmetros salvos.', $('#cfgErro'));
+}
 // ===================== base de exemplo (modo demonstração) =====================
 function criarBaseExemplo() {
   let semente = 7; const rnd = () => ((semente = (semente * 16807) % 2147483647) / 2147483647);
@@ -2110,7 +2697,7 @@ function criarBaseExemplo() {
     [90, 60, 30].forEach(k => add('hs_historico', { id_cliente: cid, data: iso(somaDias(h, -k)), hs_dados: String(Math.max(0, Math.min(100, hs + int(-12, 12)))) }));
     add('hs_historico', { id_cliente: cid, data: iso(somaDias(h, -1)), hs_dados: String(hs) });
     if (jornada === 'Onboarding') { add('tarefas', { id_cliente: cid, tipo: 'Contato', descricao: 'Encontro de implantação', responsavel: 'Diego Lima', prazo: iso(somaDias(h, int(1, 6))), status: 'Aberta', origem: 'Manual', criada_por: 'Diego Lima', criada_em: ag }); continue; }
-    if (ifa === 'IF0') { add('churn', { id_cliente: cid, data_cancelamento: iso(somaDias(h, -3)), origem: 'Plataforma', motivo: 'Preço', mrr_perdido: String(mrr), churn_surpresa: 'Sim', registrado_por: 'CRM', registrado_em: ag }); continue; }
+    if (ifa === 'IF0') { const ul = DB.clientes[DB.clientes.length - 1]; ul.csm_cancelamento = ul.csm_ongoing; ul.csm_ongoing = CARTEIRA_CANCELADOS; ul.cancelado_em = iso(somaDias(h, -3)); add('churn', { id_cliente: cid, data_cancelamento: iso(somaDias(h, -3)), origem: 'Plataforma', motivo: 'Preço', mrr_perdido: String(mrr), churn_surpresa: 'Sim', registrado_por: 'CRM', registrado_em: ag, csm: ul.csm_cancelamento }); continue; }
     const dias = [...new Set([...Array(int(1, 4))].map(() => int(3, 140)))].sort((a, b) => b - a);
     const semR = i === 11 || i === 12;
     dias.forEach(d => { const tipo = pick(['Check-in', 'Ligação', 'Mensagem', 'Reunião']); add('interacoes', { id_cliente: cid, data: iso(somaDias(h, -d)), tipo, canal: pick(['WhatsApp', 'Videochamada', 'Telefone', 'E-mail']), resultado: semR && d < 45 ? 'Sem resposta' : pesos(['Efetivo (cliente respondeu)', 'Sem resposta'], [94, 6]), resumo: pick(['Alinhamento de uso e próximos passos', 'Cliente relatou dificuldade na integração', 'Revisão de indicadores do mês', 'Dúvidas sobre emissão de notas', 'Conversa sobre expansão para novo marketplace']), chk_acao: tipo === 'Check-in' ? 'Agendar acompanhamento' : '', registrado_por: csm, registrado_em: iso(somaDias(h, -d)) }); });
@@ -2146,7 +2733,7 @@ async function iniciar() {
   const u = USUARIO(), marca = `${iso(hoje())}|${u?.nome}`;
   if (u && DB.clientes.length && localStorage.getItem('crmAuto') !== marca) {
     tirarRetrato();
-    try { if (await executar(tx => { if (!DB.listas.length || !DB.cadencias.length) garantirConfiguracao(tx); executarAutomacoes(tx); }, false)) localStorage.setItem('crmAuto', marca); } catch (e) { console.warn(e); }
+    try { if (await executar(tx => { if (ehMaster(u)) garantirConfiguracao(tx); executarAutomacoes(tx); }, false)) localStorage.setItem('crmAuto', marca); } catch (e) { console.warn(e); }
     render();
   }
 }
