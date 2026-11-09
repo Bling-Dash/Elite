@@ -165,8 +165,12 @@ dialog footer{padding:12px 20px 16px;border-top:1px solid var(--bd);display:flex
 const WEBAPP_URL = 'https://script.google.com/a/macros/bling.com.br/s/AKfycbyOpU5Pjadz_x16De8HJE94aYzw_doWXlk6CvZShS5L-EqN9TLyj719sToi69zkW9yi1g/exec';
 
 // ===================== constantes do negócio =====================
-const PERFIS = ['CSM de Ongoing', 'CSM de Onboarding', 'Coordenação', 'Liderança', 'CS Ops'];
-const PERFIS_GESTAO = ['Coordenação', 'CS Ops'];
+// Cargos: os quatro primeiros veem e editam tudo; só a Coordenação concede os três primeiros.
+const CARGOS = ['Coordenação', 'Gerente executivo', 'Diretor geral', 'CS Ops', 'CSM', 'Visitante'];
+const CARGOS_MASTER = ['Coordenação', 'Gerente executivo', 'Diretor geral', 'CS Ops'];
+const CARGOS_SUPERIORES = ['Coordenação', 'Gerente executivo', 'Diretor geral'];
+const PERFIS_GESTAO = CARGOS_MASTER;
+const TIPOS_CARTEIRA = ['Ongoing', 'Onboarding'];
 const IFS = ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5'];
 const IF_NOME = { IF0: 'Cancelamento concluído', IF1: 'Verbalizou cancelamento', IF2: 'Atritado (risco)', IF3: 'Em recuperação', IF4: 'Saudável', IF5: 'Pronto para expansão' };
 const TETO_IF = { IF1: 39, IF2: 59, IF3: 59 };
@@ -179,7 +183,7 @@ const COR_IF = { IF0: '', IF1: 't-red', IF2: 't-org', IF3: 't-vio', IF4: 't-grn'
 const COR_ESTADO = { 'Crítico': 't-red', 'Em Atenção': 't-org', 'Sem Resposta': '', 'Oportunidade': 't-blu', 'Saudável': 't-grn', 'Cancelado': '' };
 
 const SCHEMAS = {
-  usuarios: ['id', 'nome', 'email', 'perfil', 'ativo'],
+  usuarios: ['id', 'nome', 'email', 'perfil', 'ativo', 'carteira', 'solicitado_em'],
   oficiais: ['id_cliente', 'razao_social', 'nome_fantasia', 'cnpj', 'data_entrada_elite', 'data_contratacao_bling', 'plano', 'periodicidade', 'mrr', 'gmv', 'pedidos_periodo', 'faixa_apurada', 'hs_dados', 'hs_data_calculo', 'pedidos_mes', 'importacoes_mes', 'consumo_limite_pct', 'inadimplente', 'dias_atraso', 'valor_atraso', 'data_cancelamento', 'atualizado_em'],
   clientes: ['id_cliente', 'jornada', 'status', 'objetivos', 'faixa_atendimento', 'key_account', 'key_account_origem', 'key_account_justificativa', 'prioridade_abc', 'csm_ongoing', 'csm_onboarding', 'data_atribuicao', 'if_atual', 'if_desde', 'if_motivo', 'if_detalhamento', 'if_pendente', 'if3_inicio', 'excecao_validade', 'gatilho', 'gatilho_descricao', 'gatilho_desde', 'criado_em'],
   contatos: ['id', 'id_cliente', 'nome', 'papel', 'telefone', 'whatsapp', 'email', 'canal_preferido', 'sponsor', 'ativo', 'observacoes', 'confirmado_em'],
@@ -296,6 +300,7 @@ Object.keys(SCHEMAS).forEach(t => (DB[t] = []));
 const MODO_DEMO = !WEBAPP_URL;
 const CHAVE_DEMO = 'crmElite_demo_v1';
 let EMAIL_SERVIDOR = '';
+let EU_SERVIDOR = null; // cadastro de quem abriu o CRM, conforme o e-mail Google
 let ULTIMA_CARGA = 0;
 let VERSAO = 0; // muda a cada alteração: invalida a visão calculada
 
@@ -326,12 +331,17 @@ async function carregarDados() {
   } else {
     const d = await jsonp({ acao: 'carregar', token: token() });
     EMAIL_SERVIDOR = S(d.email).toLowerCase();
+    EU_SERVIDOR = d.eu || null;
     Object.keys(SCHEMAS).forEach(t => {
       const cols = (d.colunas && d.colunas[t]) || SCHEMAS[t];
       DB[t] = (d.tabelas[t] || []).map(l => { const o = linhaVazia(t); cols.forEach((c, i) => { if (c in o) o[c] = S(l[i]); }); return o; });
     });
   }
   ULTIMA_CARGA = Date.now(); VERSAO++;
+}
+
+async function solicitarAcesso(tipo, carteira, nome) {
+  await jsonp({ acao: 'solicitar', token: token(), tipo, carteira, nome });
 }
 
 function salvarDemo() { try { localStorage.setItem(CHAVE_DEMO, JSON.stringify(DB)); } catch (e) { aviso('O navegador não tem espaço para guardar a demonstração.', 'err'); } }
@@ -443,7 +453,13 @@ function diasCadencia(modelo, estado, prio) {
 const exigePrevia = (prio, ka, ifNovo) => prio === 'A' || ka || ifNovo === 'IF5';
 const limiteDesconto = per => LIMITE_DESCONTO[per] || 20;
 function lista(nome, pai) { return DB.listas.filter(l => l.lista === nome && l.ativo !== 'Não' && (pai == null || l.pai === pai)).map(l => l.valor); }
-function nomesUsuarios(perfis) { return DB.usuarios.filter(u => u.ativo !== 'Não' && (!perfis || perfis.includes(u.perfil))).map(u => u.nome); }
+const usuarioAtivo = u => !!u && !['Não', 'Pendente', 'Recusado'].includes(u.ativo);
+const ehMaster = u => usuarioAtivo(u) && CARGOS_MASTER.includes(u.perfil);
+const ehVisitante = u => !u || u.perfil === 'Visitante';
+// Pessoas que podem ser responsáveis por tarefas (sem visitantes); com cargos, filtra por cargo
+function nomesUsuarios(cargos) { return DB.usuarios.filter(u => usuarioAtivo(u) && u.perfil !== 'Visitante' && (!cargos || cargos.includes(u.perfil))).map(u => u.nome); }
+// Donos de carteira: CSM e quem acumula CS Ops com carteira
+function nomesCSM(tipo) { return DB.usuarios.filter(u => usuarioAtivo(u) && u.perfil !== 'Visitante' && (tipo ? u.carteira === tipo : TIPOS_CARTEIRA.includes(u.carteira))).map(u => u.nome); }
 
 function classificarPrioridade(c, d) {
   if (c.if_atual === 'IF1') return [1, 'IF1: cliente verbalizou cancelamento', d];
@@ -531,8 +547,8 @@ const nomeCliente = id => { const o = obter('oficiais', id); return (o && (o.nom
 // ===================== serviços =====================
 function podeEditar(u, c) {
   if (!u) return false;
-  if (PERFIS_GESTAO.includes(u.perfil)) return true;
-  if (u.perfil === 'Liderança') return false;
+  if (ehMaster(u)) return true;
+  if (!usuarioAtivo(u) || ehVisitante(u)) return false;
   return [c.csm_ongoing, c.csm_onboarding].includes(u.nome);
 }
 const respPadrao = csm => csm || nomesUsuarios(['Coordenação'])[0] || 'Coordenação';
@@ -895,9 +911,12 @@ function importarOficiais(tx, linhas) {
 // ----- automações (idempotentes) -----
 function executarAutomacoes(tx) {
   const d = hoje(); const log = [];
-  const n = aprovacoesTacitas(tx, d); if (n) log.push(`${n} aprovação(ões) por decurso de prazo`);
+  // Cada pessoa roda as automações do que pode editar: CS Ops e superiores, tudo; CSM, a própria carteira
+  const u = USUARIO(), master = ehMaster(u);
+  if (!usuarioAtivo(u) || ehVisitante(u)) return log;
+  const n = master ? aprovacoesTacitas(tx, d) : 0; if (n) log.push(`${n} aprovação(ões) por decurso de prazo`);
   VERSAO++;
-  carteira().forEach(c => {
+  carteira().filter(c => master || podeEditar(u, c)).forEach(c => {
     const cid = c.id_cliente, nome = c.nome, csm = respPadrao(c.csm);
     const canc = data(c.data_cancelamento);
     if (canc && c.if_atual !== 'IF0' && c.status === 'Ativo' && canc <= d) {
@@ -924,39 +943,107 @@ function executarAutomacoes(tx) {
     if (c.dias_sem_efetivo != null && c.dias_sem_efetivo >= DIAS_SEM_EFETIVO) notificar(tx, csm, 'Sem contato efetivo', `${nome}: ${c.dias_sem_efetivo} dias sem resposta do cliente.`, cid, `sce:${cid}:${c.ultimo_efetivo}`);
     if (c.sem_resposta && (c.prioridade_abc === 'A' || c.key_account)) notificarCoord(tx, 'Sem resposta', `${nome} (conta A ou Key Account) concluiu a régua sem resposta.`, cid, `semresp:${cid}:${c.ultimo_efetivo}`);
   });
-  DB.descontos.forEach(ds => { const f = data(ds.fim); if (f && f >= d && f <= somaDias(d, 7)) { const c = obter('clientes', ds.id_cliente); if (c) notificar(tx, c.csm_ongoing, 'Fim de desconto', `Desconto de ${ds.pct}% termina em ${fdata(f)}.`, ds.id_cliente, `desc:${ds.id}`); } });
-  tarefasSituacao().filter(t => t.situacao === 'Vencida').forEach(t => notificar(tx, t.responsavel, 'Tarefa vencida', `${t.tipo}: ${t.descricao} (prazo ${fdata(t.prazo)})`, t.id_cliente, `venc:${t.id}`));
+  DB.descontos.forEach(ds => { const f = data(ds.fim); if (f && f >= d && f <= somaDias(d, 7)) { const c = obter('clientes', ds.id_cliente); if (c && (master || podeEditar(u, c))) notificar(tx, c.csm_ongoing, 'Fim de desconto', `Desconto de ${ds.pct}% termina em ${fdata(f)}.`, ds.id_cliente, `desc:${ds.id}`); } });
+  tarefasSituacao().filter(t => t.situacao === 'Vencida' && (master || t.responsavel === u.nome)).forEach(t => notificar(tx, t.responsavel, 'Tarefa vencida', `${t.tipo}: ${t.descricao} (prazo ${fdata(t.prazo)})`, t.id_cliente, `venc:${t.id}`));
   return log;
 }
+
+// ----- usuários e carteiras -----
+function exigirMaster() { exigir(ehMaster(USUARIO()), 'Só CS Ops, coordenação, gerência e diretoria alteram usuários e carteiras.'); }
+const clientesDaCarteira = (nome, tipo) => DB.clientes.filter(c => c.status !== 'Cancelado' && (tipo === 'Onboarding' ? c.csm_onboarding === nome : tipo === 'Ongoing' ? c.csm_ongoing === nome : c.csm_ongoing === nome || c.csm_onboarding === nome));
+function salvarUsuario(tx, d, id) {
+  exigirMaster();
+  const eu = USUARIO(), coord = eu.perfil === 'Coordenação', atual = id ? obter('usuarios', id) : null;
+  const nome = S(d.nome).replace(/\s+/g, ' '), email = S(d.email).toLowerCase();
+  if (!atual) exigir(nome.length >= 3, 'Informe o nome completo.');
+  exigir(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email), 'Informe o e-mail Google da pessoa.');
+  exigir(CARGOS.includes(d.perfil), 'Escolha o cargo.');
+  if (!coord) exigir(!CARGOS_SUPERIORES.includes(d.perfil) && !(atual && CARGOS_SUPERIORES.includes(atual.perfil)), 'Só a coordenação concede ou altera os cargos de Coordenação, Gerente executivo e Diretor geral.');
+  exigir(!DB.usuarios.some(u => u.id !== id && S(u.email).toLowerCase() === email), 'Já existe um usuário com esse e-mail.');
+  if (!atual) exigir(!DB.usuarios.some(u => S(u.nome).toLowerCase() === nome.toLowerCase()), 'Já existe um usuário com esse nome.');
+  const carteira = d.perfil === 'Visitante' ? '' : (d.carteira || '');
+  if (d.perfil === 'CSM') exigir(carteira, 'CSM precisa de uma carteira: Ongoing ou Onboarding.');
+  const ativo = d.ativo || 'Sim';
+  if (atual && atual.perfil === 'Coordenação' && (d.perfil !== 'Coordenação' || ativo !== 'Sim'))
+    exigir(DB.usuarios.some(u => u.id !== id && u.perfil === 'Coordenação' && usuarioAtivo(u)), 'Mantenha ao menos uma pessoa ativa na Coordenação.');
+  if (atual && atual.carteira && (carteira !== atual.carteira || ativo !== 'Sim')) {
+    const n = clientesDaCarteira(atual.nome, atual.carteira).length;
+    exigir(!n, `${atual.nome} ainda tem ${n} clientes na carteira de ${atual.carteira}. Transfira a carteira antes.`);
+  }
+  if (atual) { tx.atualizar('usuarios', id, { email, perfil: d.perfil, carteira, ativo }); return 'Usuário atualizado.'; }
+  tx.inserir('usuarios', { nome, email, perfil: d.perfil, carteira, ativo: 'Sim', solicitado_em: agora() });
+  return `${nome} cadastrado. Quando entrar com ${email}, o CRM reconhece a pessoa${carteira ? ' e a carteira' : ''}.`;
+}
+function transferirCarteira(tx, de, para, tipo) {
+  exigirMaster();
+  exigir(de && para && de !== para, 'Escolha para quem transferir.');
+  exigir(TIPOS_CARTEIRA.includes(tipo), 'Escolha a carteira.');
+  const cls = clientesDaCarteira(de, tipo);
+  exigir(cls.length, `${de} não tem clientes na carteira de ${tipo}.`);
+  const ids = new Set(cls.map(c => c.id_cliente));
+  cls.forEach(c => atribuirCSM(tx, c.id_cliente, tipo, para));
+  DB.tarefas.filter(t => t.status === 'Aberta' && t.responsavel === de && ids.has(t.id_cliente)).forEach(t => tx.atualizar('tarefas', t.id, { responsavel: para }));
+  notificar(tx, para, 'Carteira recebida', `Você recebeu ${cls.length} clientes da carteira de ${de}.`);
+  return `${cls.length} clientes transferidos de ${de} para ${para}.`;
+}
+function aprovarAcesso(tx, id, carteira, assumirDe) {
+  exigirMaster();
+  const u = obter('usuarios', id); exigir(u && u.ativo === 'Pendente', 'Este pedido já foi decidido.');
+  exigir(TIPOS_CARTEIRA.includes(carteira), 'Escolha a carteira.');
+  tx.atualizar('usuarios', id, { ativo: 'Sim', perfil: 'CSM', carteira });
+  let msg = `${u.nome} aprovado como CSM de ${carteira}.`;
+  if (assumirDe) msg += ' ' + transferirCarteira(tx, assumirDe, u.nome, carteira);
+  notificar(tx, u.nome, 'Acesso aprovado', `Seu acesso como CSM de ${carteira} foi aprovado por ${tx.usuario}.`);
+  return msg;
+}
+function recusarAcesso(tx, id) {
+  exigirMaster();
+  const u = obter('usuarios', id); exigir(u && u.ativo === 'Pendente', 'Este pedido já foi decidido.');
+  tx.atualizar('usuarios', id, { ativo: 'Recusado' });
+  return `Pedido de ${u.nome} recusado.`;
+}
+function atribuirEmMassa(tx, ids, tipo, para) {
+  exigirMaster();
+  exigir(ids.length, 'Selecione ao menos um cliente.'); exigir(para, 'Escolha o CSM.');
+  ids.forEach(cid => atribuirCSM(tx, cid, tipo, para));
+  return `${ids.length} clientes atribuídos a ${para} (${tipo}).`;
+}
 // ===================== interface: base =====================
+const podeLista = u => ehMaster(u) || ehVisitante(u) || u.carteira === 'Ongoing';
 const PAGINAS = {
   inicio: { nome: 'Início', fn: () => pgInicio() },
-  prioridades: { nome: 'Prioridades da semana', fn: () => pgPrioridades(), perfis: ['CSM de Ongoing', 'Coordenação', 'CS Ops', 'Liderança'] },
+  prioridades: { nome: 'Prioridades da semana', fn: () => pgPrioridades(), pode: podeLista },
   carteira: { nome: 'Carteira', fn: () => pgCarteira() },
   cliente: { nome: 'Ficha do cliente', fn: a => pgFicha(a) },
   tarefas: { nome: 'Tarefas', fn: () => pgTarefas() },
   semproxima: { nome: 'Sem próxima ação', fn: () => pgSemProxima() },
   riscos: { nome: 'Riscos e recuperação', fn: () => pgRiscos() },
-  agenda: { nome: 'Agenda de cadências', fn: () => pgAgenda(), perfis: ['CSM de Ongoing', 'Coordenação', 'CS Ops', 'Liderança'] },
-  onboarding: { nome: 'Onboarding', fn: () => pgOnboarding(), perfis: ['CSM de Onboarding', 'Coordenação', 'CS Ops', 'Liderança'] },
-  aprovacoes: { nome: 'Aprovações', fn: () => pgAprovacoes(), perfis: ['Coordenação', 'CS Ops', 'Liderança'] },
-  painel: { nome: 'Painel da coordenação', fn: () => pgPainel(), perfis: ['Coordenação', 'CS Ops', 'Liderança'] },
-  config: { nome: 'Configurações', fn: () => pgConfig(), perfis: ['Coordenação', 'CS Ops'] },
+  agenda: { nome: 'Agenda de cadências', fn: () => pgAgenda(), pode: podeLista },
+  onboarding: { nome: 'Onboarding', fn: () => pgOnboarding(), pode: u => ehMaster(u) || ehVisitante(u) || u.carteira === 'Onboarding' },
+  aprovacoes: { nome: 'Aprovações', fn: () => pgAprovacoes(), pode: u => ehMaster(u) || ehVisitante(u) },
+  painel: { nome: 'Painel da coordenação', fn: () => pgPainel(), pode: u => ehMaster(u) || ehVisitante(u) },
+  usuarios: { nome: 'Usuários', fn: () => pgUsuarios(), pode: u => ehMaster(u) },
+  config: { nome: 'Configurações', fn: () => pgConfig(), pode: u => ehMaster(u) },
 };
 const POS = []; // funções que ligam eventos depois que a página é desenhada
 const depois = f => POS.push(f);
 const ESTADO_UI = { filtros: {}, abaFicha: {}, abaConfig: 'carga', ordem: {} };
 
 function USUARIO() {
-  const ativos = DB.usuarios.filter(u => u.ativo !== 'Não');
-  if (EMAIL_SERVIDOR) { const u = ativos.find(x => S(x.email).toLowerCase() === EMAIL_SERVIDOR); if (u) return u; }
+  if (!MODO_DEMO) {
+    if (!EU_SERVIDOR) return null;
+    const u = DB.usuarios.find(x => x.id === EU_SERVIDOR.id) || EU_SERVIDOR;
+    return usuarioAtivo(u) ? u : null;
+  }
+  const ativos = DB.usuarios.filter(usuarioAtivo);
   const nome = localStorage.getItem('crmUsuario');
   return ativos.find(u => u.nome === nome) || ativos[0] || null;
 }
-const ehGestao = () => PERFIS_GESTAO.includes(USUARIO()?.perfil);
+const ehGestao = () => ehMaster(USUARIO());
+const descCargo = u => u ? u.perfil + (TIPOS_CARTEIRA.includes(u.carteira) && u.perfil !== 'CSM' ? ` · carteira de ${u.carteira}` : u.perfil === 'CSM' && u.carteira ? ` de ${u.carteira}` : '') : '';
 function rota() { const h = decodeURIComponent(location.hash.slice(1)); const [p, ...a] = h.split('/'); return { pagina: PAGINAS[p] ? p : 'inicio', arg: a.join('/') }; }
 const ir = (p, arg) => { location.hash = arg ? `${p}/${encodeURIComponent(arg)}` : p; };
-const permitido = (p, u) => !PAGINAS[p].perfis || PAGINAS[p].perfis.includes(u?.perfil);
+const permitido = (p, u) => !!u && (!PAGINAS[p].pode || PAGINAS[p].pode(u));
 
 function aviso(msg, tipo = 'ok') {
   const el = document.createElement('div'); el.className = `aviso a-${tipo}`; el.textContent = msg;
@@ -1069,11 +1156,12 @@ const COLS_CLIENTE = {
 };
 const PADRAO_COLS = ['nome', 'if_atual', 'estado', 'hs_num', 'hs_final', 'faixa_at', 'modelo', 'csm', 'prox_acao', 'ultimo_efetivo', 'mrr'];
 function valorOrdem(c, k) { const v = c[k]; if (v instanceof Date) return v.getTime(); if (typeof v === 'number') return v; if (v == null || v === '') return null; return String(v).toLowerCase(); }
-function tabelaClientes(lista, cols = PADRAO_COLS, id = 't') {
+function tabelaClientes(lista, cols = PADRAO_COLS, id = 't', selecao = null) {
   if (!lista.length) return vazio('Nenhum cliente com esses filtros.');
   const o = ESTADO_UI.ordem[id];
   if (o) lista = [...lista].sort((a, b) => { const x = valorOrdem(a, o.k), y = valorOrdem(b, o.k); if (x === y) return 0; if (x == null) return 1; if (y == null) return -1; return (x < y ? -1 : 1) * o.d; });
-  return `<div class="tw"><table><thead><tr>${cols.map(k => `<th data-ord="${id}|${k}" class="${COLS_CLIENTE[k][2] || ''}">${COLS_CLIENTE[k][0]}${o && o.k === k ? (o.d > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead><tbody>${lista.map(c => `<tr class="clica" data-cliente="${esc(c.id_cliente)}">${cols.map(k => `<td class="${COLS_CLIENTE[k][2] || ''}">${COLS_CLIENTE[k][1](c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const cb = c => selecao ? `<td><input type="checkbox" data-sel="${esc(c.id_cliente)}" ${selecao.has(c.id_cliente) ? 'checked' : ''} aria-label="Selecionar ${esc(c.nome)}"></td>` : '';
+  return `<div class="tw"><table><thead><tr>${selecao ? '<th><input type="checkbox" data-seltodos aria-label="Selecionar todos"></th>' : ''}${cols.map(k => `<th data-ord="${id}|${k}" class="${COLS_CLIENTE[k][2] || ''}">${COLS_CLIENTE[k][0]}${o && o.k === k ? (o.d > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('')}</tr></thead><tbody>${lista.map(c => `<tr class="clica" data-cliente="${esc(c.id_cliente)}">${cb(c)}${cols.map(k => `<td class="${COLS_CLIENTE[k][2] || ''}">${COLS_CLIENTE[k][1](c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 function tabelaSimples(linhas, cols) {
   if (!linhas.length) return vazio('Nada para mostrar.');
@@ -1120,16 +1208,18 @@ function lerProxima(d, pref = 'p') {
 // ---------- menu e desenho ----------
 function desenharMenu() {
   const u = USUARIO(), r = rota();
-  const naoLidas = u ? DB.notificacoes.filter(n => n.usuario === u.nome && n.lida !== 'Sim').length : 0;
-  const ativos = DB.usuarios.filter(x => x.ativo !== 'Não');
-  const fixo = !MODO_DEMO && EMAIL_SERVIDOR && ativos.some(x => S(x.email).toLowerCase() === EMAIL_SERVIDOR);
+  if (!u) { $('#lateral').innerHTML = '<div class="marca"><span></span>CRM CS Elite</div>'; return; }
+  const naoLidas = DB.notificacoes.filter(n => n.usuario === u.nome && n.lida !== 'Sim').length;
+  const pedidos = ehMaster(u) ? DB.usuarios.filter(x => x.ativo === 'Pendente').length : 0;
+  const ativos = DB.usuarios.filter(usuarioAtivo);
   $('#lateral').innerHTML = `
     <div class="marca"><span></span>CRM CS Elite</div>
-    <div class="quem">${fixo ? `<label>Você entrou como</label><b>${esc(u.nome)}</b>` :
-      `<label for="quemSel">Entrar como</label><select id="quemSel">${opts(ativos.map(x => x.nome), u?.nome)}</select>`}
-      <small>${esc(u?.perfil || '')}</small></div>
-    <nav aria-label="Páginas"><ul>${Object.entries(PAGINAS).filter(([k]) => permitido(k, u)).map(([k, p]) =>
-      `<li><a href="#${k}" ${r.pagina === k ? 'aria-current="page"' : ''}>${esc(p.nome)}${k === 'inicio' && naoLidas ? `<span class="cont">${naoLidas}</span>` : ''}</a></li>`).join('')}</ul></nav>
+    <div class="quem">${MODO_DEMO ? `<label for="quemSel">Entrar como (demonstração)</label><select id="quemSel">${opts(ativos.map(x => x.nome), u.nome)}</select>` :
+      `<label>Você entrou como</label><b>${esc(u.nome)}</b>`}
+      <small>${esc(descCargo(u))}</small></div>
+    <nav aria-label="Páginas"><ul>${Object.entries(PAGINAS).filter(([k]) => permitido(k, u)).map(([k, p]) => {
+      const n = k === 'inicio' ? naoLidas : k === 'usuarios' ? pedidos : 0;
+      return `<li><a href="#${k}" ${r.pagina === k ? 'aria-current="page"' : ''}>${esc(p.nome)}${n ? `<span class="cont">${n}</span>` : ''}</a></li>`; }).join('')}</ul></nav>
     <div class="rodape">
       <span id="sinc" class="sinc"></span>
       ${MODO_DEMO ? '' : '<button class="btn peq" id="recarregar" type="button">Atualizar dados</button>'}
@@ -1149,6 +1239,7 @@ function render() {
   const u = USUARIO();
   desenharMenu();
   const main = $('#conteudo');
+  if (!MODO_DEMO && !u) { main.innerHTML = telaAcessoUsuario(); ligarAcessoUsuario(); return; }
   if (!u) { main.innerHTML = telaPrimeiroUsuario(); ligarPrimeiroUsuario(); return; }
   let { pagina, arg } = rota();
   if (!permitido(pagina, u)) pagina = 'inicio';
@@ -1169,6 +1260,34 @@ function ligarComuns(raiz) {
     const [id, k] = th.dataset.ord.split('|'); const o = ESTADO_UI.ordem[id];
     ESTADO_UI.ordem[id] = o && o.k === k ? { k, d: -o.d } : { k, d: 1 }; render();
   }));
+}
+
+// Quem abre o CRM sem cadastro escolhe entre visitante e CSM; CSM aguarda aprovação
+function telaAcessoUsuario() {
+  const eu = EU_SERVIDOR;
+  if (!EMAIL_SERVIDOR) return `<div class="topo"><div><h1>Não identifiquei sua conta Google</h1><p class="lead">Entre neste navegador com o seu e-mail da Bling e abra o CRM de novo. Se continuar, avise o CS Ops: o serviço de dados precisa estar publicado para “Qualquer pessoa na Bling”.</p></div></div>`;
+  if (eu && eu.ativo === 'Pendente') return `<div class="topo"><div><h1>Pedido enviado</h1><p class="lead">Seu pedido de acesso como CSM (${esc(eu.email)}) foi enviado em ${fdh(eu.solicitado_em)}. Um CS Ops ou a coordenação precisa aprovar e vincular a sua carteira.</p></div></div><div class="acoes"><button class="btn pri" id="verificar" type="button">Verificar de novo</button></div>`;
+  if (eu) return `<div class="topo"><div><h1>Acesso não liberado</h1><p class="lead">O acesso de ${esc(eu.email)} ao CRM está ${eu.ativo === 'Recusado' ? 'recusado' : 'inativo'}. Fale com o CS Ops ou com a coordenação.</p></div></div>`;
+  return `<div class="topo"><div><h1>Primeiro acesso</h1><p class="lead">Seu e-mail ${esc(EMAIL_SERVIDOR)} ainda não está cadastrado no CRM. Conte quem você é.</p></div></div>
+  <div class="card" style="max-width:560px"><div id="acErro"></div>
+    ${campo('Seu nome completo', '<input type="text" id="acNome" autocomplete="name">')}
+    <div style="margin:14px 0 6px" class="mut peq">Como você vai usar o CRM?</div>
+    <div class="opcoes" id="acTipo"><label><input type="radio" name="acTipo" value="Visitante" checked>Visitante: só consulta, entra na hora</label><label><input type="radio" name="acTipo" value="CSM">CSM: atendo uma carteira (precisa de aprovação)</label></div>
+    <div id="acCart" hidden style="margin-top:12px">${campo('Carteira', `<div class="opcoes"><label><input type="radio" name="acCarteira" value="Ongoing" checked>Ongoing</label><label><input type="radio" name="acCarteira" value="Onboarding">Onboarding</label></div>`)}</div>
+    <div class="acoes"><button class="btn pri" id="acEnviar" type="button">Continuar</button></div></div>`;
+}
+function ligarAcessoUsuario() {
+  const recarregar = async () => { try { await carregarDados(); } catch (e) { aviso(e.message, 'err'); } render(); };
+  $('#verificar') && ($('#verificar').onclick = recarregar);
+  if (!$('#acEnviar')) return;
+  $$('[name=acTipo]').forEach(r => r.onchange = () => { $('#acCart').hidden = $('[name=acTipo]:checked').value !== 'CSM'; });
+  $('#acEnviar').onclick = async () => {
+    const nome = S($('#acNome').value), tipo = $('[name=acTipo]:checked').value;
+    if (nome.length < 3) { $('#acErro').innerHTML = '<div class="aviso a-err">Informe seu nome completo.</div>'; return; }
+    $('#acEnviar').disabled = true;
+    try { await solicitarAcesso(tipo, $('[name=acCarteira]:checked').value, nome); await recarregar(); }
+    catch (e) { $('#acErro').innerHTML = `<div class="aviso a-err">${esc(e.message)}</div>`; $('#acEnviar').disabled = false; }
+  };
 }
 
 function telaPrimeiroUsuario() {
@@ -1257,13 +1376,13 @@ function pgInicio() {
   const u = USUARIO(), cart = carteira(), ts = tarefasSituacao().filter(t => t.responsavel === u.nome && t.status === 'Aberta');
   const sem = iso(segunda(hoje())), listaU = DB.lista_semanal.filter(l => l.csm === u.nome && l.semana === sem);
   let k3, k4;
-  if (u.perfil === 'CSM de Ongoing') {
+  if (!ehMaster(u) && u.carteira === 'Ongoing') {
     const meus = cart.filter(c => c.csm_ongoing === u.nome && c.status === 'Ativo');
     k3 = kpi('Itens pendentes da semana', listaU.length ? listaU.filter(l => l.status === 'Pendente').length : '—', '', 'prioridades');
     k4 = kpi('Clientes sem próxima ação', meus.filter(c => !c.prox_acao).length, '', 'semproxima');
-  } else if (PERFIS_GESTAO.includes(u.perfil)) {
+  } else if (ehMaster(u)) {
     k3 = kpi('Aprovações pendentes', DB.aprovacoes.filter(a => a.decisao === 'Pendente').length, '', 'aprovacoes');
-    k4 = kpi('Para revisão semanal', DB.aprovacoes.filter(a => a.decisao === 'Revisão semanal').length, '', 'aprovacoes');
+    k4 = kpi('Pedidos de acesso', DB.usuarios.filter(x => x.ativo === 'Pendente').length, '', 'usuarios');
   } else {
     const at = cart.filter(c => c.status === 'Ativo');
     k3 = kpi('Clientes ativos', at.length, '', 'carteira'); k4 = kpi('Clientes em IF1 ou IF2', at.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length, '', 'riscos');
@@ -1275,7 +1394,7 @@ function pgInicio() {
     $('#lerTodas') && ($('#lerTodas').onclick = () => acaoPagina(tx => DB.notificacoes.filter(n => n.usuario === u.nome && n.lida !== 'Sim').forEach(n => tx.atualizar('notificacoes', n.id, { lida: 'Sim' })), 'Notificações marcadas como lidas.'));
     $$('[data-notif]').forEach(b => b.onclick = async () => { const n = obter('notificacoes', b.dataset.notif); tirarRetrato(); await executar(tx => tx.atualizar('notificacoes', n.id, { lida: 'Sim' }), false); if (n.id_cliente) ir('cliente', n.id_cliente); });
   });
-  return `<div class="topo"><div><h1>Olá, ${esc(u.nome.split(' ')[0])}</h1><p class="lead">${esc(u.perfil)} · ${fdata(hoje())}</p></div></div>
+  return `<div class="topo"><div><h1>Olá, ${esc(u.nome.split(' ')[0])}</h1><p class="lead">${esc(descCargo(u))} · ${fdata(hoje())}</p></div></div>
   <div class="grade g4">${kpi('Tarefas vencidas', ts.filter(t => t.situacao === 'Vencida').length, '', 'tarefas')}${kpi('Tarefas para hoje', ts.filter(t => t.prazo === iso(hoje())).length, '', 'tarefas')}${k3}${k4}</div>
   <h2>Notificações</h2>
   <div class="acoes" style="margin:0 0 10px">${chk('x', 'Mostrar também as lidas', todas, 'id="notifTodas"').replace('name="x"', '')}${DB.notificacoes.some(n => n.usuario === u.nome && n.lida !== 'Sim') ? '<button class="btn peq" id="lerTodas" type="button">Marcar todas como lidas</button>' : ''}</div>
@@ -1287,10 +1406,10 @@ function pgInicio() {
 // ===================== prioridades =====================
 function escolherCSM(id, todos = true) {
   const u = USUARIO();
-  if (u.perfil === 'CSM de Ongoing') return { csm: u.nome, html: '' };
-  const csms = nomesUsuarios(['CSM de Ongoing']);
-  let v = ESTADO_UI.filtros[id] ?? (todos ? '' : csms[0] || '');
-  if (!todos && !v) v = csms[0] || '';
+  if (!ehMaster(u) && !ehVisitante(u) && u.carteira === 'Ongoing') return { csm: u.nome, html: '' };
+  const csms = nomesCSM('Ongoing'), meu = csms.includes(u.nome) ? u.nome : csms[0] || '';
+  let v = ESTADO_UI.filtros[id] ?? (todos ? '' : meu);
+  if (!todos && !v) v = meu;
   depois(() => { $(`#${id}`).onchange = e => { ESTADO_UI.filtros[id] = e.target.value; render(); }; });
   return { csm: v || null, html: campo('CSM', `<select id="${id}">${opts(csms, v, todos ? 'Todos' : undefined)}</select>`) };
 }
@@ -1300,13 +1419,13 @@ function pgPrioridades() {
   const sem = iso(segunda(hoje()));
   let lst = DB.lista_semanal.filter(l => l.csm === csm && l.semana === sem);
   const chaveG = csm + sem;
-  if (!lst.length && !ESTADO_UI['g' + chaveG]) { ESTADO_UI['g' + chaveG] = 1; depois(() => { tirarRetrato(); executar(tx => gerarLista(tx, csm), false); }); }
-  const edita = u.nome === csm || PERFIS_GESTAO.includes(u.perfil);
+  const edita = u.nome === csm || ehMaster(u);
+  if (edita && !lst.length && !ESTADO_UI['g' + chaveG]) { ESTADO_UI['g' + chaveG] = 1; depois(() => { tirarRetrato(); executar(tx => gerarLista(tx, csm), false); }); }
   const cart = new Map(carteira().map(c => [c.id_cliente, c]));
   lst = [...lst].sort((a, b) => (+a.posicao) - (+b.posicao));
   const pend = lst.filter(l => l.status === 'Pendente'), feitos = lst.filter(l => l.status !== 'Pendente');
   depois(() => {
-    $('#regerar').onclick = () => acaoPagina(tx => { gerarLista(tx, csm, true); }, 'Lista atualizada com a regra.');
+    $('#regerar') && ($('#regerar').onclick = () => acaoPagina(tx => { gerarLista(tx, csm, true); }, 'Lista atualizada com a regra.'));
     $$('[data-tratar]').forEach(b => b.onclick = () => janelaContato(b.dataset.tratar, 'completo'));
     $$('[data-adiar]').forEach(b => b.onclick = () => {
       const it = obter('lista_semanal', b.dataset.adiar);
@@ -1316,7 +1435,7 @@ function pgPrioridades() {
   });
   const pct = lst.length ? (feitos.length / lst.length) * 100 : 0;
   return `<div class="topo"><div><h1>Prioridades da semana</h1><p class="lead">Semana de ${fdata(sem).slice(0, 5)}. A lista sai na segunda-feira, ordenada por risco antes do calendário; gatilhos imediatos entram no topo durante a semana.</p></div>
-    <div class="acoes">${html ? `<div style="min-width:200px">${html}</div>` : ''}<button class="btn" id="regerar" type="button">Atualizar lista com a regra</button></div></div>
+    <div class="acoes">${html ? `<div style="min-width:200px">${html}</div>` : ''}${edita ? '<button class="btn" id="regerar" type="button">Atualizar lista com a regra</button>' : ''}</div></div>
   <p class="peq mut">${feitos.length} de ${lst.length} itens tratados, adiados ou dispensados</p><div class="barra" style="margin-bottom:16px"><i style="width:${pct}%"></i></div>
   ${!lst.length ? vazio('Nenhum cliente em risco ou com cadência vencida nesta semana.') : ''}
   ${pend.map((it, i) => {
@@ -1332,9 +1451,10 @@ function pgPrioridades() {
 
 // ===================== carteira =====================
 function filtrosCarteira(id) {
-  const u = USUARIO(), f = ESTADO_UI.filtros[id] || (ESTADO_UI.filtros[id] = { ver: u.perfil.startsWith('CSM') ? 'minha' : 'todos', status: 'Ativo', csm: '', jornada: '', modelo: '', if: '', estado: '', faixa: '', hs: '', prio: '', busca: '' });
+  const u = USUARIO(), temCart = TIPOS_CARTEIRA.includes(u.carteira) && !ehVisitante(u);
+  const f = ESTADO_UI.filtros[id] || (ESTADO_UI.filtros[id] = { ver: temCart && !ehMaster(u) ? 'minha' : 'todos', status: 'Ativo', csm: '', jornada: '', modelo: '', if: '', estado: '', faixa: '', hs: '', prio: '', busca: '' });
   let cart = carteira();
-  if (u.perfil.startsWith('CSM') && f.ver === 'minha') cart = cart.filter(c => c.csm_ongoing === u.nome || c.csm_onboarding === u.nome);
+  if (temCart && f.ver === 'minha') cart = cart.filter(c => c.csm_ongoing === u.nome || c.csm_onboarding === u.nome);
   if (f.csm) cart = cart.filter(c => c.csm === f.csm);
   if (f.status) cart = cart.filter(c => c.status === f.status);
   ['jornada', 'modelo', 'estado'].forEach(k => { if (f[k]) cart = cart.filter(c => c[k] === f[k]); });
@@ -1346,7 +1466,7 @@ function filtrosCarteira(id) {
   const s = (k, vals, rot) => campo(rot, `<select data-f="${k}">${opts(vals, f[k], 'Todos')}</select>`);
   const html = `<div class="card filtros" style="margin-bottom:14px">
     ${campo('Buscar', `<input type="text" data-f="busca" value="${esc(f.busca)}" placeholder="Nome, CNPJ ou ID">`)}
-    ${u.perfil.startsWith('CSM') ? campo('Clientes', `<select data-f="ver">${opts([['minha', 'Minha carteira'], ['todos', 'Todos']], f.ver)}</select>`) : s('csm', [...new Set(carteira().map(c => c.csm).filter(Boolean))].sort(), 'CSM')}
+    ${temCart ? campo('Clientes', `<select data-f="ver">${opts([['minha', 'Minha carteira'], ['todos', 'Todos']], f.ver)}</select>`) : s('csm', [...new Set(carteira().map(c => c.csm).filter(Boolean))].sort(), 'CSM')}
     ${campo('Situação', `<select data-f="status">${opts([['Ativo', 'Ativos'], ['Janela de reversão', 'Janela de reversão'], ['Cancelado', 'Cancelados']], f.status, 'Todos')}</select>`)}
     ${s('jornada', JORNADAS, 'Jornada')}${s('modelo', MODELOS, 'Modelo')}${s('if', IFS, 'IF')}${s('estado', ESTADOS, 'Estado')}
     ${s('faixa', ['1', '2', '3', '4', '5', '6', '7', '8'], 'Faixa')}${s('hs', ['Crítico', 'Atenção', 'Saudável', 'Excelente'], 'Faixa do HS final')}${s('prio', ['A', 'B', 'C'], 'Prioridade A/B/C')}</div>`;
@@ -1361,10 +1481,22 @@ function baixarCSV(nome, linhas) {
 }
 function pgCarteira() {
   const { cart, html } = filtrosCarteira('cart');
+  const master = ehGestao(), selecao = ESTADO_UI.sel || (ESTADO_UI.sel = new Set());
+  if (master) depois(() => {
+    const atualizar = () => { $('#qtdSel').textContent = `${selecao.size} selecionado(s)`; };
+    $$('[data-sel]').forEach(cb => cb.onchange = () => { cb.checked ? selecao.add(cb.dataset.sel) : selecao.delete(cb.dataset.sel); atualizar(); });
+    $('[data-seltodos]') && ($('[data-seltodos]').onchange = e => { cart.forEach(c => e.target.checked ? selecao.add(c.id_cliente) : selecao.delete(c.id_cliente)); render(); });
+    $('#tipoAtrib').onchange = e => { $('#paraAtrib').innerHTML = opts(nomesCSM(e.target.value)); };
+    $('#limparSel').onclick = () => { selecao.clear(); render(); };
+    $('#atribuir').onclick = () => acaoPagina(tx => { const r = atribuirEmMassa(tx, [...selecao], $('#tipoAtrib').value, $('#paraAtrib').value); selecao.clear(); return r; });
+  });
+  const barra = master ? `<div class="card acoes" style="margin:0 0 14px"><b id="qtdSel">${selecao.size} selecionado(s)</b>
+    <span class="mut">Atribuir à carteira de</span><select id="tipoAtrib" style="width:auto">${opts(TIPOS_CARTEIRA, 'Ongoing')}</select>
+    <select id="paraAtrib" style="width:auto">${opts(nomesCSM('Ongoing'))}</select><button class="btn pri" id="atribuir" type="button">Atribuir</button><button class="btn" id="limparSel" type="button">Limpar seleção</button></div>` : '';
   depois(() => { $('#baixarCart').onclick = () => baixarCSV('carteira.csv', cart.map(c => ({ id_cliente: c.id_cliente, cliente: c.nome, cnpj: c.cnpj, if: c.if_atual, estado: c.estado, hs_dados: c.hs_num ?? '', hs_final: c.hs_final ?? '', faixa: c.faixa_at, modelo: c.modelo, prioridade: c.prioridade_abc, csm: c.csm, proxima_acao: c.prox_acao, prazo: c.prox_prazo, ultimo_contato_efetivo: c.ultimo_efetivo, mrr: c.mrr }))); });
   return `<div class="topo"><div><h1>Carteira</h1><p class="lead">Clique em um cliente para abrir a ficha. Clique no título de uma coluna para ordenar.</p></div><button class="btn" id="baixarCart" type="button">Baixar CSV</button></div>${html}
   <div class="grade g5" style="margin-bottom:14px">${kpi('Clientes', cart.length)}${ESTADOS.slice(0, 4).map(e => kpi(e, cart.filter(c => c.estado === e).length)).join('')}</div>
-  ${tabelaClientes(cart, PADRAO_COLS, 'cart')}`;
+  ${barra}${tabelaClientes(cart, PADRAO_COLS, 'cart', master ? selecao : null)}`;
 }
 
 // ===================== tarefas =====================
@@ -1447,10 +1579,10 @@ function pgAgenda() {
 function pgOnboarding() {
   const u = USUARIO();
   let onb = carteira().filter(c => c.jornada === 'Onboarding' && c.status === 'Ativo');
-  if (u.perfil === 'CSM de Onboarding') onb = onb.filter(c => c.csm_onboarding === u.nome);
+  if (!ehMaster(u) && u.carteira === 'Onboarding') onb = onb.filter(c => c.csm_onboarding === u.nome);
   onb = onb.map(c => ({ c, dias: difDias(hoje(), data(c.data_entrada_elite) || hoje()) })).sort((a, b) => b.dias - a.dias);
   depois(() => $$('[data-handoff]').forEach(b => b.onclick = () => {
-    const c = cliente(b.dataset.handoff), csms = nomesUsuarios(['CSM de Ongoing']);
+    const c = cliente(b.dataset.handoff), csms = nomesCSM('Ongoing');
     janela(`Handoff para o CSM de Ongoing · ${c.nome}`, `<p class="mut peq">Só depois do treinamento de usuários e do primeiro ciclo completo de venda (D-31).</p>
       ${campo('CSM de Ongoing', sel('csm', csms))}
       ${chk('ciclo', 'Primeiro ciclo de venda concluído: pedido, conferência, nota fiscal, saída de estoque e separação')}
@@ -1516,7 +1648,7 @@ function pgPainel() {
   const retM = (mrrAt + perdido) ? (1 - perdido / (mrrAt + perdido)) * 100 : 100;
   const surpresa = DB.churn.length ? DB.churn.filter(c => c.churn_surpresa === 'Sim').length / DB.churn.length * 100 : null;
   const sem = iso(segunda(h));
-  const linhas = nomesUsuarios(['CSM de Ongoing', 'CSM de Onboarding']).map(n => {
+  const linhas = nomesCSM().map(n => {
     const m = at.filter(c => c.csm === n), lst = DB.lista_semanal.filter(l => l.csm === n && l.semana === sem);
     return { n, cli: m.length, mrr: m.reduce((a, c) => a + c.mrr, 0), if1: m.filter(c => c.if_atual === 'IF1').length, if2: m.filter(c => c.if_atual === 'IF2').length, if3: m.filter(c => c.if_atual === 'IF3').length,
       semProx: m.filter(c => !c.prox_acao).length, cad: m.filter(c => c.cadencia_vencida).length, venc: ts.filter(t => t.responsavel === n && t.situacao === 'Vencida').length,
@@ -1534,14 +1666,14 @@ function pgPainel() {
 
 // ===================== configurações =====================
 function pgConfig() {
-  if (!ehGestao()) return `<h1>Configurações</h1>${vazio('Só a coordenação e o CS Ops alteram configurações.')}`;
+  if (!ehGestao()) return `<h1>Configurações</h1>${vazio('Só CS Ops, coordenação, gerência e diretoria alteram configurações.')}`;
   const aba = ESTADO_UI.abaConfig;
-  const abas = [['carga', 'Carga de dados oficiais'], ['listas', 'Listas'], ['cad', 'Cadências'], ['usu', 'Usuários'], ['dados', 'Exportar e acesso']];
+  const abas = [['carga', 'Carga de dados oficiais'], ['listas', 'Listas'], ['cad', 'Cadências'], ['dados', 'Exportar e acesso']];
   depois(() => {
     $$('[data-abacfg]').forEach(b => b.onclick = () => { ESTADO_UI.abaConfig = b.dataset.abacfg; render(); });
-    ({ carga: ligarCarga, listas: ligarListas, cad: ligarCad, usu: ligarUsu, dados: ligarDados })[aba]();
+    ({ carga: ligarCarga, listas: ligarListas, cad: ligarCad, dados: ligarDados })[aba]();
   });
-  const corpo = { carga: cfgCarga, listas: cfgListas, cad: cfgCad, usu: cfgUsu, dados: cfgDados }[aba]();
+  const corpo = { carga: cfgCarga, listas: cfgListas, cad: cfgCad, dados: cfgDados }[aba]();
   return `<div class="topo"><div><h1>Configurações</h1></div></div><div class="abas" role="tablist">${abas.map(([k, r]) => `<button type="button" role="tab" aria-selected="${aba === k}" data-abacfg="${k}">${r}</button>`).join('')}</div><div id="cfgErro"></div>${corpo}`;
 }
 let LINHAS_CARGA = null;
@@ -1591,20 +1723,6 @@ function cfgCad() {
 function ligarCad() {
   $('#salvarCad').onclick = () => acaoPagina(tx => tx.substituir('cadencias', $$('#tabCad tbody tr').map(tr => ({ id: tr.dataset.id || novoId(), modelo: $('[data-c=modelo]', tr).value, estado: $('[data-c=estado]', tr).value, prioridade: $('[data-c=prioridade]', tr).value, dias: $('[data-c=dias]', tr).value })).filter(c => c.modelo && c.estado)), 'Cadências salvas.', $('#cfgErro'));
 }
-function cfgUsu() {
-  return `<div class="card"><p class="mut peq">Com o e-mail Google preenchido, o CRM reconhece a pessoa automaticamente quando o serviço de dados está publicado só para o domínio da empresa. Sem isso, cada pessoa escolhe o nome em “Entrar como”.</p>
-  <div class="tw"><table id="tabUsu"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Ativo</th></tr></thead><tbody>${[...DB.usuarios, { id: '', nome: '', email: '', perfil: 'CSM de Ongoing', ativo: 'Sim' }].map(u => `<tr data-id="${esc(u.id)}"><td><input type="text" data-c="nome" value="${esc(u.nome)}"></td><td><input type="email" data-c="email" value="${esc(u.email)}"></td><td><select data-c="perfil">${opts(PERFIS, u.perfil)}</select></td><td><select data-c="ativo">${opts(['Sim', 'Não'], u.ativo || 'Sim')}</select></td></tr>`).join('')}</tbody></table></div>
-  <div class="acoes"><button class="btn" id="maisUsu" type="button">Adicionar linha</button><button class="btn pri" id="salvarUsu" type="button">Salvar usuários</button></div></div>`;
-}
-function ligarUsu() {
-  $('#maisUsu').onclick = () => { const tr = $('#tabUsu tbody tr:last-child').cloneNode(true); tr.dataset.id = ''; $$('input', tr).forEach(i => (i.value = '')); $('#tabUsu tbody').appendChild(tr); };
-  $('#salvarUsu').onclick = () => acaoPagina(tx => {
-    const us = $$('#tabUsu tbody tr').map(tr => ({ id: tr.dataset.id || novoId(), nome: S($('[data-c=nome]', tr).value), email: S($('[data-c=email]', tr).value), perfil: $('[data-c=perfil]', tr).value, ativo: $('[data-c=ativo]', tr).value })).filter(u => u.nome);
-    exigir(us.some(u => u.perfil === 'Coordenação' && u.ativo !== 'Não'), 'Mantenha ao menos uma pessoa ativa na Coordenação.');
-    exigir(new Set(us.map(u => u.nome)).size === us.length, 'Há nomes repetidos.');
-    tx.substituir('usuarios', us);
-  }, 'Usuários salvos.', $('#cfgErro'));
-}
 function cfgDados() {
   return `<div class="card"><h3>Onde ficam os dados</h3><p>${MODO_DEMO ? 'Modo demonstração: os dados ficam só neste navegador. Para o time usar junto, configure o serviço de dados (veja o README_CRM).' : 'Os dados ficam na Planilha Google ligada ao serviço de dados, uma aba por tabela.'}</p>
   <div class="acoes"><button class="btn" id="exportar" type="button">Baixar todas as tabelas (.xlsx)</button></div></div>
@@ -1615,6 +1733,66 @@ function ligarDados() {
   $('#exportar').onclick = () => { const wb = XLSX.utils.book_new(); Object.keys(SCHEMAS).forEach(t => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB[t].length ? DB[t] : [linhaVazia(t)], { header: SCHEMAS[t] }), t.slice(0, 31))); XLSX.writeFile(wb, `crm_cs_elite_${iso(hoje())}.xlsx`); };
   $('#recriar') && ($('#recriar').onclick = () => { if (confirm('Apagar os dados deste navegador e recriar a base de exemplo?')) { localStorage.removeItem(CHAVE_DEMO); Object.keys(DB).forEach(t => (DB[t] = [])); criarBaseExemplo(); location.hash = 'inicio'; iniciar(); } });
   $('#sairToken') && ($('#sairToken').onclick = () => { localStorage.removeItem('crmToken'); location.reload(); });
+}
+// ===================== usuários e carteiras =====================
+function pgUsuarios() {
+  const eu = USUARIO(), coord = eu.perfil === 'Coordenação';
+  const pend = DB.usuarios.filter(u => u.ativo === 'Pendente').sort((a, b) => a.solicitado_em.localeCompare(b.solicitado_em));
+  const lista = DB.usuarios.filter(u => u.ativo !== 'Pendente').sort((a, b) => CARGOS.indexOf(a.perfil) - CARGOS.indexOf(b.perfil) || a.nome.localeCompare(b.nome));
+  const donos = DB.usuarios.filter(u => usuarioAtivo(u) && TIPOS_CARTEIRA.includes(u.carteira));
+  const cart = carteira();
+  const sit = u => u.ativo === 'Recusado' ? '<span class="tag t-red">Recusado</span>' : u.ativo === 'Não' ? '<span class="tag">Inativo</span>' : '<span class="tag t-grn">Ativo</span>';
+  const podeMexer = u => coord || !CARGOS_SUPERIORES.includes(u.perfil);
+  depois(() => {
+    $('#novoUsu').onclick = () => janelaUsuario();
+    $$('[data-editusu]').forEach(b => b.onclick = () => janelaUsuario(b.dataset.editusu));
+    $$('[data-aprovar]').forEach(b => b.onclick = () => janelaAprovar(b.dataset.aprovar));
+    $$('[data-recusar]').forEach(b => b.onclick = () => { if (confirm('Recusar este pedido de acesso?')) acaoPagina(tx => recusarAcesso(tx, b.dataset.recusar)); });
+    $$('[data-transf]').forEach(b => b.onclick = () => { const [nome, tipo] = b.dataset.transf.split('|'); janelaTransferir(nome, tipo); });
+  });
+  return `<div class="topo"><div><h1>Usuários</h1><p class="lead">CS Ops, coordenação, gerência e diretoria veem e editam tudo. CSM edita só a própria carteira; visitante só consulta. Os cargos de Coordenação, Gerente executivo e Diretor geral só podem ser concedidos pela coordenação. Cadastre a pessoa com o e-mail Google: quando ela entrar, o CRM já a reconhece com a carteira.</p></div><button class="btn pri" id="novoUsu" type="button">Novo usuário</button></div>
+  <h2>Pedidos de acesso${pend.length ? ` (${pend.length})` : ''}</h2>
+  ${pend.length ? pend.map(u => `<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+    <div><b>${esc(u.nome)}</b> · ${esc(u.email)}<br><small class="mut">Pediu acesso como CSM de ${esc(u.carteira || 'Ongoing')} em ${fdh(u.solicitado_em)}</small></div>
+    <div class="acoes" style="margin:0"><button class="btn" type="button" data-recusar="${esc(u.id)}">Recusar</button><button class="btn pri" type="button" data-aprovar="${esc(u.id)}">Aprovar e vincular carteira</button></div></div>`).join('') : '<p class="mut">Nenhum pedido aguardando aprovação.</p>'}
+  <h2>Carteiras</h2>
+  ${tabelaSimples(donos.map(u => ({ u, cls: cart.filter(c => c.status === 'Ativo' && (u.carteira === 'Onboarding' ? c.csm_onboarding : c.csm_ongoing) === u.nome) })), [
+    ['CSM', x => `<b>${esc(x.u.nome)}</b>`], ['Carteira', x => esc(x.u.carteira)], ['Clientes ativos', x => x.cls.length],
+    ['MRR', x => fmoeda(x.cls.reduce((a, c) => a + c.mrr, 0))], ['IF1 e IF2', x => x.cls.filter(c => ['IF1', 'IF2'].includes(c.if_atual)).length],
+    ['Sem próxima ação', x => x.cls.filter(c => !c.prox_acao).length],
+    ['', x => x.cls.length ? `<button class="btn peq" type="button" data-transf="${esc(x.u.nome)}|${esc(x.u.carteira)}">Transferir carteira</button>` : '<span class="mut peq">Atribua clientes pela Carteira</span>']])}
+  <p class="mut peq">Para montar uma carteira, use a página Carteira: selecione os clientes e atribua ao CSM.</p>
+  <h2>Todos os usuários</h2>
+  ${tabelaSimples(lista, [['Nome', u => `<b>${esc(u.nome)}</b>`], ['E-mail', 'email'], ['Cargo', 'perfil'], ['Carteira', u => esc(u.carteira || '—')], ['Situação', sit],
+    ['', u => podeMexer(u) ? `<button class="btn peq" type="button" data-editusu="${esc(u.id)}">Editar</button>` : '<span class="mut peq">Só a coordenação altera</span>']])}`;
+}
+function opcoesCargo() { return USUARIO().perfil === 'Coordenação' ? CARGOS : CARGOS.filter(c => !CARGOS_SUPERIORES.includes(c)); }
+function janelaUsuario(id) {
+  const u = id ? obter('usuarios', id) : { nome: '', email: '', perfil: 'CSM', carteira: 'Ongoing', ativo: 'Sim' };
+  janela(id ? `Editar ${u.nome}` : 'Novo usuário', `
+    ${id ? `<p><b>${esc(u.nome)}</b></p>` : campo('Nome completo', txt('nome'))}
+    <div class="linha" style="margin-top:10px">${campo('E-mail Google', `<input type="email" name="email" value="${esc(u.email)}" placeholder="nome@bling.com.br">`)}${campo('Cargo', sel('perfil', opcoesCargo(), u.perfil))}</div>
+    <div class="linha">${campo('Carteira', sel('carteira', [['', 'Sem carteira'], ['Ongoing', 'Ongoing'], ['Onboarding', 'Onboarding']], u.carteira), 'Obrigatória para CSM. CS Ops ou superior também pode ter carteira.')}
+    ${id ? campo('Situação', sel('ativo', [['Sim', 'Ativo'], ['Não', 'Inativo']], ['Sim', 'Não'].includes(u.ativo) ? u.ativo : 'Sim')) : ''}</div>
+    ${USUARIO().perfil !== 'Coordenação' ? '<p class="mut peq">Os cargos de Coordenação, Gerente executivo e Diretor geral só são concedidos pela coordenação.</p>' : ''}`,
+    [{ rotulo: 'Salvar', pri: true, acao: (d, tx) => salvarUsuario(tx, d, id || null) }]);
+}
+function opcoesAssumir(tipo, excluir) {
+  return [['', 'Nova carteira, sem clientes'], ...DB.usuarios.filter(x => x.nome !== excluir && TIPOS_CARTEIRA.includes(x.carteira))
+    .map(x => [x.nome, `Assumir a carteira de ${x.nome} (${clientesDaCarteira(x.nome, tipo).length} clientes)`])];
+}
+function janelaAprovar(id) {
+  const u = obter('usuarios', id), tipo = u.carteira || 'Ongoing';
+  janela(`Aprovar ${u.nome}`, `<p class="mut peq">${esc(u.email)} · pediu acesso em ${fdh(u.solicitado_em)}</p>
+    ${campo('Carteira', sel('carteira', TIPOS_CARTEIRA, tipo))}<div style="margin-top:10px">${campo('Clientes', sel('assumir', opcoesAssumir(tipo, u.nome)), 'Ao assumir a carteira de alguém, os clientes e as tarefas abertas passam para esta pessoa, com mensagem de apresentação de transição.')}</div>`,
+    [{ rotulo: 'Aprovar', pri: true, acao: (d, tx) => aprovarAcesso(tx, id, d.carteira, d.assumir) }],
+    raiz => { $('[name=carteira]', raiz).onchange = e => { $('[name=assumir]', raiz).innerHTML = opts(opcoesAssumir(e.target.value, u.nome)); }; });
+}
+function janelaTransferir(nome, tipo) {
+  const destinos = nomesCSM(tipo).filter(n => n !== nome);
+  janela(`Transferir carteira de ${nome}`, `<p>${clientesDaCarteira(nome, tipo).length} clientes da carteira de ${esc(tipo)}. As tarefas abertas de ${esc(nome)} nesses clientes também passam para o novo CSM, e cada cliente recebe as tarefas de apresentação de transição.</p>
+    ${destinos.length ? campo('Transferir para', sel('para', destinos)) : '<div class="aviso a-warn">Não há outro CSM com carteira de ' + esc(tipo) + '. Cadastre a pessoa antes.</div>'}`,
+    destinos.length ? [{ rotulo: 'Transferir', pri: true, acao: (d, tx) => transferirCarteira(tx, nome, d.para, tipo) }] : []);
 }
 // ===================== ficha do cliente =====================
 function pgFicha(arg) {
@@ -1643,7 +1821,7 @@ function pgFicha(arg) {
     ${kpi('Próxima ação', c.prox_acao ? fdata(c.prox_prazo) : '—', c.prox_acao ? esc(c.prox_acao) : '<span class="tag t-red">Sem próxima ação</span>')}</div>
   ${c.alertas.map(a => `<div class="aviso a-warn">${esc(a)}</div>`).join('')}
   ${fix.map(n => `<div class="pino">📌 ${esc(n.texto)} <small>— ${esc(n.autor)}, ${fdata(n.data)}</small></div>`).join('')}
-  ${edita && ['Ativo', 'Janela de reversão'].includes(c.status) ? `<div class="acoes"><button class="btn pri" type="button" data-reg="completo">Registrar contato</button><button class="btn" type="button" data-reg="rapido">Registro rápido de mensagem</button><button class="btn" type="button" data-reg="checkin">Registrar check-in</button></div>` : (!edita ? '<p class="mut peq">Você pode consultar este cliente, mas só edita clientes da sua carteira.</p>' : '')}
+  ${edita && ['Ativo', 'Janela de reversão'].includes(c.status) ? `<div class="acoes"><button class="btn pri" type="button" data-reg="completo">Registrar contato</button><button class="btn" type="button" data-reg="rapido">Registro rápido de mensagem</button><button class="btn" type="button" data-reg="checkin">Registrar check-in</button></div>` : (!edita ? `<p class="mut peq">${ehVisitante(u) ? 'Acesso de visitante: somente consulta.' : 'Você pode consultar este cliente, mas só edita clientes da sua carteira.'}</p>` : '')}
   <div class="abas" role="tablist">${abas.map(([k, r]) => `<button type="button" role="tab" aria-selected="${aba === k}" data-abaf="${k}">${r}</button>`).join('')}</div>
   <div id="fichaErro"></div>${corpo}`;
 }
@@ -1653,7 +1831,7 @@ function fGeral(c, edita) {
   const g = ehGestao(), dis = edita ? '' : 'disabled', disG = g ? '' : 'disabled';
   const ofi = [['Razão social', c.razao_social], ['Entrada no Elite', fdata(c.data_entrada_elite)], ['Plano', c.plano], ['Periodicidade', c.periodicidade], ['MRR', fmoeda(c.mrr)], ['GMV', fmoeda(c.gmv)], ['Faixa apurada', c.faixa_apurada], ['Pedidos no período', fnum(c.pedidos_periodo)], ['Pedidos no mês', fnum(c.pedidos_mes)], ['Importações no mês', fnum(c.importacoes_mes)], ['Maior consumo de limite', c.consumo != null ? fpct(c.consumo) : '—'], ['Inadimplência', sim(c.inadimplente) ? 'Em atraso' : 'Em dia']];
   const desc = DB.descontos.filter(d => d.id_cliente === c.id_cliente && (data(d.fim) || hoje()) >= hoje());
-  const csms = nomesUsuarios(['CSM de Ongoing']), onbs = nomesUsuarios(['CSM de Onboarding']);
+  const csms = nomesCSM('Ongoing'), onbs = nomesCSM('Onboarding');
   const kaMarca = c.key_account && c.key_account_origem === 'Peso de marca';
   return `<div class="grade g2"><div><div class="card"><h3>Dados oficiais</h3><p class="mut peq">Somente leitura. Última carga: ${fdh(c.atualizado_em)}</p>
     <div class="tw"><table><tbody>${ofi.map(([k, v]) => `<tr><td class="mut">${k}</td><td>${esc(v || '—')}</td></tr>`).join('')}</tbody></table></div></div>
@@ -1853,8 +2031,8 @@ function criarBaseExemplo() {
   const h = hoje(), ag = agora(), tx = new Tx('Base de exemplo');
   Object.keys(DB).forEach(t => (DB[t] = []));
   garantirConfiguracao(tx);
-  const USU = [['Ana Ribeiro', 'CSM de Ongoing'], ['Bruno Costa', 'CSM de Ongoing'], ['Carla Mendes', 'CSM de Ongoing'], ['Diego Lima', 'CSM de Onboarding'], ['Fernanda Alves', 'Coordenação'], ['Gustavo Rocha', 'CS Ops'], ['Helena Prado', 'Liderança']];
-  USU.forEach(([nome, perfil]) => DB.usuarios.push({ ...linhaVazia('usuarios'), id: novoId(), nome, perfil, ativo: 'Sim', email: nome.toLowerCase().replace(' ', '.') + '@empresa.com.br' }));
+  const USU = [['Karen Miranda', 'Coordenação', '', 'Sim'], ['Darci Junior', 'CS Ops', 'Ongoing', 'Sim'], ['Ana Ribeiro', 'CSM', 'Ongoing', 'Sim'], ['Bruno Costa', 'CSM', 'Ongoing', 'Sim'], ['Carla Mendes', 'CSM', 'Ongoing', 'Sim'], ['Diego Lima', 'CSM', 'Onboarding', 'Sim'], ['Helena Prado', 'Visitante', '', 'Sim'], ['Pedro Souza', 'CSM', 'Ongoing', 'Pendente']];
+  USU.forEach(([nome, perfil, cart, ativo]) => DB.usuarios.push({ ...linhaVazia('usuarios'), id: novoId(), nome, perfil, carteira: cart, ativo, solicitado_em: ag, email: nome.toLowerCase().replace(' ', '.') + '@empresa.com.br' }));
   const PRE = ['Casa', 'Mundo', 'Empório', 'Atacadão', 'Ótica', 'Pet', 'Moda', 'Bazar', 'Distribuidora', 'Ateliê', 'Vila', 'Doce', 'Ponto', 'Rede', 'Estação'];
   const SUF = ['do Sul', 'Brasil', 'Express', 'Center', 'Shop', 'Store', 'Mix', 'Prime', 'Norte', 'Leste', 'Online', 'Mega', 'Bela', 'Nova', 'Real'];
   const PES = ['Mariana', 'Rafael', 'Juliana', 'Thiago', 'Patrícia', 'Lucas', 'Camila', 'Rodrigo', 'Aline', 'Felipe', 'Renata', 'Marcelo'];
