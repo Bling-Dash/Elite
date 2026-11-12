@@ -2573,6 +2573,37 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-cmpmes]'); if (!t) return;
   const [a, b] = t.dataset.cmpmes.split('|'); CMP_PER.de = a; CMP_PER.ate = b; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
 });
+// ===== Contagem de tarefas com as regras do CX (Tarefas › Acompanhamento de tarefas, com filtro de data) =====
+// L.tarefas: [usuário, origem, criada, início, fim, conclusão, ...] (minutos desde 1970). a/b = início e fim do período (ms), mom = momento olhado.
+//  concluídas = conclusão no período (até o momento) · atrasadas/pendentes = abertas no momento, com agendamento no período
+//  (atrasada = horário do fim, ou do início, já passou) · sem agendamento = abertas, sem data, criadas no período.
+//  Extras: criadas = criadas no período · concluidas_atraso = concluídas no período depois do horário agendado.
+function contarTarefasCx(L, a, b, mom, guardar) {
+  const r = {};
+  for (const reg0 of L.tarefas) {
+    const [u, , c0, i0, f0, z0] = reg0, c = c0 * 6e4, i = i0 * 6e4, f = f0 * 6e4, z = z0 * 6e4;
+    const x = r[u] = r[u] || { atrasadas: 0, pendentes: 0, sem_agendamento: 0, concluidas: 0, criadas: 0, concluidas_atraso: 0, _t: { atrasadas: [], pendentes: [], sem_agendamento: [], concluidas: [] } };
+    if (c && c >= a && c <= b && c <= mom) x.criadas++;
+    let k = null;
+    if (z && z <= mom) { if (z >= a && z <= b) { k = 'concluidas'; if ((f || i) && z > (f || i)) x.concluidas_atraso++; } }
+    else if (!(c && c > mom)) {                                        // já existia no momento olhado
+      const ref = i || f;
+      if (!ref) { if (c >= a && c <= b) k = 'sem_agendamento'; }
+      else if (ref >= a && ref <= b) k = (f || i) < mom ? 'atrasadas' : 'pendentes';
+    }
+    if (k) { x[k]++; if (guardar) x._t[k].push(reg0); }
+  }
+  return r;
+}
+// início e fim (ms) de um período da tabela: '2026-11' (mês) ou '2026-S45' (semana ISO, de segunda a domingo)
+function faixaPeriodo(p) {
+  let m = String(p).match(/^(\d{4})-(\d{2})$/);
+  if (m) return [new Date(+m[1], +m[2] - 1, 1).getTime(), new Date(+m[1], +m[2], 0, 23, 59, 59, 999).getTime()];
+  m = String(p).match(/^(\d{4})-S(\d{2})$/);
+  if (m) { const j4 = new Date(+m[1], 0, 4), seg = new Date(+m[1], 0, 4 - ((j4.getDay() || 7) - 1) + (+m[2] - 1) * 7);
+    return [seg.getTime(), new Date(seg.getFullYear(), seg.getMonth(), seg.getDate() + 6, 23, 59, 59, 999).getTime()]; }
+  return null;
+}
 function abrirTarefasCmp(chave) {
   const L = CMP_LISTAS[chave]; if (!L) return;
   const dt = m => m ? new Date(m * 6e4).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -2615,20 +2646,7 @@ function comparativoCsm(T, csms, sel) {
     const dias = Math.round((deIso(iso(ate)) - deIso(iso(de))) / 864e5) + 1;
     deA = new Date(de.getFullYear(), de.getMonth(), de.getDate() - dias); ateA = new Date(ate.getFullYear(), ate.getMonth(), ate.getDate() - dias); MA = M - dias * 864e5;
   }
-  const contar = (A, B, mom, guardar) => { const r = {}; const a = A.getTime(), b = fimDia(B);
-    for (const reg0 of L.tarefas) {
-      const [u, , c0, i0, f0, z0] = reg0, c = c0 * 6e4, i = i0 * 6e4, f = f0 * 6e4, z = z0 * 6e4;
-      const x = r[u] = r[u] || { atrasadas: 0, pendentes: 0, sem_agendamento: 0, concluidas: 0, _t: { atrasadas: [], pendentes: [], sem_agendamento: [], concluidas: [] } };
-      let k = null;
-      if (z && z <= mom) { if (z >= a && z <= b) k = 'concluidas'; }
-      else if (!(c && c > mom)) {                                        // já existia no momento olhado
-        const ref = i || f;
-        if (!ref) { if (c >= a && c <= b) k = 'sem_agendamento'; }
-        else if (ref >= a && ref <= b) k = (f || i) < mom ? 'atrasadas' : 'pendentes';
-      }
-      if (k) { x[k]++; if (guardar) x._t[k].push(reg0); }
-    }
-    return r; };
+  const contar = (A, B, mom, guardar) => contarTarefasCx(L, A.getTime(), fimDia(B), mom, guardar);
   const AT = contar(de, ate, M, true), AN = contar(deA, ateA, MA, false);
   CMP_LISTAS = { periodo: `${br(de)} a ${br(ate)}` };
   const COLS = [['atrasadas', 'Atrasadas'], ['pendentes', 'Pendentes'], ['sem_agendamento', 'Sem agendamento'], ['concluidas', 'Concluídas']];
@@ -2662,7 +2680,9 @@ function histCsm(H) {
   const T = H.tarefas;
   if (!T) return '<p class="note">O histórico das carteiras aparece depois da primeira coleta completa do CustomerX com a leitura de tarefas (madrugada).</p>';
   const tab = HV2.gran === 'mes' ? T.mensal : T.semanal, atr = (H.atrasadas && (HV2.gran === 'mes' ? H.atrasadas.mensal : H.atrasadas.semanal)) || {};
-  const pers = Object.keys(tab || {}).sort().slice(HV2.gran === 'mes' ? -12 : -16);
+  // só até o período atual (tarefas agendadas para o futuro criam períodos que ainda não começaram)
+  const agoraP = (T.lista && T.lista.momento_ms) || Date.now();
+  const pers = Object.keys(tab || {}).filter(p => { const fx = faixaPeriodo(p); return !fx || fx[0] <= agoraP; }).sort().slice(HV2.gran === 'mes' ? -12 : -16);
   const ultSnap = H.per.length ? H.snap[H.per[H.per.length - 1]] : [];
   // usuários que são responsáveis por alguma empresa Elite vêm primeiro
   const respEmails = new Set([...ultSnap.map(x => x.resp), ...ALL.map(respDe)].filter(Boolean));   // fotos + dados de hoje
@@ -2687,26 +2707,42 @@ function histCsm(H) {
   const somaAb = k => alvo().reduce((s2, u) => s2 + (aberta(u, k) || 0), 0);
   const ultP = pers[pers.length - 1];
   const mAb = T.abertas_mes ? rotulo(T.abertas_mes) : 'este mês';
-  const abasCx = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
+  // mesma contagem do comparativo e do CX: cada período como aparece hoje no CX filtrando por ele
+  const LT = T.lista && T.lista.tarefas ? T.lista : null, momL = LT ? (LT.momento_ms || Date.now()) : 0;
+  const cxPer = {}; if (LT) pers.forEach(p => { const fx = faixaPeriodo(p); if (fx) cxPer[p] = contarTarefasCx(LT, fx[0], fx[1], momL, false); });
+  const cxSoma = (p, k) => cxPer[p] ? alvo().reduce((s2, u) => s2 + (((cxPer[p][u.id]) || {})[k] || 0), 0) : null;
+  const fxMes = LT ? (() => { const d = new Date(momL); return [new Date(d.getFullYear(), d.getMonth(), 1).getTime(), new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime()]; })() : null;
+  const cxMes = LT ? contarTarefasCx(LT, fxMes[0], fxMes[1], momL, false) : null;
+  const cxMesSoma = k => alvo().reduce((s2, u) => s2 + (((cxMes || {})[u.id] || {})[k] || 0), 0);
+  const abasCxNovo = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(cxMesSoma('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('pendentes')), `pendentes · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('sem_agendamento')), `sem agendamento · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('concluidas')), `concluídas · ${esc(mAb)}`)}</div>`;
+  const abasCx = () => LT ? abasCxNovo() : abasCxAntigo();
+  const abasCxAntigo = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
     + (AB ? '' : '<p class="note" style="margin-top:4px">Pendentes e sem agendamento aparecem depois da próxima coleta da madrugada.</p>');
-  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')}${O ? ` · fontes: ${fmtInt(O.boards)} tarefas dos boards + ${fmtInt(O.jornadas)} tarefas das jornadas (acompanhamento das contas)` : ''}</p>`
+  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')} (boards e jornadas somados)</p>`
     + (O && O.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(O.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
     + abasCx()
     + (!O ? `<p class="note">Estes números ainda são só das tarefas dos boards. A partir da próxima coleta da madrugada entram também as tarefas atreladas às contas (jornadas), como em Tarefas › Acompanhamento de tarefas no CX.</p>` : '');
   h += comparativoCsm(T, doTime, sel);
-  h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : ' · todos os CSMs'}</h3><div class="grid">${card('Tarefas', 'criadas, finalizadas e finalizadas fora do prazo', linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
+  h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : ' · todos os CSMs'}</h3><div class="grid">${card('Tarefas', LT ? 'criadas, concluídas e concluídas depois do horário agendado (regras do CX)' : 'criadas, finalizadas e finalizadas fora do prazo', LT ? linhas([{ nome: 'Criadas', vals: pers.map(p => cxSoma(p, 'criadas')) }, { nome: 'Concluídas', vals: pers.map(p => cxSoma(p, 'concluidas')) }, { nome: 'Concluídas com atraso', vals: pers.map(p => cxSoma(p, 'concluidas_atraso')), cor: 'var(--rk)' }], labs) : linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
   const per = pers.map((p, i) => i).reverse();
-  h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
-    ['Tarefas criadas', ...per.map(i => fmtInt(soma(pers[i], 'criadas')))], ['Tarefas agendadas', ...per.map(i => fmtInt(soma(pers[i], 'agendadas')))],
-    ['Tarefas finalizadas', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas')))],
-    ...(temOrigem ? [['· das jornadas (acompanhamento das contas)', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_jornada')))], ['· dos boards', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_board')))]] : []),
+  const vCx = (i, k) => { const v = cxSoma(pers[i], k); return v == null ? '–' : fmtInt(v); };
+  const linhasCx = LT ? [
+    ['<b>Atrasadas</b>', ...per.map(i => vCx(i, 'atrasadas'))], ['<b>Pendentes</b>', ...per.map(i => vCx(i, 'pendentes'))],
+    ['<b>Sem agendamento</b>', ...per.map(i => vCx(i, 'sem_agendamento'))], ['<b>Concluídas</b>', ...per.map(i => vCx(i, 'concluidas'))],
+    ['Concluídas com atraso', ...per.map(i => vCx(i, 'concluidas_atraso'))],
+    ['% concluídas no horário', ...per.map(i => { const c = cxSoma(pers[i], 'concluidas'); return c ? pct(c - cxSoma(pers[i], 'concluidas_atraso'), c) : '–'; })],
+    ['Tarefas criadas', ...per.map(i => vCx(i, 'criadas'))],
+  ] : [
+    ['Tarefas criadas', ...per.map(i => fmtInt(soma(pers[i], 'criadas')))], ['Tarefas finalizadas', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas')))],
     ['Finalizadas com atraso', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_com_atraso')))],
-    ['% finalizadas no prazo', ...per.map(i => { const f = soma(pers[i], 'finalizadas'); return f ? pct(f - soma(pers[i], 'finalizadas_com_atraso'), f) : '–'; })],
-    ['Atrasadas de qualquer mês (foto do fim do período)', ...per.map(i => atr[pers[i]] ? fmtInt(atrasP(pers[i])) : '–')],
+  ];
+  h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
+    ...linhasCx,
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
-    ['Empresas Elite na carteira', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], ['Health Score médio da carteira', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
+    [sel ? 'Empresas no Elite (do CSM)' : 'Empresas no Elite', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], [sel ? 'Health Score médio (do CSM)' : 'Health Score médio', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-  h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão, somando as tarefas dos boards e as tarefas das jornadas atreladas às contas; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
+
+  h += `<p class="note">Como contamos: <b>atrasadas, pendentes, sem agendamento e concluídas</b> seguem as regras de Tarefas › Acompanhamento de tarefas do CX e mostram cada ${HV2.gran === 'mes' ? 'mês' : 'semana'} como ele aparece hoje no CX quando você filtra por ele (por isso, em períodos passados, as tarefas que ficaram abertas aparecem como atrasadas). Boards e jornadas somados. <b>Concluídas com atraso</b> = concluídas depois do horário agendado. <b>Criadas</b> = criadas no período, para o responsável. <b>Reuniões</b> = concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas. <b>Empresas contatadas</b> = empresas distintas com tarefa concluída no período. <b>Empresas no Elite</b> e <b>Health Score médio</b> vêm da foto do plano Elite de cada período.</p>`;
   return h;
 }
 
