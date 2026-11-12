@@ -597,6 +597,10 @@ h3.tit-ctl .dica{margin-left:0}
 :root[data-theme="dark"] .pagehead #dicaStatus button.dica-i{background:#41CFFA!important;color:#0B2733!important}
 .pagehead #dicaStatus.alerta button.dica-i{background:var(--yl)!important;color:#3a2a00!important}
 .pagehead .dica-txt{font-weight:400;left:auto;right:-12px}
+
+/* "i" dentro do título de um cartão */
+.card h3 .dica-card{margin-left:6px;vertical-align:middle}
+.card h3 .dica-card .dica-txt{font-weight:400}
 </style>
 </head>
 <body>
@@ -706,6 +710,9 @@ const Nraw = v => parseNum(v, true);
 const has = (t, k) => S(t).toLowerCase().includes(k.toLowerCase());
 const toDate = v => { if (v == null || v === '') return null; if (v instanceof Date) return isNaN(v) ? null : v; if (typeof v === 'number') return new Date(Math.round((v - 25569) * 864e5)); const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return new Date(+m[3], m[2] - 1, +m[1]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})(?!\d)/); if (m) return new Date(2000 + +m[3], m[2] - 1, +m[1]); const d = new Date(s); return isNaN(d) ? null : d; };
 const daysBetween = (a, b) => (a && b) ? Math.round((b - a) / 864e5) : null;
+// dias úteis (segunda a sexta) depois de "a" até "b", contando o dia "b": logou dia 10 (ter) e hoje é 12 (qui) → 2; logou dia 11 → 1
+const diasUteisEntre = (a, b) => { if (!a || !b) return null; const d = new Date(a.getFullYear(), a.getMonth(), a.getDate()), fim = new Date(b.getFullYear(), b.getMonth(), b.getDate()); let n = 0;
+  while (d < fim) { d.setDate(d.getDate() + 1); const s = d.getDay(); if (s !== 0 && s !== 6) n++; } return n; };
 const idKey = v => { const s = S(v); if (/^\d+(\.0+)?$/.test(s)) return String(parseInt(s, 10)); if (/e\+/i.test(s)) return String(Math.round(Number(s))); return s; };
 
 // Recebe arrays de linhas (array de arrays) de cada aba; localiza a linha de cabeçalho.
@@ -859,10 +866,11 @@ function buildAccounts(cxRows, metaRows) {
     const apiRaw = m ? S(col(m, 'Saúde da API (% 2xx)')) : '', armRaw = m ? S(col(m, '% Armazenamento Utilizado')) : '';
     const sim = k => m ? (S(col(m, k)).toLowerCase() === 'sim' ? 1 : 0) : null;
     const cert = m ? (['não','nao',''].includes(S(col(m, 'Comprou Certificado pelo Bling')).toLowerCase()) ? 0 : 1) : null;
-    const ultLogin = m ? toDate(col(m, 'Último Login')) : null; const diasLogin = daysBetween(ultLogin, REF);
+    const ultLogin = m ? toDate(col(m, 'Último Login')) : null; const diasLogin = daysBetween(ultLogin, REF), diasUteisLogin = diasUteisEntre(ultLogin, REF);
     const ultContato = toDate(col(r, 'Último contato')); const diasContato = daysBetween(ultContato, REF);
     const diasTarefa = N(col(r, 'Dias da última tarefa concluída'));
-    const diasInteracao = (diasContato != null && diasTarefa != null) ? Math.min(diasContato, diasTarefa) : (diasContato ?? diasTarefa);
+    // última interação do CSM = última tarefa concluída com o cliente (board ou jornada, lida do CustomerX)
+    const diasInteracao = diasTarefa;
     const tipoContato = S(col(r, 'Tipo último contato'));
     const nps = N(col(r, 'NPS Score'));
     const seg = S(col(r, 'Segmento')) || 'Sem segmento na Cx';
@@ -918,7 +926,7 @@ function buildAccounts(cxRows, metaRows) {
       abaixoFaixa: pos === 'Sem faixa na tag' ? null : (pos === 'Abaixo do intervalo' ? 1 : 0),
       mrrFonte, mrrCx, mrrMeta, situacaoMeta: m ? S(col(m, 'Situação Empresa', 'Situação')) : '', link: S(col(r, 'Link Admin de Empresas')), linkOcta: S(col(r, 'Link Conversa Octadesk', 'Link Octadesk', 'Link Octa')), linkCx: m ? S(col(m, 'Link CustomerX', 'Link CX', 'Link Cx')) : '',
       cnpjTxt: S(col(r, 'CNPJ/CPF')) || (m ? S(col(m, 'CNPJ')) : ''), ticketsLista, ticketsSug, ticketsDP,
-      ultLogin, diasLogin, ultContato, diasContato, diasTarefa, diasInteracao, tipoContato, nps,
+      ultLogin, diasLogin, diasUteisLogin, ultContato, diasContato, diasTarefa, diasInteracao, tipoContato, nps,
       _r: r, _m: m,
       hsCx: Nraw(col(r, 'HS')), // Health Score oficial: coluna X (HS) da Exportação de Clientes
     };
@@ -1081,7 +1089,7 @@ document.addEventListener('click', e => {
 
 const RISK_IND = [
   { name: 'Pedidos −25% vs. média 3m', f: a => a.queda, semDado: 'sem linha na Tabela Meta ou sem pedidos do último mês' }, { name: `Saúde da API < ${API_GREEN}%`, f: a => a.apiBaixa, tone: 'red', semDado: 'não usa API ou sem linha na Tabela Meta' }, { name: 'Preço citado como risco', f: a => a.riscos['Preço'] },
-  { name: `Armazenamento > ${ARM_RED}% ou tag storage`, f: a => a.storage, tone: 'red' }, { name: 'Baixo engajamento (tag)', f: a => a.baixoEng }, { name: 'Inadimplente', f: a => a.inad }, { name: 'Pagamento atrasado no mês', f: a => a.atrasoMes, tone: 'red', semDado: 'sem data de cobrança na Tabela Meta' }, { name: 'Situação divergente no CX', f: a => a.divCx, semDado: 'sem a coluna Situação Contrato CX na Tabela Meta' }, { name: 'Mais de 5 tickets nos últimos 90 dias', f: a => a.ticketsAlto, semDado: 'sem linha na Tabela Meta' }, { name: 'Sem login há mais de 15 dias', f: a => a.diasLogin == null ? null : (a.diasLogin > 15 ? 1 : 0), tone: 'red', semDado: 'sem data de último login' }, { name: 'Sem interação do CSM há mais de 60 dias', f: a => a.diasInteracao == null ? null : (a.diasInteracao > 60 ? 1 : 0), tone: 'red', semDado: 'sem último contato e sem tarefa concluída na Cx' }, { name: 'Volume abaixo da faixa contratada', f: a => a.abaixoFaixa, semDado: 'sem faixa na tag' }];
+  { name: `Armazenamento > ${ARM_RED}% ou tag storage`, f: a => a.storage, tone: 'red' }, { name: 'Baixo engajamento (tag)', f: a => a.baixoEng }, { name: 'Inadimplente', f: a => a.inad }, { name: 'Pagamento atrasado no mês', f: a => a.atrasoMes, tone: 'red', semDado: 'sem data de cobrança na Tabela Meta' }, { name: 'Situação divergente no CX', f: a => a.divCx, semDado: 'sem a coluna Situação Contrato CX na Tabela Meta' }, { name: 'Mais de 5 tickets nos últimos 90 dias', f: a => a.ticketsAlto, semDado: 'sem linha na Tabela Meta' }, { name: 'Sem login há mais de 15 dias', f: a => a.diasLogin == null ? null : (a.diasLogin > 15 ? 1 : 0), tone: 'red', semDado: 'sem data de último login' }, { name: 'Sem interação do CSM há mais de 60 dias', f: a => a.diasInteracao == null ? null : (a.diasInteracao > 60 ? 1 : 0), tone: 'red', semDado: 'sem tarefa concluída no CustomerX' }, { name: 'Volume abaixo da faixa contratada', f: a => a.abaixoFaixa, semDado: 'sem faixa na tag' }];
 const EXP_IND = [
   { name: 'Volume acima da faixa contratada', f: a => a.acimaFaixa, semDado: 'sem faixa na tag' }, { name: 'Pagamento de faixa incorreta (tag)', f: a => a.faixaIncorreta }, { name: 'Aproximando próxima faixa Elite', f: a => a.aproximando },
   { name: 'Sem Bling Conta Digital', f: a => a.contaDigital == null ? null : 1 - a.contaDigital , semDado: 'sem linha na Tabela Meta' }, { name: 'Sem certificado pelo Bling', f: a => a.cert == null ? null : 1 - a.cert , semDado: 'sem linha na Tabela Meta' }, { name: `Certificado vencido ou vence em ${CERT_DIAS} dias`, f: a => a.certAlerta, semDado: 'sem data de vencimento do certificado na Exportação de Clientes', opts: { certificado: true, sort: porCert } }, { name: 'Sem Checkout', f: a => a.checkout == null ? null : 1 - a.checkout , semDado: 'sem linha na Tabela Meta' },
@@ -1164,10 +1172,14 @@ function render() {
   const bands = ['Saudável', 'Atenção', 'Crítico'].map(k => ({ label: k, acc: ACC.filter(a => a.banda === k) }));
   const ref = buildAccounts.REF;
   const bucket = (v, cuts) => v == null ? 'Sem dado' : cuts.find(c => v <= c[0])?.[1] || cuts[cuts.length - 1][1];
-  const loginCuts = [[7, 'Até 7 dias'], [15, '8 a 15 dias'], [30, '16 a 30 dias'], [1e9, 'Mais de 30 dias']];
+  // login em dias úteis sem entrar (só quem tem 2 ou mais; "Sem dado" = sem data de login na Meta)
+  const loginCuts = [[5, '2 a 5 dias úteis'], [10, '6 a 10 dias úteis'], [22, '11 a 22 dias úteis'], [1e9, 'Mais de 22 dias úteis']];
+  const semLogin = ACC.filter(a => a.diasUteisLogin == null || a.diasUteisLogin >= 2);
   const interCuts = [[30, 'Até 30 dias'], [60, '31 a 60 dias'], [90, '61 a 90 dias'], [1e9, 'Mais de 90 dias']];
-  const bColor = { 'Até 7 dias': '#34AD61', '8 a 15 dias': '#8BE0AA', '16 a 30 dias': '#F5A60A', 'Mais de 30 dias': '#F05143', 'Até 30 dias': '#34AD61', '31 a 60 dias': '#F5A60A', '61 a 90 dias': '#F56A5D', 'Mais de 90 dias': '#BA291C', 'Sem dado': '#97A4B8' };
-  const mkBuckets = (f, cuts) => [...cuts.map(c => c[1]), 'Sem dado'].map(k => ({ label: k, value: ACC.filter(a => bucket(f(a), cuts) === k).length, color: bColor[k], text: ACC.filter(a => bucket(f(a), cuts) === k).length + ' emp.', acc: ACC.filter(a => bucket(f(a), cuts) === k) })).filter(i => i.value);
+  const bColor = { '2 a 5 dias úteis': '#F5C842', '6 a 10 dias úteis': '#F5A60A', '11 a 22 dias úteis': '#F05143', 'Mais de 22 dias úteis': '#BA291C', 'Até 30 dias': '#34AD61', '31 a 60 dias': '#F5A60A', '61 a 90 dias': '#F56A5D', 'Mais de 90 dias': '#BA291C', 'Sem dado': '#97A4B8' };
+  const mkBucketsDe = (lista, f, cuts) => [...cuts.map(c => c[1]), 'Sem dado'].map(k => { const acc = lista.filter(a => bucket(f(a), cuts) === k); return { label: k, value: acc.length, color: bColor[k], text: acc.length + ' emp.', acc }; }).filter(i => i.value);
+  const mkBuckets = (f, cuts) => mkBucketsDe(ACC, f, cuts);
+  const dicaCard = (id, html) => `<span class="dica dica-card"><button type="button" class="dica-i" aria-label="Como é calculado" aria-describedby="${id}">i</button><span class="dica-txt" role="tooltip" id="${id}">${html}</span></span>`;
   const penTop = {}; ACC.forEach(a => a.penalidades.forEach(p => { if (p[1] > 0) (penTop[p[0]] = penTop[p[0]] || []).push(a); }));
   const criticas = ACC.filter(a => a.banda !== 'Saudável').sort((a, b) => a.score - b.score);
   h += `<h2>Health Score e engajamento</h2><p class="lead">Score de 0 a 100 por conta: começa em 100 e desconta pontos por IF, queda de pedidos, API, armazenamento, tickets, inadimplência, engajamento, preço, dias sem interação e sem login. Pesos editáveis no código (HEALTH). Data de referência: ${fmtDate(ref)}.</p><div class="grid">`
@@ -1175,8 +1187,11 @@ function render() {
     + card('Score médio por IF', 'quanto menor, mais frágil', barList(ifPresent.map(g => ({ label: g.label, value: Math.round(scoreMedia(g.acc) ?? 0), color: IF_COLOR[g.key], acc: g.acc })), v => v + ' pts'))
     + card('Sinais de risco mais comuns', 'contas afetadas por cada sinal (informativo; o score vem da coluna HS da Exportação)', barList(Object.entries(penTop).filter(([k]) => !IF_ORDER.some(i => k.startsWith(i))).sort((a, b) => b[1].length - a[1].length).slice(0, 10).map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + ' emp.'))
     + '</div><div class="grid">'
-    + card('Último login no Bling', `${cnt(ACC, a => a.diasLogin)} contas com dado (Tabela Meta) · ref. ${fmtDate(ref)}`, pie(mkBuckets(a => a.diasLogin, loginCuts), 'Último login'))
-    + card('Última interação do CSM', `${cnt(ACC, a => a.diasInteracao)} contas com dado · menor entre "Último contato" e "Dias da última tarefa concluída"`, pie(mkBuckets(a => a.diasInteracao, interCuts), 'Última interação'))
+    + card(`Último login no Bling${dicaCard('dica-login', `<p>Só aparecem clientes com <b>2 dias úteis ou mais</b> sem entrar no Bling. Sábado e domingo não contam.</p><p>Exemplo: hoje (${fmtDate(ref)}) — quem entrou 2 dias úteis antes aparece; quem entrou no dia útil anterior ou hoje não aparece.</p><p>Data do último login: Tabela Meta (coluna "Último Login").</p>`)}`,
+        `${fmtInt(semLogin.length)} contas com 2+ dias úteis sem login · ref. ${fmtDate(ref)}`,
+        semLogin.length ? pie(mkBucketsDe(semLogin, a => a.diasUteisLogin, loginCuts), 'Último login') : '<p class="note">Todas as contas entraram no Bling no último dia útil.</p>')
+    + card(`Última interação do CSM${dicaCard('dica-interacao', '<p><b>Última interação = data da última tarefa concluída com esse cliente</b> (tarefas de board e de jornada, lidas do CustomerX).</p><p>Sem nenhuma tarefa concluída com o cliente, ele aparece em "Sem dado".</p>')}`,
+        `${cnt(ACC, a => a.diasInteracao)} contas com tarefa concluída · dias desde a última`, pie(mkBuckets(a => a.diasInteracao, interCuts), 'Última interação'))
     + '</div>';
   h += `<div class="stat" style="margin-top:12px">${['Crítico', 'Atenção', 'Saudável'].map(k => { const acc = ACC.filter(a => a.banda === k); return `<div class="ck" data-l="${reg('Health Score · ' + k, acc)}" title="Clique para ver a lista" style="--bc:${BAND_COLOR[k]}"><b style="color:${BAND_COLOR[k]}">${acc.length}</b><span>${k}</span></div>`; }).join('')}</div>`;
 
