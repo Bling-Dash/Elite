@@ -2545,9 +2545,11 @@ function histCsm(H) {
   // carteira do CSM: primeiro pelos dados de hoje (responsável atual); se não houver, pela última foto
   const carteiraDe = u => { const vivo = carteiraAoVivoDe(u.email); if (vivo) return vivo; const cont = {}; ultSnap.filter(x => x.resp === u.email).forEach(x => { cont[x.csm] = (cont[x.csm] || 0) + 1; }); const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : ''; };
   const sel = users.find(u => u.id === HV2.csm);
-  let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos (soma)</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label></div>`;
-  const soma = (p, k) => (sel ? [sel] : users).reduce((s, u) => s + ((tab[p][u.id] || {})[k] || 0), 0);
-  const atrasP = p => (sel ? [sel] : users).reduce((s, u) => s + (((atr[p] || {})[u.id]) || 0), 0);
+  let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos os CSMs (soma)</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label></div>`;
+  // "Todos" soma só quem é responsável por empresas Elite (CSMs); usuários de automação (ex.: admin) ficam de fora
+  const doTime = users.filter(u => respEmails.has(u.email)), alvo = () => sel ? [sel] : doTime;
+  const soma = (p, k) => alvo().reduce((s, u) => s + (((tab[p] || {})[u.id] || {})[k] || 0), 0);
+  const atrasP = p => alvo().reduce((s, u) => s + (((atr[p] || {})[u.id]) || 0), 0);
   const cart = sel ? carteiraDe(sel) : '';
   const hsP = p => { const s = H.snap[p]; if (!s) return null; const a = sel ? s.filter(x => x.resp === sel.email) : s; const m = avg(a, x => /^finalizad/i.test(x.status) ? null : x.hs); return m == null ? null : Math.round(m); };
   const nP = p => { const s = H.snap[p]; if (!s) return null; return (sel ? s.filter(x => x.resp === sel.email) : s).length; };
@@ -2556,10 +2558,10 @@ function histCsm(H) {
   // situação de agora por CSM (mesmas abas do CX: Atrasadas · Pendentes · Sem agendamento) + concluídas no período mais recente
   const AB = T.abertas_agora || null;
   const aberta = (u, k) => AB ? ((AB[u.id] || {})[k] || 0) : (k === 'atrasadas' ? ((T.atrasadas_agora || {})[u.id] || 0) : null);
-  const somaAb = k => (sel ? [sel] : users).reduce((s2, u) => s2 + (aberta(u, k) || 0), 0);
+  const somaAb = k => alvo().reduce((s2, u) => s2 + (aberta(u, k) || 0), 0);
   const ultP = pers[pers.length - 1];
   const mAb = T.abertas_mes ? rotulo(T.abertas_mes) : 'este mês';
-  const abasCx = () => `<p class="note" style="margin:8px 0 4px">Como em Tarefas › Acompanhamento de tarefas do CX, com o filtro de ${esc(mAb)}: <b>atrasadas</b> = agendadas no mês para um dia anterior a hoje · <b>pendentes</b> = agendadas no mês de hoje em diante · <b>sem agendamento</b> = criadas no mês sem data · <b>concluídas</b> = data de conclusão no mês.</p><div class="kpis">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
+  const abasCx = () => `<p class="note" style="margin:8px 0 4px">Como em Tarefas › Acompanhamento de tarefas do CX, com o filtro de ${esc(mAb)}: <b>atrasadas</b> = agendadas no mês com o horário já vencido · <b>pendentes</b> = agendadas no mês com o horário ainda por vir · <b>sem agendamento</b> = criadas no mês sem data · <b>concluídas</b> = data de conclusão no mês.</p><div class="kpis">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
     + (AB ? '' : '<p class="note" style="margin-top:4px">Pendentes e sem agendamento aparecem depois da próxima coleta da madrugada.</p>');
   h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')}${O ? ` · fontes: ${fmtInt(O.boards)} tarefas dos boards + ${fmtInt(O.jornadas)} tarefas das jornadas (acompanhamento das contas)` : ''}</p>`
     + (O && O.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(O.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
