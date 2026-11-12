@@ -581,6 +581,18 @@ h3.tit-ctl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 h3.tit-ctl .seg{font-size:13px;font-weight:500}
 h3.tit-ctl .dica{margin-left:0}
 #fldCarteiraHist select{min-width:200px}
+
+/* status e dica de clique dentro do "i" ao lado de "Dados de" */
+.lbl-i{display:flex;align-items:center;gap:6px}
+.lbl-i .dica{margin-left:0}
+.loader.status-no-i #status,.loader.status-no-i > .hint{display:none}
+#dicaStatusTxt{max-width:min(560px,80vw)}
+#dicaStatusTxt .st-ok{color:var(--tx)}#dicaStatusTxt .st-err{color:var(--rk)}
+/* (os botões da barra usam !important com um id no seletor; o "i" precisa de um id também para ficar igual aos outros "i") */
+.loader #dicaStatus button.dica-i,.loader #dicaStatus button.dica-i:hover,.loader #dicaStatus button.dica-i:focus{display:grid!important;place-items:center;width:18px!important;height:18px!important;min-width:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:50%!important;background:#0EB2E8!important;color:#fff!important;font:italic 700 12px/1 Georgia,'Times New Roman',serif!important;box-shadow:none!important;cursor:help}
+:root[data-theme="dark"] .loader #dicaStatus button.dica-i,:root[data-theme="dark"] .loader #dicaStatus button.dica-i:hover{background:#41CFFA!important;color:#0B2733!important}
+.loader #dicaStatus.alerta button.dica-i,.loader #dicaStatus.alerta button.dica-i:hover{background:var(--yl)!important;color:#3a2a00!important}
+.loader .lbl-i .dica-txt{font-weight:400}
 </style>
 </head>
 <body>
@@ -609,7 +621,7 @@ h3.tit-ctl .dica{margin-left:0}
 <div class="loader">
   <div class="frow">
     <div class="fld" id="fldCarteiraHist" hidden><label for="hCarteira">Carteira</label><select id="hCarteira" data-h2f="csm"></select></div>
-    <div class="row" id="autoRow" hidden><div class="fld"><label for="periodo">Dados de</label><select id="periodo"><option value="atual">Hoje</option></select></div><div class="fld" id="tokenBox" hidden><label for="wtoken">Código de acesso</label><span class="inl"><input type="password" id="wtoken" placeholder="Digite o código"><button id="wtokenOk" type="button">Conectar</button></span></div></div>
+    <div class="row" id="autoRow" hidden><div class="fld"><span class="lbl-i"><label for="periodo">Dados de</label><span class="dica" id="dicaStatus"><button type="button" class="dica-i" aria-label="Sobre os dados carregados" aria-describedby="dicaStatusTxt">i</button><span class="dica-txt" role="tooltip" id="dicaStatusTxt"></span></span></span><select id="periodo"><option value="atual">Hoje</option></select></div><div class="fld" id="tokenBox" hidden><label for="wtoken">Código de acesso</label><span class="inl"><input type="password" id="wtoken" placeholder="Digite o código"><button id="wtokenOk" type="button">Conectar</button></span></div></div>
     <button id="manualBtn" type="button" aria-expanded="false" aria-controls="manual">Carregar arquivos manualmente</button>
   </div>
   <div id="manual" hidden>
@@ -1629,9 +1641,27 @@ render = function () {
   renderCarteira(); if (temDados()) { extrasCarteira(); organizarTemas(); } renderAbaAtual();
 };
 function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); }
+// Histórico das carteiras: mostra o campo "Carteira" ao lado de "Dados de" e esconde o seletor do topo (senão o nome aparece duas vezes)
+(function statusNoI() {
+  const st = document.getElementById('status'), hint = document.querySelector('.loader > .hint'), auto = document.getElementById('autoRow');
+  const txt = document.getElementById('dicaStatusTxt'), dica = document.getElementById('dicaStatus'), loader = document.querySelector('.loader');
+  if (!st || !auto || !txt) return;
+  const sync = () => {
+    loader.classList.toggle('status-no-i', !auto.hidden);           // sem o automático (carga manual), o status continua visível
+    txt.innerHTML = `<p class="st-${st.classList.contains('err') ? 'err' : 'ok'}">${st.innerHTML}</p>${hint ? `<p>${hint.innerHTML}</p>` : ''}`;
+    dica.classList.toggle('alerta', st.classList.contains('err') || /⚠/.test(st.textContent));   // aviso: o "i" fica amarelo
+  };
+  new MutationObserver(sync).observe(st, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(sync).observe(auto, { attributes: true, attributeFilter: ['hidden'] });
+  sync();
+})();
+function seletorCarteiraHist(mostrar) {
+  document.getElementById('fldCarteiraHist').hidden = !mostrar;
+  const topo = document.querySelector('.pagehead .pillsel'); if (topo) topo.hidden = mostrar;
+}
 function trocarAba(t) {
   TAB = t;
-  document.getElementById('fldCarteiraHist').hidden = true;      // o seletor de carteira só existe no Histórico das carteiras
+  seletorCarteiraHist(false);                                     // o seletor de carteira só existe no Histórico das carteiras
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   ['carteira', 'empresa', 'historico', 'localizacao'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
   const h = t === 'carteira' ? '' : '#' + t + (t === 'empresa' && EMP_ID ? '=' + encodeURIComponent(EMP_ID) : '');
@@ -2307,7 +2337,7 @@ function ligarBuscaEmpresa() {
 // =====================================================================
 function renderHistorico() {
   const box = document.getElementById('tab-historico');
-  document.getElementById('fldCarteiraHist').hidden = true;      // histCsm mostra de novo quando for a visão das carteiras
+  seletorCarteiraHist(false);                                     // histCsm mostra de novo quando for a visão das carteiras
   const seg = (k, ops) => `<span class="seg">${ops.map(([v, l]) => `<button type="button" data-h2="${k}" data-v="${v}" class="${HV2[k] === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
   let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)'], ['comparar', 'Comparador']])}</label><label>Período:${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
   if (!histDisponivel()) { box.innerHTML = h + '<p class="note">O histórico usa os dados automáticos do Drive (configure o WEBAPP_URL).</p>'; return; }
@@ -2714,7 +2744,7 @@ function histCsm(H) {
   // seletor "Carteira" na barra de cima (à esquerda de "Dados de")
   const fc = document.getElementById('fldCarteiraHist'), selC = document.getElementById('hCarteira');
   selC.innerHTML = `<option value="">Todos os CSMs</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}`;
-  fc.hidden = false;
+  seletorCarteiraHist(true);
   let h = '';
   const doTime = users.filter(u => respEmails.has(u.email));
   // escopo: um CSM escolhido → só ele · aba CSMs → soma dos CSMs · aba Totais → conta inteira (igual ao CX sem filtro)
