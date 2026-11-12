@@ -575,6 +575,12 @@ details>summary{cursor:pointer;margin:10px 0 6px;font-size:13px;color:var(--tx2)
 .cmpd{font-size:12px;font-weight:700;white-space:nowrap;min-width:7ch;text-align:left}
 .cmpv.bom b,.cmpd.bom{color:var(--ac)}.cmpv.ruim b,.cmpd.ruim{color:var(--rk)}.cmpd.eq{color:var(--mut);font-weight:500}
 .cmpv.ck{cursor:pointer;border-radius:6px;padding:2px 6px;margin:-2px -6px}.cmpv.ck:hover,.cmpv.ck:focus-visible{background:var(--hover);outline:none}.cmpv.ck:hover b{text-decoration:underline;text-underline-offset:3px}
+
+/* título com controles ao lado (Tabela mês a mês + CSMs/Totais + i) */
+h3.tit-ctl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h3.tit-ctl .seg{font-size:13px;font-weight:500}
+h3.tit-ctl .dica{margin-left:0}
+#fldCarteiraHist select{min-width:200px}
 </style>
 </head>
 <body>
@@ -602,6 +608,7 @@ details>summary{cursor:pointer;margin:10px 0 6px;font-size:13px;color:var(--tx2)
 <main id="conteudo">
 <div class="loader">
   <div class="frow">
+    <div class="fld" id="fldCarteiraHist" hidden><label for="hCarteira">Carteira</label><select id="hCarteira" data-h2f="csm"></select></div>
     <div class="row" id="autoRow" hidden><div class="fld"><label for="periodo">Dados de</label><select id="periodo"><option value="atual">Hoje</option></select></div><div class="fld" id="tokenBox" hidden><label for="wtoken">Código de acesso</label><span class="inl"><input type="password" id="wtoken" placeholder="Digite o código"><button id="wtokenOk" type="button">Conectar</button></span></div></div>
     <button id="manualBtn" type="button" aria-expanded="false" aria-controls="manual">Carregar arquivos manualmente</button>
   </div>
@@ -1624,6 +1631,7 @@ render = function () {
 function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); }
 function trocarAba(t) {
   TAB = t;
+  document.getElementById('fldCarteiraHist').hidden = true;      // o seletor de carteira só existe no Histórico das carteiras
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   ['carteira', 'empresa', 'historico', 'localizacao'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
   const h = t === 'carteira' ? '' : '#' + t + (t === 'empresa' && EMP_ID ? '=' + encodeURIComponent(EMP_ID) : '');
@@ -2299,6 +2307,7 @@ function ligarBuscaEmpresa() {
 // =====================================================================
 function renderHistorico() {
   const box = document.getElementById('tab-historico');
+  document.getElementById('fldCarteiraHist').hidden = true;      // histCsm mostra de novo quando for a visão das carteiras
   const seg = (k, ops) => `<span class="seg">${ops.map(([v, l]) => `<button type="button" data-h2="${k}" data-v="${v}" class="${HV2[k] === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
   let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)'], ['comparar', 'Comparador']])}</label><label>Período:${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
   if (!histDisponivel()) { box.innerHTML = h + '<p class="note">O histórico usa os dados automáticos do Drive (configure o WEBAPP_URL).</p>'; return; }
@@ -2607,7 +2616,7 @@ function abrirTarefasCmp(chave) {
 document.addEventListener('click', e => { const t = e.target.closest('[data-cmpl]'); if (t) abrirTarefasCmp(t.dataset.cmpl); });
 document.addEventListener('click', e => { const t = e.target.closest('[data-escopo]'); if (!t) return; HV2.escopo = t.dataset.escopo; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y); });
 document.addEventListener('keydown', e => { const t = e.target.closest && e.target.closest('[data-cmpl]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirTarefasCmp(t.dataset.cmpl); } });
-function comparativoCsm(T, csms, sel, escopo = 'csm') {
+function comparativoCsm(T, csms, sel, escopo = 'csm', sobre = '') {
   const L = T.lista;
   if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Sem dados para o comparativo.</b> O resumo de tarefas publicado é de ${esc(T.gerado_em || 'data desconhecida')} e foi gerado por uma versão anterior do Apps Script. Rode <b>iniciarColetaCustomerX</b> no Apps Script (ou aguarde a coleta da madrugada) e recarregue a página quando a coleta terminar.</p>`;
   if (!csms.length) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Nenhum CSM encontrado.</b> O comparativo lista quem é "Responsável: Analista Principal" de alguma empresa Elite; confira se os dados do CustomerX de hoje foram carregados.</p>`;
@@ -2667,11 +2676,13 @@ function comparativoCsm(T, csms, sel, escopo = 'csm') {
   else lin.push(['<b>Total dos CSMs</b>', ...COLS.map(([k, l]) => cel(cA[k], cP[k], false, k, guardaLista('totalcsm|' + k, `${l} · total dos CSMs`, csms.flatMap(u => ((AT[u.id] || {})._t || {})[k] || []))))]);
   const mp = new Date(agora.getFullYear(), agora.getMonth() - 1, 1), mpf = new Date(agora.getFullYear(), agora.getMonth(), 0);
   const atalho = (a, b, l) => `<button type="button" data-cmpmes="${iso(a)}|${iso(b)}" class="${iso(a) === iso(de) && iso(b) === iso(ate) ? 'on' : ''}">${l}</button>`;
+  // os <p class="note"> logo abaixo do título viram o "i" azul (só aparecem ao passar o mouse)
   return `<h3 class="sp">Comparativo por CSM · ${br(de)} a ${br(ate)}</h3>
+    ${sobre ? `<p class="note">${sobre}</p>` : ''}
+    <p class="note">Coleta de ${brh(agora)}, com as regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · ▲ aumentou · ▼ diminuiu · <b class="mv-up">verde</b> = melhorou (menos atrasadas e sem agendamento; mais pendentes e concluídas) · <b class="mv-dn">vermelho</b> = piorou. Clique num número para ver as tarefas.</p>
+    <p class="note">${tudo ? '<b>Totais</b>: igual ao CX sem filtro de responsável (CSMs + outros responsáveis + tarefas sem responsável).' : '<b>CSMs</b>: só as tarefas dos CSMs; o total é a soma das linhas.'}</p>
     <div class="heatctl"><label>De <input type="date" data-cmpper="de" value="${iso(de)}"></label><label>Até <input type="date" data-cmpper="ate" value="${iso(ate)}"></label>
       <span class="seg">${atalho(iniMes, fimMes, 'Este mês')}${atalho(mp, mpf, 'Mês passado')}</span></div>
-    <p class="note" style="margin-top:4px">Coleta de ${brh(agora)}, regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · ▲ aumentou · ▼ diminuiu · <b class="mv-up">verde</b> = melhorou (menos atrasadas e sem agendamento; mais pendentes e concluídas) · <b class="mv-dn">vermelho</b> = piorou · clique num número para ver as tarefas.</p>
-    <p class="note" style="margin-top:0">${tudo ? 'Aba <b>Totais</b>: igual ao CX sem filtro de responsável (CSMs + outros responsáveis + tarefas sem responsável).' : 'Aba <b>CSMs</b>: só as tarefas dos CSMs; o total é a soma das linhas acima.'}</p>
     <div class="cmpt">${tabela(['CSM', ...COLS.map(([, l]) => l)], lin)}</div>`;
 }
 // chave de período de uma data: '2026-11' (mês) ou '2026-S46' (semana ISO, como no Apps Script)
@@ -2700,7 +2711,11 @@ function histCsm(H) {
   // carteira do CSM: primeiro pelos dados de hoje (responsável atual); se não houver, pela última foto
   const carteiraDe = u => { const vivo = carteiraAoVivoDe(u.email); if (vivo) return vivo; const cont = {}; ultSnap.filter(x => x.resp === u.email).forEach(x => { cont[x.csm] = (cont[x.csm] || 0) + 1; }); const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : ''; };
   const sel = users.find(u => u.id === HV2.csm);
-  let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos os CSMs</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label>${HV2.csm ? '' : `<span class="seg" role="tablist" aria-label="O que somar">${[['csm', 'CSMs'], ['total', 'Totais']].map(([v, l]) => `<button type="button" role="tab" data-escopo="${v}" aria-selected="${(HV2.escopo === 'total' ? 'total' : 'csm') === v}" class="${(HV2.escopo === 'total' ? 'total' : 'csm') === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="dica"><button type="button" class="dica-i" aria-label="Por que duas abas" aria-describedby="dica-escopo">i</button><span class="dica-txt" role="tooltip" id="dica-escopo"><p><b>CSMs</b>: só as tarefas dos CSMs (a soma de cada um, 1 a 1).</p><p><b>Totais</b>: igual ao CX sem filtro. Inclui também tarefas de jornada sem responsável + tarefas do usuário de automação + usuários sem carteira.</p></span></span>`}</div>`;
+  // seletor "Carteira" na barra de cima (à esquerda de "Dados de")
+  const fc = document.getElementById('fldCarteiraHist'), selC = document.getElementById('hCarteira');
+  selC.innerHTML = `<option value="">Todos os CSMs</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}`;
+  fc.hidden = false;
+  let h = '';
   const doTime = users.filter(u => respEmails.has(u.email));
   // escopo: um CSM escolhido → só ele · aba CSMs → soma dos CSMs · aba Totais → conta inteira (igual ao CX sem filtro)
   const escopo = HV2.escopo === 'total' ? 'total' : 'csm';
@@ -2718,16 +2733,18 @@ function histCsm(H) {
   const cxMes = contarTarefasCx(LT, new Date(dM.getFullYear(), dM.getMonth(), 1).getTime(), new Date(dM.getFullYear(), dM.getMonth() + 1, 0, 23, 59, 59, 999).getTime(), momL, false);
   const cartoes = `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">`
     + [['atrasadas', 'atrasadas'], ['pendentes', 'pendentes'], ['sem_agendamento', 'sem agendamento'], ['concluidas', 'concluídas']].map(([k, l]) => kpiBox(fmtInt(somaR(cxMes, k)), `${l} · ${esc(mAb)}`)).join('') + '</div>';
-  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : (escopo === 'total' ? 'Totais · conta inteira, igual ao CX sem filtro' : 'CSMs · só as tarefas dos CSMs')} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')} (boards e jornadas somados)</p>`
-    + (T.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(T.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
+  const sobre = `${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : (escopo === 'total' ? 'Totais · conta inteira, igual ao CX sem filtro' : 'CSMs · só as tarefas dos CSMs')} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')} (boards e jornadas somados).`;
+  h += (T.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(T.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
     + cartoes;
-  h += comparativoCsm(T, doTime, sel, escopo);
+  h += comparativoCsm(T, doTime, sel, escopo, sobre);
   h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : escopo === 'total' ? ' · totais' : ' · CSMs'}</h3><div class="grid">`
     + card('Tarefas', 'criadas, concluídas e concluídas depois do horário agendado (regras do CX)', linhas([{ nome: 'Criadas', vals: pers.map(p => cxSoma(p, 'criadas')) }, { nome: 'Concluídas', vals: pers.map(p => cxSoma(p, 'concluidas')) }, { nome: 'Concluídas com atraso', vals: pers.map(p => cxSoma(p, 'concluidas_atraso')), cor: 'var(--rk)' }], labs))
     + card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs)) + '</div>';
   const per = pers.map((p, i) => i).reverse();
   const vCx = (i, k) => { const v = cxSoma(pers[i], k); return v == null ? '–' : fmtInt(v); };
-  h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
+  const abas = sel ? '' : `<span class="seg" role="tablist" aria-label="O que somar">${[['csm', 'CSMs'], ['total', 'Totais']].map(([v, l]) => `<button type="button" role="tab" data-escopo="${v}" aria-selected="${escopo === v}" class="${escopo === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+  const dicaTab = `<span class="dica"><button type="button" class="dica-i" aria-label="Sobre a tabela" aria-describedby="dica-tabela">i</button><span class="dica-txt" role="tooltip" id="dica-tabela">${sel ? '' : '<p><b>CSMs</b>: só as tarefas dos CSMs (a soma de cada um, 1 a 1). <b>Totais</b>: igual ao CX sem filtro; inclui também tarefas de jornada sem responsável + tarefas do usuário de automação + usuários sem carteira. A escolha vale para a página toda (cartões, comparativo, gráficos e tabela).</p>'}<p>Como contamos: <b>atrasadas, pendentes, sem agendamento e concluídas</b> seguem as regras de Tarefas › Acompanhamento de tarefas do CX e mostram cada ${HV2.gran === 'mes' ? 'mês' : 'semana'} como ele aparece hoje no CX quando você filtra por ele (por isso, em períodos passados, as tarefas que ficaram abertas aparecem como atrasadas). Boards e jornadas somados. <b>Concluídas com atraso</b> = concluídas depois do horário agendado. <b>Criadas</b> = criadas no período, para o responsável. <b>Reuniões</b> = concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas. <b>Empresas contatadas</b> = empresas distintas com tarefa concluída no período. <b>Empresas no Elite</b> e <b>Health Score médio</b> vêm da foto do plano Elite de cada período.</p></span></span>`;
+  h += `<h3 class="sp tit-ctl">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${abas}${dicaTab}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
     ['<b>Atrasadas</b>', ...per.map(i => vCx(i, 'atrasadas'))], ['<b>Pendentes</b>', ...per.map(i => vCx(i, 'pendentes'))],
     ['<b>Sem agendamento</b>', ...per.map(i => vCx(i, 'sem_agendamento'))], ['<b>Concluídas</b>', ...per.map(i => vCx(i, 'concluidas'))],
     ['Concluídas com atraso', ...per.map(i => vCx(i, 'concluidas_atraso'))],
@@ -2736,7 +2753,6 @@ function histCsm(H) {
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
     [sel ? 'Empresas no Elite (do CSM)' : 'Empresas no Elite', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], [sel ? 'Health Score médio (do CSM)' : 'Health Score médio', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-  h += `<p class="note">Como contamos: <b>atrasadas, pendentes, sem agendamento e concluídas</b> seguem as regras de Tarefas › Acompanhamento de tarefas do CX e mostram cada ${HV2.gran === 'mes' ? 'mês' : 'semana'} como ele aparece hoje no CX quando você filtra por ele (por isso, em períodos passados, as tarefas que ficaram abertas aparecem como atrasadas). Boards e jornadas somados. <b>Concluídas com atraso</b> = concluídas depois do horário agendado. <b>Criadas</b> = criadas no período, para o responsável. <b>Reuniões</b> = concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas. <b>Empresas contatadas</b> = empresas distintas com tarefa concluída no período. <b>Empresas no Elite</b> e <b>Health Score médio</b> vêm da foto do plano Elite de cada período.</p>`;
   return h;
 }
 
