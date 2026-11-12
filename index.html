@@ -1477,6 +1477,7 @@ function resumoStatus(st) {
   if (!st) return '';
   const p = [];
   if (st.meta) p.push(st.meta.erro ? `⚠ Metabase falhou em ${st.meta.erro_em}` : `${metaRotulo(st.meta)} de ${st.meta.arquivo_de || st.meta.atualizado_em}`);
+  if (st.tarefas) p.push(`Tarefas (CustomerX) de ${st.tarefas.gerado_em}${st.tarefas.erro_jornadas ? ' · ⚠ sem as tarefas das jornadas' : ''}`);
   if (st.tickets) p.push(st.tickets.erro ? `⚠ lista de tickets indisponível (${st.tickets.erro})` : `${metaRotulo(st.tickets, 'Tickets')} de ${st.tickets.arquivo_de || st.tickets.atualizado_em}`);
   if (st.cx) p.push(st.cx.erro ? `⚠ CustomerX: ${st.cx.erro}` : st.cx.origem === 'API'
     ? `CustomerX (API) de ${st.cx.arquivo_de || st.cx.atualizado_em}${st.cx.clientes_com_falha ? ` · ⚠ ${st.cx.clientes_com_falha} clientes com indicador faltando` : ''}${st.cx.complemento_de ? ` · colunas em validação da exportação de ${st.cx.complemento_de}` : ''}`
@@ -1504,7 +1505,7 @@ const IDB = (() => {
 })();
 // versão dos dados guardados no navegador: muda quando chega Meta, CustomerX ou lista de tickets nova
 // (o "v2" no início descarta os caches antigos, gravados antes da lista de tickets existir)
-const versaoDe = st => st ? ['v2', st.ultima_publicacao, (st.cx || {}).arquivo_de, (st.meta || {}).arquivo_de, (st.tickets || {}).arquivo_de].join('|') : '';
+const versaoDe = st => st ? ['v3', st.ultima_publicacao, (st.cx || {}).arquivo_de, (st.meta || {}).arquivo_de, (st.tickets || {}).arquivo_de, (st.tarefas || {}).gerado_em].join('|') : '';
 
 // transforma a resposta do Drive em linhas (e aplica o complemento/validação do CustomerX)
 function prepararPayload(d) {
@@ -1661,13 +1662,18 @@ function linhas(series, labels, fmt = fmtInt, doZero = true) {
   if (!all.length) return '<p class="note">Sem dados para o período.</p>';
   let mn = doZero ? Math.min(0, ...all) : Math.min(...all), mx = Math.max(...all);
   if (!doZero) { const f = (mx - mn) * 0.15 || 5; mn = Math.max(0, mn - f); mx = mx + f; } if (mx === mn) mx = mn + 1;
+  // passo redondo (1, 2, 2,5, 5 × 10ⁿ); com números inteiros o passoY é no mínimo 1, para não repetir rótulos (ex.: 3, 2, 2, 1)
+  const inteiros = all.every(v => Number.isInteger(v)), bruto = (mx - mn) / 4, pot = Math.pow(10, Math.floor(Math.log10(bruto || 1)));
+  let passoY = [1, 2, 2.5, 5, 10].map(m => m * pot).find(st => st >= bruto) || 10 * pot; if (inteiros) passoY = Math.max(1, Math.ceil(passoY));
+  mn = Math.floor(mn / passoY) * passoY; mx = Math.ceil(mx / passoY) * passoY; if (mx === mn) mx = mn + passoY;
+  const nTicks = Math.round((mx - mn) / passoY);
   const x = i => P.l + (labels.length === 1 ? (W - P.l - P.r) / 2 : i * (W - P.l - P.r) / (labels.length - 1));
   const y = v => P.t + (H - P.t - P.b) * (1 - (v - mn) / (mx - mn));
   // rótulos do eixo curtos (R$ 2,4 mi / R$ 950 mil) para caberem na margem do gráfico
   const eixo = v => { const t = fmt(v); if (!/R\$/.test(t) || Math.abs(v) < 1000) return t; const a = Math.abs(v);
     return 'R$ ' + (a >= 1e6 ? (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi' : Math.round(v / 1e3).toLocaleString('pt-BR') + ' mil'); };
   let g = '';
-  for (let k = 0; k <= 4; k++) { const v = mn + (mx - mn) * k / 4, yy = y(v); g += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)" vector-effect="non-scaling-stroke"/><text x="${P.l - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--mut)">${esc(eixo(v))}</text>`; }
+  for (let k = 0; k <= nTicks; k++) { const v = mn + passoY * k, yy = y(v); g += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="var(--bd)" vector-effect="non-scaling-stroke"/><text x="${P.l - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--mut)">${esc(eixo(v))}</text>`; }
   const passo = Math.max(1, Math.ceil(labels.length / 6));
   labels.forEach((l, i) => { if (i % passo === 0 || i === labels.length - 1) g += `<text x="${x(i)}" y="${H - P.b + 16}" text-anchor="middle" font-size="11" fill="var(--mut)">${esc(l)}</text>`; });
   series.forEach((s, si) => {
@@ -1701,8 +1707,9 @@ async function carregarHist(gran, silencioso) {
   HIST_CARREGANDO[gran] = true;
   try {
     const c = VERSAO ? await IDB.get('hist:' + gran) : null;
-    const d = (c && c.ver === VERSAO) ? c.d : await chamarWebApp('acao=historico&gran=' + gran);
-    if (VERSAO && !(c && c.ver === VERSAO)) IDB.put('hist:' + gran, { ver: VERSAO, d });
+    const cacheOk = c && c.ver === VERSAO && c.d && (!c.d.tarefas || c.d.tarefas.lista);     // resumo antigo (sem a lista de tarefas) não serve
+    const d = cacheOk ? c.d : await chamarWebApp('acao=historico&gran=' + gran);
+    if (VERSAO && !cacheOk) IDB.put('hist:' + gran, { ver: VERSAO, d });
     const per = Object.keys(d.periodos || {}).sort();
     HIST[gran] = { per, snap: Object.fromEntries(per.map(p => [p, resumoParaContas(d.periodos[p])])), tarefas: d.tarefas, atrasadas: d.atrasadas };
   } catch (e) { HIST[gran] = silencioso ? undefined : { erro: e ? e.message : 'Informe o código de acesso no campo acima.' }; }
@@ -2556,9 +2563,10 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-cmpmes]'); if (!t) return;
   const [a, b] = t.dataset.cmpmes.split('|'); CMP_PER.de = a; CMP_PER.ate = b; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
 });
-function comparativoCsm(T, csms) {
+function comparativoCsm(T, csms, sel) {
   const L = T.lista, C = T.comparativo;
-  if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note">O comparativo aparece depois da próxima coleta do CustomerX (madrugada).</p>`;
+  if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Sem dados para o comparativo.</b> O resumo de tarefas publicado é de ${esc(T.gerado_em || 'data desconhecida')} e foi gerado por uma versão anterior do Apps Script. Rode <b>iniciarColetaCustomerX</b> no Apps Script (ou aguarde a coleta da madrugada) e recarregue a página quando a coleta terminar.</p>`;
+  if (!csms.length) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Nenhum CSM encontrado.</b> O comparativo lista quem é "Responsável: Analista Principal" de alguma empresa Elite; confira se os dados do CustomerX de hoje foram carregados.</p>`;
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const deIso = v => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
   const br = d => d.toLocaleDateString('pt-BR'), brh = d => d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -2597,7 +2605,7 @@ function comparativoCsm(T, csms) {
     return `<span class="cmpv ${cls}" title="Período anterior: ${num(ant, casas)} → este período: ${num(v, casas)}"><b>${num(v, casas)}</b><span class="cmpd ${cls}">${txt}</span></span>`;
   };
   const val = (R, u, k) => ((R[u.id] || {})[k]) || 0;
-  const lin = csms.slice().sort((p, q) => p.nome.localeCompare(q.nome)).map(u => [esc(u.nome), ...COLS.map(([k]) => cel(val(AT, u, k), val(AN, u, k)))]);
+  const lin = csms.slice().sort((p, q) => p.nome.localeCompare(q.nome)).map(u => [sel && sel.id === u.id ? `<b>${esc(u.nome)}</b> <span class="mut">· selecionado</span>` : esc(u.nome), ...COLS.map(([k]) => cel(val(AT, u, k), val(AN, u, k)))]);
   const tot = R => Object.fromEntries(COLS.map(([k]) => [k, csms.reduce((s2, u) => s2 + val(R, u, k), 0)]));
   const tA = tot(AT), tP = tot(AN), n = csms.length || 1;
   lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(tA[k] / n, tP[k] / n, true))]);
@@ -2607,7 +2615,7 @@ function comparativoCsm(T, csms) {
   return `<h3 class="sp">Comparativo por CSM · ${br(de)} a ${br(ate)}</h3>
     <div class="heatctl"><label>De <input type="date" data-cmpper="de" value="${iso(de)}"></label><label>Até <input type="date" data-cmpper="ate" value="${iso(ate)}"></label>
       <span class="seg">${atalho(iniMes, fimMes, 'Este mês')}${atalho(mp, mpf, 'Mês passado')}</span></div>
-    <p class="note" style="margin-top:4px">Situação na coleta de ${brh(agora)}, com as regras do CX. A seta compara com <b>${br(deA)} a ${br(ateA)}</b> como estava em ${brh(new Date(MA))}: <b class="mv-up">▲ +n</b> = n tarefas a mais · <b class="mv-dn">▼ −n</b> = n a menos.</p>
+    <p class="note" style="margin-top:4px">Coleta de ${brh(agora)}, regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · <b class="mv-up">▲ +n</b> a mais · <b class="mv-dn">▼ −n</b> a menos.</p>
     <div class="cmpt">${tabela(['CSM', ...COLS.map(([, l]) => l)], lin)}</div>`;
 }
 function histCsm(H) {
@@ -2639,13 +2647,14 @@ function histCsm(H) {
   const somaAb = k => alvo().reduce((s2, u) => s2 + (aberta(u, k) || 0), 0);
   const ultP = pers[pers.length - 1];
   const mAb = T.abertas_mes ? rotulo(T.abertas_mes) : 'este mês';
-  const abasCx = () => `<p class="note" style="margin:8px 0 4px">Como em Tarefas › Acompanhamento de tarefas do CX, com o filtro de ${esc(mAb)}: <b>atrasadas</b> = agendadas no mês com o horário já vencido · <b>pendentes</b> = agendadas no mês com o horário ainda por vir · <b>sem agendamento</b> = criadas no mês sem data · <b>concluídas</b> = data de conclusão no mês.</p><div class="kpis">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
+  const abasCx = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
     + (AB ? '' : '<p class="note" style="margin-top:4px">Pendentes e sem agendamento aparecem depois da próxima coleta da madrugada.</p>');
   h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')}${O ? ` · fontes: ${fmtInt(O.boards)} tarefas dos boards + ${fmtInt(O.jornadas)} tarefas das jornadas (acompanhamento das contas)` : ''}</p>`
     + (O && O.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(O.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
     + abasCx()
     + (!O ? `<p class="note">Estes números ainda são só das tarefas dos boards. A partir da próxima coleta da madrugada entram também as tarefas atreladas às contas (jornadas), como em Tarefas › Acompanhamento de tarefas no CX.</p>` : '');
-  h += `<div class="grid">${card('Tarefas', 'criadas, finalizadas e finalizadas fora do prazo', linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
+  h += comparativoCsm(T, doTime, sel);
+  h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : ' · todos os CSMs'}</h3><div class="grid">${card('Tarefas', 'criadas, finalizadas e finalizadas fora do prazo', linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
   const per = pers.map((p, i) => i).reverse();
   h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
     ['Tarefas criadas', ...per.map(i => fmtInt(soma(pers[i], 'criadas')))], ['Tarefas agendadas', ...per.map(i => fmtInt(soma(pers[i], 'agendadas')))],
@@ -2653,11 +2662,10 @@ function histCsm(H) {
     ...(temOrigem ? [['· das jornadas (acompanhamento das contas)', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_jornada')))], ['· dos boards', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_board')))]] : []),
     ['Finalizadas com atraso', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_com_atraso')))],
     ['% finalizadas no prazo', ...per.map(i => { const f = soma(pers[i], 'finalizadas'); return f ? pct(f - soma(pers[i], 'finalizadas_com_atraso'), f) : '–'; })],
-    ['Em atraso (foto do fim do período)', ...per.map(i => atr[pers[i]] ? fmtInt(atrasP(pers[i])) : '–')],
+    ['Atrasadas de qualquer mês (foto do fim do período)', ...per.map(i => atr[pers[i]] ? fmtInt(atrasP(pers[i])) : '–')],
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
     ['Empresas Elite na carteira', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], ['Health Score médio da carteira', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-  if (!sel) h += comparativoCsm(T, doTime);
   h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão, somando as tarefas dos boards e as tarefas das jornadas atreladas às contas; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
   return h;
 }
