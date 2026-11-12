@@ -588,7 +588,8 @@ details>summary{cursor:pointer;margin:10px 0 6px;font-size:13px;color:var(--tx2)
 .cmpv{display:inline-flex;align-items:baseline;gap:8px;justify-content:flex-end}
 .cmpv b{font-size:14px;min-width:2.5ch;text-align:right}
 .cmpd{font-size:12px;font-weight:700;white-space:nowrap;min-width:7ch;text-align:left}
-.cmpv.up b,.cmpd.up{color:var(--ac)}.cmpv.dn b,.cmpd.dn{color:var(--rk)}.cmpd.eq{color:var(--mut);font-weight:500}
+.cmpv.bom b,.cmpd.bom{color:var(--ac)}.cmpv.ruim b,.cmpd.ruim{color:var(--rk)}.cmpd.eq{color:var(--mut);font-weight:500}
+.cmpv.ck{cursor:pointer;border-radius:6px;padding:2px 6px;margin:-2px -6px}.cmpv.ck:hover,.cmpv.ck:focus-visible{background:var(--hover);outline:none}.cmpv.ck:hover b{text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -2555,6 +2556,15 @@ function comparador(H) {
 // Seta: compara com o período anterior do mesmo tamanho (mês inteiro → mês anterior inteiro), olhando como ele estava
 // o mesmo tempo atrás (ex.: nov até 12/11 11h × out até 12/10 11h), para comparar períodos no mesmo ponto.
 const CMP_PER = { de: '', ate: '' };
+// O que é bom em cada coluna: +1 = aumentar é bom (verde) · −1 = diminuir é bom (verde)
+const CMP_BOM = { atrasadas: -1, pendentes: +1, sem_agendamento: -1, concluidas: +1 };
+// Estes nomes vão para o fim da lista do comparativo (comparação sem acento e sem maiúsculas, pelo começo do nome)
+const CMP_FIM = ['CS Bling', 'Felipe Farias', 'Mariana Monteiro'];
+// Endereço do CustomerX. Link da tarefa: se souber o padrão do endereço de uma tarefa, preencha com {id} (número) ou {codigo} (código longo);
+// enquanto estiver vazio, o link abre a página da empresa no CX, onde a tarefa aparece.
+const CX_APP = 'https://cliente.customerx.com.br';
+const LINK_TAREFA_CX = { board: '', jornada: '' };
+let CMP_LISTAS = {};
 document.addEventListener('change', e => {
   const t = e.target.closest('[data-cmpper]'); if (!t) return;
   CMP_PER[t.dataset.cmpper] = t.value; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
@@ -2563,6 +2573,26 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-cmpmes]'); if (!t) return;
   const [a, b] = t.dataset.cmpmes.split('|'); CMP_PER.de = a; CMP_PER.ate = b; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
 });
+function abrirTarefasCmp(chave) {
+  const L = CMP_LISTAS[chave]; if (!L) return;
+  const dt = m => m ? new Date(m * 6e4).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  const nomeEmp = id => { if (id === '' || id == null) return ''; const a = ALL.find(x => String(x.linkCx || '').endsWith('/clients/' + id)); return a ? a.nome : ''; };
+  const link = r => { const [, o, , , , , id, cod, , cli] = r, tpl = LINK_TAREFA_CX[o ? 'jornada' : 'board'];
+    if (tpl && (id !== '' || cod)) return { url: tpl.replace('{id}', encodeURIComponent(id)).replace('{codigo}', encodeURIComponent(cod)), txt: 'Abrir tarefa no CX ↗' };
+    if (cli !== '' && cli != null) return { url: CX_APP + '/clients/' + encodeURIComponent(cli), txt: 'Abrir empresa no CX ↗' };
+    return null; };
+  const regs = L.regs.slice().sort((p, q) => ((p[3] || p[4] || p[5] || p[2]) - (q[3] || q[4] || q[5] || q[2])));
+  $('#mtitle').textContent = `${L.titulo} · ${regs.length} tarefa${regs.length === 1 ? '' : 's'} · ${CMP_LISTAS.periodo}`;
+  $('#mbody').innerHTML = regs.length ? tabela(['Tarefa', 'Empresa', 'Origem', 'Agendada', 'Concluída', 'Criada', 'Link'], regs.map(r => {
+    const [, o, c, i, f, z, , cod, tit, cli, cliNome] = r, lk = link(r), emp = cliNome || nomeEmp(cli);
+    return [`${esc(tit || 'Sem título')}${cod ? `<br><span class="mut sm">${esc(cod)}</span>` : ''}`, esc(emp || '—'), o ? 'Jornada' : 'Board',
+      i || f ? `${dt(i || f)}${i && f ? ' – ' + new Date(f * 6e4).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}` : '—', dt(z), dt(c),
+      lk ? `<a class="lbtn" href="${esc(lk.url)}" target="_blank" rel="noopener">${lk.txt}</a>` : '—'];
+  })) : '<p class="note">Nenhuma tarefa.</p>';
+  $('#modal').showModal();
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-cmpl]'); if (t) abrirTarefasCmp(t.dataset.cmpl); });
+document.addEventListener('keydown', e => { const t = e.target.closest && e.target.closest('[data-cmpl]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirTarefasCmp(t.dataset.cmpl); } });
 function comparativoCsm(T, csms, sel) {
   const L = T.lista, C = T.comparativo;
   if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Sem dados para o comparativo.</b> O resumo de tarefas publicado é de ${esc(T.gerado_em || 'data desconhecida')} e foi gerado por uma versão anterior do Apps Script. Rode <b>iniciarColetaCustomerX</b> no Apps Script (ou aguarde a coleta da madrugada) e recarregue a página quando a coleta terminar.</p>`;
@@ -2585,37 +2615,47 @@ function comparativoCsm(T, csms, sel) {
     const dias = Math.round((deIso(iso(ate)) - deIso(iso(de))) / 864e5) + 1;
     deA = new Date(de.getFullYear(), de.getMonth(), de.getDate() - dias); ateA = new Date(ate.getFullYear(), ate.getMonth(), ate.getDate() - dias); MA = M - dias * 864e5;
   }
-  const contar = (A, B, mom) => { const r = {}; const a = A.getTime(), b = fimDia(B);
-    for (const [u, , c0, i0, f0, z0] of L.tarefas) {
-      const c = c0 * 6e4, i = i0 * 6e4, f = f0 * 6e4, z = z0 * 6e4;
-      const x = r[u] = r[u] || { atrasadas: 0, pendentes: 0, sem_agendamento: 0, concluidas: 0 };
-      if (z && z <= mom) { if (z >= a && z <= b) x.concluidas++; continue; }
-      if (c && c > mom) continue;                                        // ainda não existia
-      const ref = i || f;
-      if (!ref) { if (c >= a && c <= b) x.sem_agendamento++; continue; }
-      if (ref >= a && ref <= b) { if ((f || i) < mom) x.atrasadas++; else x.pendentes++; }
+  const contar = (A, B, mom, guardar) => { const r = {}; const a = A.getTime(), b = fimDia(B);
+    for (const reg0 of L.tarefas) {
+      const [u, , c0, i0, f0, z0] = reg0, c = c0 * 6e4, i = i0 * 6e4, f = f0 * 6e4, z = z0 * 6e4;
+      const x = r[u] = r[u] || { atrasadas: 0, pendentes: 0, sem_agendamento: 0, concluidas: 0, _t: { atrasadas: [], pendentes: [], sem_agendamento: [], concluidas: [] } };
+      let k = null;
+      if (z && z <= mom) { if (z >= a && z <= b) k = 'concluidas'; }
+      else if (!(c && c > mom)) {                                        // já existia no momento olhado
+        const ref = i || f;
+        if (!ref) { if (c >= a && c <= b) k = 'sem_agendamento'; }
+        else if (ref >= a && ref <= b) k = (f || i) < mom ? 'atrasadas' : 'pendentes';
+      }
+      if (k) { x[k]++; if (guardar) x._t[k].push(reg0); }
     }
     return r; };
-  const AT = contar(de, ate, M), AN = contar(deA, ateA, MA);
+  const AT = contar(de, ate, M, true), AN = contar(deA, ateA, MA, false);
+  CMP_LISTAS = { periodo: `${br(de)} a ${br(ate)}` };
   const COLS = [['atrasadas', 'Atrasadas'], ['pendentes', 'Pendentes'], ['sem_agendamento', 'Sem agendamento'], ['concluidas', 'Concluídas']];
   const num = (v, casas) => casas ? v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : fmtInt(v);
-  const cel = (v, ant, casas) => {
-    const d = Math.round((v - ant) * 10) / 10, cls = d > 0 ? 'up' : d < 0 ? 'dn' : 'eq';
+  const cel = (v, ant, casas, k, chave) => {
+    const d = Math.round((v - ant) * 10) / 10, bom = d * CMP_BOM[k] > 0, cls = d === 0 ? 'eq' : bom ? 'bom' : 'ruim';
     const txt = d > 0 ? `▲ +${num(d, casas)}` : d < 0 ? `▼ −${num(-d, casas)}` : '= 0';
-    return `<span class="cmpv ${cls}" title="Período anterior: ${num(ant, casas)} → este período: ${num(v, casas)}"><b>${num(v, casas)}</b><span class="cmpd ${cls}">${txt}</span></span>`;
+    const clic = chave && v > 0 ? ` ck" data-cmpl="${chave}" role="button" tabindex="0` : '';
+    return `<span class="cmpv ${cls}${clic}" title="Período anterior: ${num(ant, casas)} → este período: ${num(v, casas)}${chave && v > 0 ? ' · clique para ver as tarefas' : ''}"><b>${num(v, casas)}</b><span class="cmpd ${cls}">${txt}</span></span>`;
   };
+  const guardaLista = (chave, titulo, regs) => { CMP_LISTAS[chave] = { titulo, regs }; return chave; };
   const val = (R, u, k) => ((R[u.id] || {})[k]) || 0;
-  const lin = csms.slice().sort((p, q) => p.nome.localeCompare(q.nome)).map(u => [sel && sel.id === u.id ? `<b>${esc(u.nome)}</b> <span class="mut">· selecionado</span>` : esc(u.nome), ...COLS.map(([k]) => cel(val(AT, u, k), val(AN, u, k)))]);
+  const semAc = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const posFim = u => { const n = semAc(u.nome); const i = CMP_FIM.findIndex(x => n.startsWith(semAc(x))); return i < 0 ? -1 : i; };
+  const ordem = csms.slice().sort((p, q) => (posFim(p) - posFim(q)) || p.nome.localeCompare(q.nome));
+  const lin = ordem.map(u => [sel && sel.id === u.id ? `<b>${esc(u.nome)}</b> <span class="mut">· selecionado</span>` : esc(u.nome),
+    ...COLS.map(([k, l]) => cel(val(AT, u, k), val(AN, u, k), false, k, guardaLista(u.id + '|' + k, `${l} · ${u.nome}`, ((AT[u.id] || {})._t || {})[k] || [])))]);
   const tot = R => Object.fromEntries(COLS.map(([k]) => [k, csms.reduce((s2, u) => s2 + val(R, u, k), 0)]));
   const tA = tot(AT), tP = tot(AN), n = csms.length || 1;
-  lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(tA[k] / n, tP[k] / n, true))]);
-  lin.push(['<b>Total</b>', ...COLS.map(([k]) => cel(tA[k], tP[k]))]);
+  lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(tA[k] / n, tP[k] / n, true, k))]);
+  lin.push(['<b>Total</b>', ...COLS.map(([k, l]) => cel(tA[k], tP[k], false, k, guardaLista('total|' + k, `${l} · todos os CSMs`, csms.flatMap(u => ((AT[u.id] || {})._t || {})[k] || []))))]);
   const mp = new Date(agora.getFullYear(), agora.getMonth() - 1, 1), mpf = new Date(agora.getFullYear(), agora.getMonth(), 0);
   const atalho = (a, b, l) => `<button type="button" data-cmpmes="${iso(a)}|${iso(b)}" class="${iso(a) === iso(de) && iso(b) === iso(ate) ? 'on' : ''}">${l}</button>`;
   return `<h3 class="sp">Comparativo por CSM · ${br(de)} a ${br(ate)}</h3>
     <div class="heatctl"><label>De <input type="date" data-cmpper="de" value="${iso(de)}"></label><label>Até <input type="date" data-cmpper="ate" value="${iso(ate)}"></label>
       <span class="seg">${atalho(iniMes, fimMes, 'Este mês')}${atalho(mp, mpf, 'Mês passado')}</span></div>
-    <p class="note" style="margin-top:4px">Coleta de ${brh(agora)}, regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · <b class="mv-up">▲ +n</b> a mais · <b class="mv-dn">▼ −n</b> a menos.</p>
+    <p class="note" style="margin-top:4px">Coleta de ${brh(agora)}, regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · ▲ aumentou · ▼ diminuiu · <b class="mv-up">verde</b> = melhorou (menos atrasadas e sem agendamento; mais pendentes e concluídas) · <b class="mv-dn">vermelho</b> = piorou · clique num número para ver as tarefas.</p>
     <div class="cmpt">${tabela(['CSM', ...COLS.map(([, l]) => l)], lin)}</div>`;
 }
 function histCsm(H) {
