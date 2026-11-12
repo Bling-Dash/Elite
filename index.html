@@ -562,6 +562,24 @@ table.loctab td a{color:var(--link)}
 .loc-rotulo{display:block;margin:16px 0 0;font-size:12px;font-weight:600;color:var(--mut)}
 .locwarn{margin-left:4px;color:var(--yl)!important;font-weight:700;cursor:help}
 .loc-aviso.ck:hover{outline:1px solid var(--warn-fg)}
+
+/* evolução com setas (movimentação entre faixas e IFs) */
+.evt td:not(:first-child),.evt th:not(:first-child){text-align:right}
+.ev{display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.ev b{font-size:14px}.ev small{font-size:11px;font-weight:600;white-space:nowrap}
+.ev-up b,.ev-up small{color:var(--ac)}.ev-dn b,.ev-dn small{color:var(--rk)}.ev-eq small{color:var(--mut)}
+details>summary{cursor:pointer;margin:10px 0 6px;font-size:13px;color:var(--tx2)}
+/* abinhas (Top 20: Crítico / Atenção) */
+.abinhas{display:inline-flex;gap:2px;padding:3px;margin:4px 12px 8px 0;border:1px solid var(--bd);border-radius:9px;background:var(--card2);vertical-align:middle}
+.abinhas button{border:0;background:transparent;color:var(--mut);font:inherit;font-size:13px;font-weight:600;padding:5px 14px;border-radius:7px;cursor:pointer}
+.abinhas button span{font-weight:500;margin-left:4px;opacity:.8}
+.abinhas button.on{background:var(--card);color:var(--tx2);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.abinhas button[data-topfx="critico"].on{color:var(--rk)}.abinhas button[data-topfx="atencao"].on{color:var(--yl)}
+
+/* matriz de/para com setas */
+.mv-up{color:var(--ac)}.mv-dn{color:var(--rk)}
+.mvt td:not(:first-child),.mvt th:not(:first-child){text-align:right;white-space:nowrap}
+.mvt td:nth-last-child(-n+3),.mvt th:nth-last-child(-n+3){background:var(--card2)}
 </style>
 </head>
 <body>
@@ -676,7 +694,7 @@ const parseNum = (v, pct) => {
 const N = v => parseNum(v, false);
 const Nraw = v => parseNum(v, true);
 const has = (t, k) => S(t).toLowerCase().includes(k.toLowerCase());
-const toDate = v => { if (v == null || v === '') return null; if (v instanceof Date) return isNaN(v) ? null : v; if (typeof v === 'number') return new Date(Math.round((v - 25569) * 864e5)); const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return new Date(+m[3], m[2] - 1, +m[1]); const d = new Date(s); return isNaN(d) ? null : d; };
+const toDate = v => { if (v == null || v === '') return null; if (v instanceof Date) return isNaN(v) ? null : v; if (typeof v === 'number') return new Date(Math.round((v - 25569) * 864e5)); const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return new Date(+m[3], m[2] - 1, +m[1]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})(?!\d)/); if (m) return new Date(2000 + +m[3], m[2] - 1, +m[1]); const d = new Date(s); return isNaN(d) ? null : d; };
 const daysBetween = (a, b) => (a && b) ? Math.round((b - a) / 864e5) : null;
 const idKey = v => { const s = S(v); if (/^\d+(\.0+)?$/.test(s)) return String(parseInt(s, 10)); if (/e\+/i.test(s)) return String(Math.round(Number(s))); return s; };
 
@@ -2307,15 +2325,72 @@ function metricas(a) {
     mrr: sum(a, x => x.mrr), arr: sum(a, x => x.arr), gmv: sum(a, x => x.gmv), ped: sum(a, x => x.ped), risco: a.filter(x => x.motivo).length, IFc,
     criticos: a.filter(x => x.hs != null && x.hs < HEALTH_BANDS.atencao && !/^finalizad/i.test(x.status)).length };
 }
+// Evolução por período: uma coluna por período; cada número é comparado com o período anterior.
+// Regra combinada com o time: subiu → verde ▲ · caiu → vermelho ▼ · igual → cinza.
+function evolucao(snaps, labs, chave, ordem, nome, rotuloCol) {
+  const cont = snaps.map(arr => { const c = {}; arr.forEach(x => { const k = chave(x); c[k] = (c[k] || 0) + 1; }); return c; });
+  const usadas = ordem.filter(k => cont.some(c => c[k]));
+  const cel = (v, ant) => {
+    if (ant == null) return `<span class="ev"><b>${fmtInt(v)}</b><small>&nbsp;</small></span>`;
+    const d = v - ant, cls = d > 0 ? 'ev-up' : d < 0 ? 'ev-dn' : 'ev-eq';
+    return `<span class="ev ${cls}" title="${fmtInt(ant)} → ${fmtInt(v)}"><b>${fmtInt(v)}</b><small>${d > 0 ? '▲ +' + fmtInt(d) : d < 0 ? '▼ −' + fmtInt(-d) : '= 0'}</small></span>`;
+  };
+  const lin = usadas.map(k => [`<b>${esc(nome(k))}</b>`, ...cont.map((c, i) => cel(c[k] || 0, i ? (cont[i - 1][k] || 0) : null))]);
+  lin.push(['<b>Total</b>', ...snaps.map((a, i) => cel(a.length, i ? snaps[i - 1].length : null))]);
+  return `<div class="evt">${tabela([rotuloCol, ...labs], lin)}</div>`;
+}
+// Entradas em risco (IF1/IF2) × recuperações, período a período (só empresas presentes nos dois períodos)
+function fluxoRisco(H, filtra, labs) {
+  const RISCO = new Set(['IF1', 'IF2']), REC = new Set(['IF3', 'IF4', 'IF5']);
+  const crit = v => v != null && v < HEALTH_BANDS.atencao, ativo = x => !/^finalizad/i.test(x.status);
+  const out = [];
+  for (let i = 1; i < H.per.length; i++) {
+    const A = new Map(filtra(H.snap[H.per[i - 1]]).map(x => [x.id, x])), B = filtra(H.snap[H.per[i]]);
+    const r = { lab: labs[i], labAnt: labs[i - 1], entrou: [], recup: [], churn: [], hsEntrou: [], hsSaiu: [], emRisco: B.filter(x => RISCO.has(x.IF)).length };
+    B.forEach(x => { const y = A.get(x.id); if (!y) return;
+      if (RISCO.has(x.IF) && !RISCO.has(y.IF) && y.IF !== 'IF0') r.entrou.push([x, y.IF, x.IF]);
+      if (RISCO.has(y.IF) && REC.has(x.IF)) r.recup.push([x, y.IF, x.IF]);
+      if (RISCO.has(y.IF) && x.IF === 'IF0') r.churn.push([x, y.IF, x.IF]);
+      if (ativo(x) && y.hs != null && x.hs != null) { if (crit(x.hs) && !crit(y.hs)) r.hsEntrou.push([x, y.hs, x.hs]); if (crit(y.hs) && !crit(x.hs)) r.hsSaiu.push([x, y.hs, x.hs]); }
+    });
+    out.push(r);
+  }
+  if (!out.length) return `<h3 class="sp">Entradas em risco (IF1/IF2) e recuperações</h3><p class="note" style="margin-top:0">Aparece quando houver pelo menos dois períodos gravados no histórico.</p>`;
+  const u = out[out.length - 1], unid = HV2.gran === 'mes' ? 'mês' : 'semana';
+  const listaMov = (arr, de, para) => tabela(['Empresa', 'Carteira', de, para], arr.map(([x, a, b]) => [`<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`, esc(x.csm || '—'), esc(String(a)), esc(String(b))]));
+  let h = `<h3 class="sp">Entradas em risco (IF1/IF2) e recuperações · por ${unid}</h3>
+    <p class="note" style="margin-top:0"><b>Entraram em risco</b>: estavam fora de IF1/IF2 no período anterior e passaram para IF1 ou IF2. <b>Recuperadas</b>: estavam em IF1/IF2 e passaram para IF3, IF4 ou IF5. <b>Churn a partir do risco</b>: saíram de IF1/IF2 para IF0. Health Score crítico = HS abaixo de ${HEALTH_BANDS.atencao} (contas não finalizadas).</p>
+    <div class="kpis">${kpiBox(fmtInt(u.entrou.length), `entraram em risco (IF1/IF2) · ${esc(u.labAnt)} → ${esc(u.lab)}`)}${kpiBox(fmtInt(u.recup.length), 'recuperadas (IF1/IF2 → IF3–IF5)')}${kpiBox(fmtInt(u.churn.length), 'churn a partir do risco (→ IF0)')}${kpiBox(fmtInt(u.emRisco), `em IF1/IF2 no fim de ${esc(u.lab)}`)}</div>`;
+  const ord = out.slice().reverse();
+  h += tabela([unid === 'mês' ? 'Mês' : 'Semana', 'Entraram em risco', 'Recuperadas', 'Saldo', 'Churn a partir do risco', 'Em IF1/IF2 no fim', `Entraram em HS crítico (< ${HEALTH_BANDS.atencao})`, 'Saíram do HS crítico'],
+    ord.map(r => { const sd = r.recup.length - r.entrou.length;
+      return [`<b>${esc(r.lab)}</b>`, `<b style="color:var(--rk)">${fmtInt(r.entrou.length)}</b>`, `<b style="color:var(--ac)">${fmtInt(r.recup.length)}</b>`,
+        `<b style="color:${sd > 0 ? 'var(--ac)' : sd < 0 ? 'var(--rk)' : 'var(--mut)'}">${sd > 0 ? '+' : ''}${fmtInt(sd)}</b>`, fmtInt(r.churn.length), fmtInt(r.emRisco), fmtInt(r.hsEntrou.length), fmtInt(r.hsSaiu.length)]; }));
+  if (out.length > 1) h += `<div class="grid" style="grid-template-columns:minmax(0,640px)">${card('Entradas em risco × recuperações', `IF1/IF2 · por ${unid}`, linhas([{ nome: 'Entraram em risco', vals: out.map(r => r.entrou.length), cor: '#F05143' }, { nome: 'Recuperadas', vals: out.map(r => r.recup.length), cor: '#34AD61' }], out.map(r => r.lab)))}</div>`;
+  if (u.entrou.length) h += `<details><summary>Ver as ${u.entrou.length} empresas que entraram em risco em ${esc(u.lab)}</summary>${listaMov(u.entrou, 'IF antes', 'IF agora')}</details>`;
+  if (u.recup.length) h += `<details><summary>Ver as ${u.recup.length} empresas recuperadas em ${esc(u.lab)}</summary>${listaMov(u.recup, 'IF antes', 'IF agora')}</details>`;
+  if (u.churn.length) h += `<details><summary>Ver as ${u.churn.length} empresas em risco que viraram churn em ${esc(u.lab)}</summary>${listaMov(u.churn, 'IF antes', 'IF agora')}</details>`;
+  return h;
+}
 // matriz de/para entre dois períodos (só empresas presentes nos dois)
-function movimentacao(antes, depois, chave, ordem, nome) {
+// Cada célula fora da diagonal mostra a seta: ▲ verde = foram para uma faixa/IF maior · ▼ vermelho = foram para uma menor.
+// No fim de cada linha: quantas havia antes, quantas há agora e a variação (▲ aumentou · ▼ diminuiu).
+function movimentacao(antes, depois, chave, ordem, nome, labA = 'antes', labB = 'agora') {
   const mA = new Map(antes.map(x => [x.id, x])), cont = {}, mudou = [];
   depois.forEach(x => { const y = mA.get(x.id); if (!y) return; const de = chave(y), para = chave(x); cont[de + '>' + para] = (cont[de + '>' + para] || 0) + 1; if (de !== para) mudou.push([x, de, para]); });
-  const cab = ['De → Para', ...ordem.map(nome), 'Total'];
-  const lin = ordem.map(de => { const t = ordem.reduce((s, pa) => s + (cont[de + '>' + pa] || 0), 0);
-    return [`<b>${esc(nome(de))}</b>`, ...ordem.map(pa => { const v = cont[de + '>' + pa] || 0; return v ? (de === pa ? `<span class="note" style="margin:0">${v}</span>` : `<b style="color:${ordem.indexOf(pa) > ordem.indexOf(de) ? 'var(--ac)' : 'var(--rk)'}">${v}</b>`) : '·'; }), fmtInt(t)]; })
-    .filter(r => r[r.length - 1] !== '0');
-  return { html: tabela(cab, lin), mudou };
+  const tLin = de => ordem.reduce((s, pa) => s + (cont[de + '>' + pa] || 0), 0), tCol = pa => ordem.reduce((s, de) => s + (cont[de + '>' + pa] || 0), 0);
+  const cab = ['De ↓ · Para →', ...ordem.map(nome), `Em ${labA}`, `Em ${labB}`, 'Variação'];
+  const lin = ordem.filter(de => tLin(de) || tCol(de)).map(de => {
+    const a = tLin(de), b = tCol(de), d = b - a;
+    return [`<b>${esc(nome(de))}</b>`, ...ordem.map(pa => {
+      const v = cont[de + '>' + pa] || 0; if (!v) return '<span class="mut">·</span>';
+      if (de === pa) return `<span class="mut" title="${v} continuaram em ${esc(nome(de))}">= ${fmtInt(v)}</span>`;
+      const sobe = ordem.indexOf(pa) > ordem.indexOf(de);
+      return `<b class="${sobe ? 'mv-up' : 'mv-dn'}" title="${v} ${v === 1 ? 'empresa foi' : 'empresas foram'} de ${esc(nome(de))} para ${esc(nome(pa))}">${sobe ? '▲' : '▼'} ${fmtInt(v)}</b>`;
+    }), fmtInt(a), `<b>${fmtInt(b)}</b>`,
+      d > 0 ? `<b class="mv-up">▲ +${fmtInt(d)}</b>` : d < 0 ? `<b class="mv-dn">▼ −${fmtInt(-d)}</b>` : '<span class="mut">= 0</span>'];
+  });
+  return { html: `<div class="mvt">${tabela(cab, lin)}</div>`, mudou };
 }
 function histElite(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas. A primeira entra na próxima publicação do Drive.</p>';
@@ -2345,11 +2420,19 @@ function histElite(H) {
     const entraram = atualA.filter(x => !idsAntes.has(x.id)), sairam = antesA.filter(x => !idsAgora.has(x.id));
     const viraramIF0 = atualA.filter(x => x.IF === 'IF0' && (antesA.find(y => y.id === x.id) || {}).IF !== 'IF0');
     h += `<p class="note">Desde ${nomePer}: <b>${entraram.length}</b> entraram na base · <b>${sairam.length}</b> saíram · <b>${viraramIF0.length}</b> passaram para IF0 (cancelaram).${entraram.length ? ' Entraram: ' + entraram.slice(0, 12).map(x => esc(x.nome)).join(', ') + (entraram.length > 12 ? '…' : '') : ''}</p>`;
-    const mf = movimentacao(antesA, atualA, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa');
-    const mi = movimentacao(antesA, atualA, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => f);
-    h += `<h3 class="sp">Movimentação entre faixas · ${labs[k - 1]} → ${labs[k]}</h3><p class="note" style="margin-top:0">Linha = faixa no período anterior; coluna = faixa agora. Verde = subiu de faixa, vermelho = desceu. ${mf.mudou.length} empresas mudaram de faixa.</p>` + mf.html;
+    const mf = movimentacao(antesA, atualA, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa', labs[k - 1], labs[k]);
+    const mi = movimentacao(antesA, atualA, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => f, labs[k - 1], labs[k]);
+    const snapsF = H.per.map(p => filtra(H.snap[p]));
+    const ultimos = Math.max(0, snapsF.length - 12), sF = snapsF.slice(ultimos), lF = labs.slice(ultimos);
+    const legenda = `<p class="note" style="margin-top:0">Quantidade de empresas em cada período. Cada número é comparado com ${nomePer}: <b style="color:var(--ac)">verde ▲</b> = aumentou · <b style="color:var(--rk)">vermelho ▼</b> = diminuiu · cinza = igual.</p>`;
+    h += `<h3 class="sp">Movimentação entre faixas</h3>${legenda}` + evolucao(sF, lF, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa', 'Faixa');
+    const legMv = (o) => `<p class="note" style="margin-top:0">Linha = ${o} em ${labs[k - 1]}; coluna = ${o} em ${labs[k]}. <b class="mv-up">▲ verde</b> = foram para ${o === 'faixa' ? 'uma faixa' : 'um IF'} maior · <b class="mv-dn">▼ vermelho</b> = foram para ${o === 'faixa' ? 'uma faixa' : 'um IF'} menor · <span class="mut">= cinza</span> = continuaram. No fim da linha: quantas havia, quantas há e a variação. Só empresas presentes nos dois períodos.</p>`;
+    h += `<h3 class="sp">De onde vieram e para onde foram · faixas · ${labs[k - 1]} → ${labs[k]}</h3>${legMv('faixa')}${mf.html}<p class="note">${mf.mudou.length} empresas mudaram de faixa.</p>`;
     if (mf.mudou.length) h += `<details><summary>Ver as ${mf.mudou.length} empresas que mudaram de faixa</summary>${tabela(['Empresa', 'Carteira', 'De', 'Para'], mf.mudou.sort((p, q) => q[2] - q[1]).map(([x, de, pa]) => [`<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`, esc(x.csm), de ? 'Faixa ' + de : '—', pa ? 'Faixa ' + pa : '—']))}</details>`;
-    h += `<h3 class="sp">Movimentação entre IFs · ${labs[k - 1]} → ${labs[k]}</h3><p class="note" style="margin-top:0">${mi.mudou.length} empresas mudaram de IF. Verde = IF maior (melhorou), vermelho = IF menor.</p>` + mi.html;
+    h += `<h3 class="sp">Movimentação entre IFs</h3>${legenda}` + evolucao(sF, lF, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => IF_LABEL[f] || f, 'IF');
+    h += `<h3 class="sp">De onde vieram e para onde foram · IFs · ${labs[k - 1]} → ${labs[k]}</h3>${legMv('IF')}${mi.html}<p class="note">${mi.mudou.length} empresas mudaram de IF.</p>`;
+    if (mi.mudou.length) h += `<details><summary>Ver as ${mi.mudou.length} empresas que mudaram de IF</summary>${tabela(['Empresa', 'Carteira', 'De', 'Para'], mi.mudou.map(([x, de, pa]) => [`<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`, esc(x.csm), esc(de), esc(pa)]))}</details>`;
+    h += fluxoRisco(H, filtra, labs);
   }
   h += `<div class="grid">${card('Health Score médio', '', linhas([{ nome: 'HS médio', vals: P.map(x => x.hs) }], labs, fmtInt, false))}${card('MRR', '', linhas([{ nome: 'MRR', vals: P.map(x => x.mrr) }], labs, fmtMil))}${card('GMV (CustomerX)', '', linhas([{ nome: 'GMV', vals: P.map(x => x.gmv) }], labs, fmtMi))}${card('Empresas por IF', '', linhas(['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5'].map(f => ({ nome: f, vals: P.map(x => x.IFc[f]) })), labs))}</div>`;
   const per = H.per.map((p, i) => i).reverse();
@@ -2360,7 +2443,45 @@ function histElite(H) {
     ...['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'].map(f => [IF_LABEL[f] || f, ...per.map(i => fmtInt(P[i].IFc[f]))]),
   ]);
   if (H.per.length < 2) h += `<p class="note">As fotos começaram a ser gravadas agora. A cada ${HV2.gran === 'mes' ? 'fim de mês' : 'fim de semana'} entra uma nova coluna, e os gráficos passam a mostrar a evolução.</p>`;
+  h += churnJornada();
   h += onboarding();
+  return h;
+}
+// Churn separado por jornada: onboarding × ongoing (dados de hoje do CustomerX, com a data de cancelamento)
+// Conta como churn: status Finalizado, tag IF0 ou data de cancelamento preenchida.
+// Conta como churn de ONBOARDING: jornada do cliente com "onboarding" (se a coluna existir), tag Onboarding / Desistiu do Onboarding,
+// ou onboarding iniciado e não finalizado antes do cancelamento. O resto é churn de ONGOING.
+function churnJornada() {
+  if (!temDados()) return '';
+  const base = ALL.filter(a => (!HV2.carteira || a.csm === HV2.carteira) && (!HV2.empresa || a.id === HV2.empresa));
+  const tags = a => S(col(a._r, 'Tags')), jornada = a => S(col(a._r, 'Jornada', 'Jornada atual', 'Etapa da jornada', 'Jornada do cliente'));
+  const dtC = a => toDate(col(a._r, 'Data de Cancelamento'));
+  const ini = a => toDate(col(a._r, 'Data de inicio de Onboarting')), fim = a => toDate(col(a._r, 'Data de finalização de onboarding'));
+  const churnou = a => finalizada(a) || a.IF === 'IF0' || !!dtC(a);
+  const deOnb = a => /onboard/i.test(jornada(a)) || /onboard/i.test(tags(a)) || (!!ini(a) && (!fim(a) || (!!dtC(a) && dtC(a) <= fim(a))));
+  const churn = base.filter(churnou), onb = churn.filter(deOnb), ong = churn.filter(a => !deOnb(a));
+  if (!churn.length) return `<h2>Churn: onboarding × ongoing</h2><p class="note">Nenhuma conta com churn neste recorte.</p>`;
+  const hoje = new Date(), meses = [];
+  for (let i = 11; i >= 0; i--) { const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1); meses.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); }
+  const chaveMes = d => d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') : '';
+  const porMes = arr => meses.map(m => arr.filter(a => chaveMes(dtC(a)) === m));
+  const mO = porMes(onb), mG = porMes(ong), noAno = arr => arr.filter(a => meses.includes(chaveMes(dtC(a))));
+  const mrrPerdido = arr => sum(arr, a => N(col(a._r, 'Último MRR Ativo')) || a.mrr || 0);
+  const semData = churn.filter(a => !dtC(a));
+  const lk = (n, titulo, arr, txt) => `<span class="ck lk" data-l="${reg(titulo, arr)}">${txt}</span>`;
+  const motivos = arr => { const c = groupBy(arr, a => S(col(a._r, 'Motivo do churn')) || S(col(a._r, 'Motivo do risco')) || 'Sem motivo registrado');
+    return barList([...c.entries()].sort((p, q) => q[1].length - p[1].length).slice(0, 10).map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i + 2), acc })), v => v + ' emp.'); };
+  const oA = noAno(onb), gA = noAno(ong);
+  let h = `<h2>Churn: onboarding × ongoing</h2><p class="lead">Churn = status Finalizado, IF0 ou data de cancelamento preenchida. <b>Onboarding</b> = a jornada do cliente estava em onboarding (tag Onboarding / Desistiu do Onboarding, ou onboarding iniciado e não finalizado antes do cancelamento); <b>ongoing</b> = o restante. Meses pela data de cancelamento do CustomerX · últimos 12 meses.</p>`;
+  h += `<div class="kpis">${kpiBox(fmtInt(oA.length), lk(0, 'Churn de onboarding · últimos 12 meses', oA, 'churn de onboarding (12 meses)'))}${kpiBox(fmtMil(mrrPerdido(oA)), 'MRR perdido no onboarding')}${kpiBox(fmtInt(gA.length), lk(0, 'Churn de ongoing · últimos 12 meses', gA, 'churn de ongoing (12 meses)'))}${kpiBox(fmtMil(mrrPerdido(gA)), 'MRR perdido no ongoing')}${kpiBox(fmtInt(mO[11].length + mG[11].length), `churn neste mês · ${fmtInt(mO[11].length)} onboarding · ${fmtInt(mG[11].length)} ongoing`)}</div>`;
+  h += `<div class="grid">${card('Churn por mês', 'onboarding × ongoing · pela data de cancelamento', linhas([{ nome: 'Onboarding', vals: mO.map(x => x.length), cor: '#F5A60A' }, { nome: 'Ongoing', vals: mG.map(x => x.length), cor: '#F05143' }], meses.map(rotulo)))}`
+    + card('Motivos · churn de onboarding', `${onb.length} contas · clique para ver`, onb.length ? motivos(onb) : '<p class="mut">Nenhuma conta.</p>')
+    + card('Motivos · churn de ongoing', `${ong.length} contas · clique para ver`, ong.length ? motivos(ong) : '<p class="mut">Nenhuma conta.</p>') + `</div>`;
+  const per = meses.map((m, i) => i).reverse().filter(i => mO[i].length || mG[i].length);
+  if (per.length) h += tabela(['Mês', 'Onboarding', 'Ongoing', 'Total', 'MRR perdido · onboarding', 'MRR perdido · ongoing'], per.map(i => [`<b>${rotulo(meses[i])}</b>`,
+    mO[i].length ? lk(0, `Churn de onboarding · ${rotulo(meses[i])}`, mO[i], fmtInt(mO[i].length)) : '0', mG[i].length ? lk(0, `Churn de ongoing · ${rotulo(meses[i])}`, mG[i], fmtInt(mG[i].length)) : '0',
+    fmtInt(mO[i].length + mG[i].length), fmtMil(mrrPerdido(mO[i])), fmtMil(mrrPerdido(mG[i]))]));
+  if (semData.length) h += `<p class="note">${lk(0, 'Churn sem data de cancelamento', semData, `${semData.length} contas com churn sem data de cancelamento`)} (${semData.filter(deOnb).length} de onboarding) ficam fora dos meses.</p>`;
   return h;
 }
 // Onboarding (entradas no Elite): vem das datas de início/fim de onboarding do CustomerX, então já tem histórico
@@ -2431,20 +2552,25 @@ function histCsm(H) {
   const hsP = p => { const s = H.snap[p]; if (!s) return null; const a = sel ? s.filter(x => x.resp === sel.email) : s; const m = avg(a, x => /^finalizad/i.test(x.status) ? null : x.hs); return m == null ? null : Math.round(m); };
   const nP = p => { const s = H.snap[p]; if (!s) return null; return (sel ? s.filter(x => x.resp === sel.email) : s).length; };
   const labs = pers.map(rotulo);
-  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')}</p>`;
+  const O = T.origens, temOrigem = pers.some(p => Object.values(tab[p] || {}).some(b => b.finalizadas_jornada != null));
+  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')}${O ? ` · fontes: ${fmtInt(O.boards)} tarefas dos boards + ${fmtInt(O.jornadas)} tarefas das jornadas (acompanhamento das contas)` : ''}</p>`
+    + (O && O.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(O.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
+    + (!O ? `<p class="note">Estes números ainda são só das tarefas dos boards. A partir da próxima coleta da madrugada entram também as tarefas atreladas às contas (jornadas), como em Tarefas › Acompanhamento de tarefas no CX.</p>` : '');
   h += `<div class="grid">${card('Tarefas', 'criadas, finalizadas e finalizadas fora do prazo', linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
   const per = pers.map((p, i) => i).reverse();
   h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
     ['Tarefas criadas', ...per.map(i => fmtInt(soma(pers[i], 'criadas')))], ['Tarefas agendadas', ...per.map(i => fmtInt(soma(pers[i], 'agendadas')))],
-    ['Tarefas finalizadas', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas')))], ['Finalizadas com atraso', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_com_atraso')))],
+    ['Tarefas finalizadas', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas')))],
+    ...(temOrigem ? [['· das jornadas (acompanhamento das contas)', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_jornada')))], ['· dos boards', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_board')))]] : []),
+    ['Finalizadas com atraso', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_com_atraso')))],
     ['% finalizadas no prazo', ...per.map(i => { const f = soma(pers[i], 'finalizadas'); return f ? pct(f - soma(pers[i], 'finalizadas_com_atraso'), f) : '–'; })],
     ['Em atraso (foto do fim do período)', ...per.map(i => atr[pers[i]] ? fmtInt(atrasP(pers[i])) : '–')],
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
     ['Empresas Elite na carteira', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], ['Health Score médio da carteira', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-  if (!sel) h += `<h3 class="sp">Comparativo por CSM · ${labs[labs.length - 1] || ''}</h3>` + tabela(['CSM', 'Carteira', 'Criadas', 'Agendadas', 'Finalizadas', 'Com atraso', 'Reuniões', 'Empresas contatadas', 'Em atraso agora'],
-    users.filter(u => respEmails.has(u.email)).map(u => { const b = (tab[pers[pers.length - 1]] || {})[u.id] || {}; return [esc(u.nome), esc(carteiraDe(u) || '—'), fmtInt(b.criadas || 0), fmtInt(b.agendadas || 0), fmtInt(b.finalizadas || 0), fmtInt(b.finalizadas_com_atraso || 0), fmtInt(b.reunioes || 0), fmtInt(b.empresas_contatadas || 0), fmtInt((T.atrasadas_agora || {})[u.id] || 0)]; }));
-  h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
+  if (!sel) h += `<h3 class="sp">Comparativo por CSM · ${labs[labs.length - 1] || ''}</h3>` + tabela(['CSM', 'Carteira', 'Criadas', 'Agendadas', 'Finalizadas', ...(temOrigem ? ['Finalizadas · jornadas', 'Finalizadas · boards'] : []), 'Com atraso', 'Reuniões', 'Empresas contatadas', 'Em atraso agora'],
+    users.filter(u => respEmails.has(u.email)).map(u => { const b = (tab[pers[pers.length - 1]] || {})[u.id] || {}; return [esc(u.nome), esc(carteiraDe(u) || '—'), fmtInt(b.criadas || 0), fmtInt(b.agendadas || 0), fmtInt(b.finalizadas || 0), ...(temOrigem ? [fmtInt(b.finalizadas_jornada || 0), fmtInt(b.finalizadas_board || 0)] : []), fmtInt(b.finalizadas_com_atraso || 0), fmtInt(b.reunioes || 0), fmtInt(b.empresas_contatadas || 0), fmtInt((T.atrasadas_agora || {})[u.id] || 0)]; }));
+  h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão, somando as tarefas dos boards e as tarefas das jornadas atreladas às contas; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
   return h;
 }
 
@@ -2452,7 +2578,10 @@ function histCsm(H) {
 // GESTÃO DE CARTEIRA: guias por objetivo + Top 20 em risco + convergência IF × HS
 // =====================================================================
 const TEMAS = [['geral', 'Visão geral da carteira'], ['risco', 'Análise de risco'], ['expansao', 'Expansão'], ['integracoes', 'Integrações'], ['portfolio', 'Portfólio'], ['tudo', 'Tudo']];
-let TEMA = localStorage.getItem('tema') || 'geral', TOP_POR = 'mrr';
+let TEMA = localStorage.getItem('tema') || 'geral', TOP_POR = 'mrr', TOP_FAIXA = 'critico';
+// Faixas do Top 20 clientes em risco: Crítico 0–39 · Atenção 40–59 · Saudável 60–79 · Excelente 80–100
+const TOP_BANDAS = { atencao: 40, saudavel: 60, excelente: 80 };
+const topBanda = s => s == null ? null : s < TOP_BANDAS.atencao ? 'Crítico' : s < TOP_BANDAS.saudavel ? 'Atenção' : s < TOP_BANDAS.excelente ? 'Saudável' : 'Excelente';
 const temaDe = t => /^(Health Score|Visão geral|1\.|2\.)/.test(t) ? 'geral' : /^(3\.|Top 20|Converg|Cobrança)/.test(t) ? 'risco' : /^4\./.test(t) ? 'expansao' : /^8\./.test(t) ? 'integracoes' : 'portfolio';
 function organizarTemas() {
   $('#temas').innerHTML = TEMAS.map(([k, l]) => `<button type="button" data-tema="${k}" class="${k === TEMA ? 'on' : ''}">${l}</button>`).join('');
@@ -2473,15 +2602,23 @@ document.getElementById('temas').addEventListener('click', e => {
 const emRisco = a => !finalizada(a) && (a.banda !== 'Saudável' || ['IF1', 'IF2', 'IF3'].includes(a.IF) || !!a.temMotivo);
 const semContato = a => a.diasInteracao == null || a.diasInteracao > 30;
 function extrasCarteira() {
-  const risco = ACC.filter(emRisco), semC = risco.filter(semContato);
-  const top = risco.slice().sort((p, q) => (TOP_POR === 'gmv' ? (q.gmv || 0) - (p.gmv || 0) : (q.mrr || 0) - (p.mrr || 0))).slice(0, 20);
+  const ativos20 = ACC.filter(a => !finalizada(a) && a.score != null);
+  const crit = ativos20.filter(a => topBanda(a.score) === 'Crítico'), aten = ativos20.filter(a => topBanda(a.score) === 'Atenção');
+  const risco = crit.concat(aten), semC = risco.filter(semContato);
+  const lista = TOP_FAIXA === 'atencao' ? aten : crit;
+  const top = lista.slice().sort((p, q) => (TOP_POR === 'gmv' ? (q.gmv || 0) - (p.gmv || 0) : (q.mrr || 0) - (p.mrr || 0))).slice(0, 20);
   const btn = (v, l) => `<button type="button" data-top="${v}" class="${TOP_POR === v ? 'on' : ''}">${l}</button>`;
-  let h = `<h2>Top 20 clientes em risco</h2><p class="lead">Contas não finalizadas com Health Score em Atenção/Crítico, IF1 a IF3 ou motivo de risco registrado · ${$('#csm').value === '__all__' ? 'todas as carteiras' : 'carteira ' + esc($('#csm').value)}.
-    <span class="ck lk" data-l="${reg('Contas em risco', risco)}">${risco.length} contas em risco</span>, das quais <span class="ck lk" data-l="${reg('Em risco e sem interação há mais de 30 dias', semC)}"><b>${semC.length} estão sem interação há mais de 30 dias</b></span>.</p>
+  const aba = (v, l, n) => `<button type="button" role="tab" data-topfx="${v}" aria-selected="${TOP_FAIXA === v}" class="${TOP_FAIXA === v ? 'on' : ''}">${l} <span>${n}</span></button>`;
+  const selo = a => { const b = topBanda(a.score); return `<span class="hsb ${b === 'Crítico' ? 'hs-c' : b === 'Atenção' ? 'hs-a' : 'hs-s'}" title="Health Score ${a.score} · ${b}">${a.score}<small>${b}</small></span>`; };
+  let h = `<h2>Top 20 clientes em risco</h2><p class="lead">Só contas em risco pelo Health Score, sem as finalizadas: <b>Crítico</b> = HS de 0 a ${TOP_BANDAS.atencao - 1} · <b>Atenção</b> = HS de ${TOP_BANDAS.atencao} a ${TOP_BANDAS.saudavel - 1} (Saudável = ${TOP_BANDAS.saudavel} a ${TOP_BANDAS.excelente - 1} · Excelente = ${TOP_BANDAS.excelente} a 100) · ${$('#csm').value === '__all__' ? 'todas as carteiras' : 'carteira ' + esc($('#csm').value)}.
+    <span class="ck lk" data-l="${reg('Contas em risco (HS Crítico ou Atenção)', risco)}">${risco.length} contas em risco</span>, das quais <span class="ck lk" data-l="${reg('Em risco e sem interação há mais de 30 dias', semC)}"><b>${semC.length} estão sem interação há mais de 30 dias</b></span>.</p>
+    <div class="abinhas" role="tablist" aria-label="Faixa do Health Score">${aba('critico', 'Crítico', crit.length)}${aba('atencao', 'Atenção', aten.length)}</div>
     <div class="heatctl">Ordenar por:<span class="seg">${btn('mrr', 'MRR')}${btn('gmv', 'GMV')}</span></div>`;
-  h += tabela(['#', 'Empresa', 'Carteira', 'IF', 'HS', 'MRR', 'GMV último mês', 'Motivo do risco', 'Sem interação', 'Sem login'],
-    top.map((a, i) => [i + 1, `<span class="lk" data-emp="${esc(a.id)}">${esc(a.nome)}</span>`, esc(a.csm), esc(a.IF), hsSelo(a),
-      fmtMoney(a.mrr), fmtMi(a.gmv), esc(S(col(a._r, 'Motivo do risco')) || '—'), semContato(a) ? `<b style="color:var(--rk)">⚠ ${a.diasInteracao == null ? 'sem registro' : a.diasInteracao + ' d'}</b>` : a.diasInteracao + ' d', fmtDays(a.diasLogin)]));
+  h += top.length ? tabela(['#', 'Empresa', 'Carteira', 'IF', 'HS', 'MRR', 'GMV último mês', 'Motivo do risco', 'Sem interação', 'Sem login'],
+    top.map((a, i) => [i + 1, `<span class="lk" data-emp="${esc(a.id)}">${esc(a.nome)}</span>`, esc(a.csm), esc(a.IF), selo(a),
+      fmtMoney(a.mrr), fmtMi(a.gmv), esc(S(col(a._r, 'Motivo do risco')) || '—'), semContato(a) ? `<b style="color:var(--rk)">⚠ ${a.diasInteracao == null ? 'sem registro' : a.diasInteracao + ' d'}</b>` : a.diasInteracao + ' d', fmtDays(a.diasLogin)]))
+    : `<p class="note">Nenhuma conta em ${TOP_FAIXA === 'atencao' ? 'Atenção' : 'Crítico'} neste recorte.</p>`;
+  if (lista.length > 20) h += `<p class="note">Mostrando as 20 maiores por ${TOP_POR === 'gmv' ? 'GMV' : 'MRR'}. <span class="ck lk" data-l="${reg(`HS ${TOP_FAIXA === 'atencao' ? 'Atenção' : 'Crítico'} (Top 20 clientes em risco)`, lista)}">Ver as ${lista.length} contas em ${TOP_FAIXA === 'atencao' ? 'Atenção' : 'Crítico'}</span>.</p>`;
   // cobrança e situação no CX (Tabela Meta)
   if (ACC.some(a => a.atrasoMes != null || a.divCx != null)) {
     const ref = buildAccounts.REF, mesRef = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -2518,6 +2655,7 @@ function extrasCarteira() {
 }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-top]'); if (t) { TOP_POR = t.dataset.top; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
+  const fx = e.target.closest('[data-topfx]'); if (fx) { TOP_FAIXA = fx.dataset.topfx; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   const em = e.target.closest('[data-emp]'); if (em) { EMP_ID = em.dataset.emp; trocarAba('empresa'); window.scrollTo(0, document.getElementById('tabs').offsetTop - 10); }
 });
 
@@ -2532,7 +2670,7 @@ document.getElementById('fontesBtn').addEventListener('click', () => {
     ['<b>Exportação manual do CustomerX</b> (opcional)', 'Conferência (?validar=1) e as colunas ainda em validação: Último MRR Ativo, Dias da última tarefa e Responsável', 'Quando alguém coloca um arquivo na pasta "entrada CustomerX"', 'Pode ser dispensada depois da validação final.'],
     ['<b>Histórico</b>', 'Foto resumida da base (HS, IF, faixa, MRR, ARR, GMV, carteira, motivo de risco)', 'Sobrescrita todo dia: ao virar o mês/semana fica a do último dia', 'Começou a ser gravado em outubro/2026.'],
     ['<b>Cruzamento</b>', 'CustomerX × Metabase pelo CNPJ e, se faltar, pelo código da empresa', '—', 'Empresas sem par aparecem só com os dados do CustomerX.'],
-    ['<b>Regras</b>', 'HS médio sem contas Finalizadas · IF0 fora da expansão · "em risco" = HS Atenção/Crítico, IF1–IF3 ou motivo de risco · reunião = tarefa com reunião/check-in/call/meet/kick-off/apresentação/alinhamento', '—', 'Ajustáveis no código.'],
+    ['<b>Regras</b>', 'HS médio sem contas Finalizadas · IF0 fora da expansão · "em risco" = HS Atenção/Crítico, IF1–IF3 ou motivo de risco · Top 20 clientes em risco: só HS Crítico (0–39) ou Atenção (40–59) · reunião = tarefa com reunião/check-in/call/meet/kick-off/apresentação/alinhamento', '—', 'Ajustáveis no código.'],
   ]) + (st.ultima_publicacao ? `<p class="note">Última publicação no Drive: ${esc(st.ultima_publicacao)} · ${esc(resumoStatus(st))}</p>` : '');
   $('#modal').showModal();
 });
