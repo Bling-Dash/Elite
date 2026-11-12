@@ -580,6 +580,15 @@ details>summary{cursor:pointer;margin:10px 0 6px;font-size:13px;color:var(--tx2)
 .mv-up{color:var(--ac)}.mv-dn{color:var(--rk)}
 .mvt td:not(:first-child),.mvt th:not(:first-child){text-align:right;white-space:nowrap}
 .mvt td:nth-last-child(-n+3),.mvt th:nth-last-child(-n+3){background:var(--card2)}
+
+/* comparativo por CSM: valor + variação */
+.cmpt td:not(:first-child),.cmpt th:not(:first-child){text-align:right}
+.cmpt tbody tr:nth-last-child(-n+2) td{background:var(--card2);font-weight:600}
+.cmpt tbody tr:nth-last-child(2) td{border-top:2px solid var(--bd2)}
+.cmpv{display:inline-flex;align-items:baseline;gap:8px;justify-content:flex-end}
+.cmpv b{font-size:14px;min-width:2.5ch;text-align:right}
+.cmpd{font-size:12px;font-weight:700;white-space:nowrap;min-width:7ch;text-align:left}
+.cmpv.up b,.cmpd.up{color:var(--ac)}.cmpv.dn b,.cmpd.dn{color:var(--rk)}.cmpd.eq{color:var(--mut);font-weight:500}
 </style>
 </head>
 <body>
@@ -2532,6 +2541,75 @@ function comparador(H) {
   return h;
 }
 
+// Comparativo por CSM nas 4 situações do CX (Atrasadas · Pendentes · Sem agendamento · Concluídas).
+// Abre no mês vigente; o calendário (De / Até) escolhe outro período. Regras iguais às do CX com filtro de data:
+//  concluídas = data de conclusão no período · atrasadas/pendentes = abertas com agendamento no período (atrasada = horário já passou)
+//  · sem agendamento = abertas, sem data, criadas no período. "Agora" = momento da coleta.
+// Seta: compara com o período anterior do mesmo tamanho (mês inteiro → mês anterior inteiro), olhando como ele estava
+// o mesmo tempo atrás (ex.: nov até 12/11 11h × out até 12/10 11h), para comparar períodos no mesmo ponto.
+const CMP_PER = { de: '', ate: '' };
+document.addEventListener('change', e => {
+  const t = e.target.closest('[data-cmpper]'); if (!t) return;
+  CMP_PER[t.dataset.cmpper] = t.value; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-cmpmes]'); if (!t) return;
+  const [a, b] = t.dataset.cmpmes.split('|'); CMP_PER.de = a; CMP_PER.ate = b; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y);
+});
+function comparativoCsm(T, csms) {
+  const L = T.lista, C = T.comparativo;
+  if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note">O comparativo aparece depois da próxima coleta do CustomerX (madrugada).</p>`;
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const deIso = v => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); };
+  const br = d => d.toLocaleDateString('pt-BR'), brh = d => d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const M = L.momento_ms || Date.now(), agora = new Date(M);
+  const iniMes = new Date(agora.getFullYear(), agora.getMonth(), 1), fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+  const de = CMP_PER.de ? deIso(CMP_PER.de) : iniMes, ate0 = CMP_PER.ate ? deIso(CMP_PER.ate) : fimMes;
+  const ate = ate0 < de ? de : ate0, fimDia = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+  // período anterior
+  const mesInteiro = de.getDate() === 1 && ate.getMonth() === de.getMonth() && ate.getFullYear() === de.getFullYear() && ate.getDate() === new Date(de.getFullYear(), de.getMonth() + 1, 0).getDate();
+  let deA, ateA, MA;
+  if (mesInteiro) {
+    deA = new Date(de.getFullYear(), de.getMonth() - 1, 1); ateA = new Date(de.getFullYear(), de.getMonth(), 0);
+    const ult = new Date(agora.getFullYear(), agora.getMonth(), 0).getDate();
+    MA = new Date(agora.getFullYear(), agora.getMonth() - 1, Math.min(agora.getDate(), ult), agora.getHours(), agora.getMinutes()).getTime();
+  } else {
+    const dias = Math.round((deIso(iso(ate)) - deIso(iso(de))) / 864e5) + 1;
+    deA = new Date(de.getFullYear(), de.getMonth(), de.getDate() - dias); ateA = new Date(ate.getFullYear(), ate.getMonth(), ate.getDate() - dias); MA = M - dias * 864e5;
+  }
+  const contar = (A, B, mom) => { const r = {}; const a = A.getTime(), b = fimDia(B);
+    for (const [u, , c0, i0, f0, z0] of L.tarefas) {
+      const c = c0 * 6e4, i = i0 * 6e4, f = f0 * 6e4, z = z0 * 6e4;
+      const x = r[u] = r[u] || { atrasadas: 0, pendentes: 0, sem_agendamento: 0, concluidas: 0 };
+      if (z && z <= mom) { if (z >= a && z <= b) x.concluidas++; continue; }
+      if (c && c > mom) continue;                                        // ainda não existia
+      const ref = i || f;
+      if (!ref) { if (c >= a && c <= b) x.sem_agendamento++; continue; }
+      if (ref >= a && ref <= b) { if ((f || i) < mom) x.atrasadas++; else x.pendentes++; }
+    }
+    return r; };
+  const AT = contar(de, ate, M), AN = contar(deA, ateA, MA);
+  const COLS = [['atrasadas', 'Atrasadas'], ['pendentes', 'Pendentes'], ['sem_agendamento', 'Sem agendamento'], ['concluidas', 'Concluídas']];
+  const num = (v, casas) => casas ? v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : fmtInt(v);
+  const cel = (v, ant, casas) => {
+    const d = Math.round((v - ant) * 10) / 10, cls = d > 0 ? 'up' : d < 0 ? 'dn' : 'eq';
+    const txt = d > 0 ? `▲ +${num(d, casas)}` : d < 0 ? `▼ −${num(-d, casas)}` : '= 0';
+    return `<span class="cmpv ${cls}" title="Período anterior: ${num(ant, casas)} → este período: ${num(v, casas)}"><b>${num(v, casas)}</b><span class="cmpd ${cls}">${txt}</span></span>`;
+  };
+  const val = (R, u, k) => ((R[u.id] || {})[k]) || 0;
+  const lin = csms.slice().sort((p, q) => p.nome.localeCompare(q.nome)).map(u => [esc(u.nome), ...COLS.map(([k]) => cel(val(AT, u, k), val(AN, u, k)))]);
+  const tot = R => Object.fromEntries(COLS.map(([k]) => [k, csms.reduce((s2, u) => s2 + val(R, u, k), 0)]));
+  const tA = tot(AT), tP = tot(AN), n = csms.length || 1;
+  lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(tA[k] / n, tP[k] / n, true))]);
+  lin.push(['<b>Total</b>', ...COLS.map(([k]) => cel(tA[k], tP[k]))]);
+  const mp = new Date(agora.getFullYear(), agora.getMonth() - 1, 1), mpf = new Date(agora.getFullYear(), agora.getMonth(), 0);
+  const atalho = (a, b, l) => `<button type="button" data-cmpmes="${iso(a)}|${iso(b)}" class="${iso(a) === iso(de) && iso(b) === iso(ate) ? 'on' : ''}">${l}</button>`;
+  return `<h3 class="sp">Comparativo por CSM · ${br(de)} a ${br(ate)}</h3>
+    <div class="heatctl"><label>De <input type="date" data-cmpper="de" value="${iso(de)}"></label><label>Até <input type="date" data-cmpper="ate" value="${iso(ate)}"></label>
+      <span class="seg">${atalho(iniMes, fimMes, 'Este mês')}${atalho(mp, mpf, 'Mês passado')}</span></div>
+    <p class="note" style="margin-top:4px">Situação na coleta de ${brh(agora)}, com as regras do CX. A seta compara com <b>${br(deA)} a ${br(ateA)}</b> como estava em ${brh(new Date(MA))}: <b class="mv-up">▲ +n</b> = n tarefas a mais · <b class="mv-dn">▼ −n</b> = n a menos.</p>
+    <div class="cmpt">${tabela(['CSM', ...COLS.map(([, l]) => l)], lin)}</div>`;
+}
 function histCsm(H) {
   const T = H.tarefas;
   if (!T) return '<p class="note">O histórico das carteiras aparece depois da primeira coleta completa do CustomerX com a leitura de tarefas (madrugada).</p>';
@@ -2579,8 +2657,7 @@ function histCsm(H) {
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
     ['Empresas Elite na carteira', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], ['Health Score médio da carteira', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-  if (!sel) h += `<h3 class="sp">Comparativo por CSM · ${labs[labs.length - 1] || ''}</h3>` + tabela(['CSM', 'Carteira', 'Criadas', 'Agendadas', 'Finalizadas', ...(temOrigem ? ['Finalizadas · jornadas', 'Finalizadas · boards'] : []), 'Com atraso', 'Reuniões', 'Empresas contatadas', `Atrasadas · ${mAb}`, `Pendentes · ${mAb}`, `Sem agendamento · ${mAb}`],
-    users.filter(u => respEmails.has(u.email)).map(u => { const b = (tab[pers[pers.length - 1]] || {})[u.id] || {}; return [esc(u.nome), esc(carteiraDe(u) || '—'), fmtInt(b.criadas || 0), fmtInt(b.agendadas || 0), fmtInt(b.finalizadas || 0), ...(temOrigem ? [fmtInt(b.finalizadas_jornada || 0), fmtInt(b.finalizadas_board || 0)] : []), fmtInt(b.finalizadas_com_atraso || 0), fmtInt(b.reunioes || 0), fmtInt(b.empresas_contatadas || 0), fmtInt(aberta(u, 'atrasadas') || 0), AB ? fmtInt(aberta(u, 'pendentes')) : '–', AB ? fmtInt(aberta(u, 'sem_agendamento')) : '–']; }));
+  if (!sel) h += comparativoCsm(T, doTime);
   h += `<p class="note">Como contamos: <b>criadas</b> pela data de criação, para quem registrou a tarefa; <b>agendadas</b> pela data agendada, para o responsável; <b>finalizadas</b> pela data de conclusão, somando as tarefas dos boards e as tarefas das jornadas atreladas às contas; <b>com atraso</b> quando a conclusão foi depois do prazo; <b>reuniões</b> são tarefas concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas; <b>empresas contatadas</b> são as empresas distintas com tarefa concluída no período. "Em atraso" é uma foto do dia e só tem histórico daqui para frente.</p>`;
   return h;
 }
