@@ -9,7 +9,6 @@
 <style>
 :root{--bg:#F8FAFC;--card:#FFFFFF;--card2:#F0F3F7;--hover:#F8FAFC;--tx:#495769;--tx2:#1F2A3B;--mut:#66768C;--bd:#E4E9F0;--bd2:#CCD5E0;--ac:#34AD61;--ac2:#288F4E;--acbg:#DCFAE6;--rk:#F05143;--yl:#F5A60A;--ex:#34AD61;--link:#0EB2E8;--neg-bg:#FFE5E3;--neg-fg:#BA291C;--warn-bg:#FFF1C7;--warn-fg:#A16207;--pos-bg:#DCFAE6;--pos-fg:#1D733C;--input:#FFFFFF;--sh:0 2px 4px 0 rgba(73,87,105,.16),0 1px 2px -1px rgba(73,87,105,.16)}
 :root[data-theme="dark"]{--bg:#18181B;--card:#27272A;--card2:#3F3F46;--hover:#3F3F46;--tx:#E4E4E7;--tx2:#FFFFFF;--mut:#A1A1AA;--bd:#3F3F46;--bd2:#52525B;--ac:#5AC782;--ac2:#34AD61;--acbg:#144728;--rk:#F05143;--yl:#F5A60A;--ex:#5AC782;--link:#41CFFA;--neg-bg:#801D1D;--neg-fg:#FFE5E3;--warn-bg:#713F12;--warn-fg:#FFF1C7;--pos-bg:#355313;--pos-fg:#E9FACD;--input:#3F3F46;--sh:0 0 5px #00000054}
-:root[data-theme="dark"] .topbar img{filter:brightness(1.15)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 'Inter',Arial,Roboto,Helvetica,sans-serif}
 main{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
 h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em;font-weight:700;color:var(--tx2)}h2{font-size:20px;margin:44px 0 6px;color:var(--tx2);font-weight:700;padding-left:12px;border-left:4px solid var(--ac)}h3{font-size:15px;margin:0;color:var(--tx2)}h3.sp{margin-top:26px}
@@ -20,12 +19,8 @@ h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em;font-weight:700;color:var
 .loader label.btn{background:var(--card);color:var(--ac)}.loader label.btn:hover{background:var(--acbg)}.loader input[type=file]{display:none}.loader select{padding:8px 10px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}.heatctl select{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}.heatctl label{color:var(--mut)}
 #manualBtn{margin-left:auto;background:var(--card);color:var(--tx);border:1px solid var(--bd2);font-weight:500}#manualBtn[aria-expanded="true"]{border-color:var(--ac);color:var(--ac)}#manual{display:grid;gap:10px;padding-top:10px;border-top:1px dashed var(--bd2)}
 #theme{background:var(--card);color:var(--tx);border:1px solid var(--bd2);font-weight:500}
-[hidden]{display:none!important}.topright{display:flex;align-items:center;gap:14px}.expbtn{background:var(--card)!important;color:var(--tx2)!important;border:1px solid var(--bd2)!important;border-radius:8px!important;padding:7px 12px!important;font:inherit;font-size:13px!important;cursor:pointer;box-shadow:none!important;white-space:nowrap}.expbtn:hover{border-color:var(--ac)!important}.mh{gap:8px}.mh #mExport{margin-left:auto}.tx-dots{background:none!important;border:0!important;box-shadow:none!important;color:inherit!important;opacity:.35;padding:0 3px!important;margin:0 0 0 4px!important;font-size:13px!important;line-height:1;cursor:pointer;vertical-align:middle}th:hover .tx-dots{opacity:.9}.tx-dots.on{opacity:1;color:var(--ac)!important}th[draggable=true]{cursor:grab}.tx-over{outline:2px dashed var(--ac);outline-offset:-2px}.tx-pop{position:fixed;z-index:9999;background:var(--card);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:8px;min-width:190px;max-width:320px;display:flex;flex-direction:column;gap:4px;font-size:13px;text-align:left;white-space:normal}.tx-pop button{background:none!important;border:0!important;box-shadow:none!important;color:var(--tx)!important;text-align:left;padding:6px 8px!important;border-radius:6px!important;font:inherit;cursor:pointer}.tx-pop button:hover{background:var(--hover)!important}.tx-pop .tx-tit{font-size:12px;color:var(--mut);padding:2px 8px 4px}.tx-busca{padding:5px 8px;border:1px solid var(--bd2);border-radius:6px;background:var(--input);color:var(--tx);font:inherit}.tx-vals{max-height:220px;overflow:auto;display:flex;flex-direction:column}.tx-op{display:flex;gap:6px;align-items:center;padding:2px 6px;cursor:pointer}.tx-op .mut{margin-left:auto;font-size:11px}.tx-acoes{display:flex;justify-content:flex-end;gap:6px;border-top:1px solid var(--bd);padding-top:6px}.tx-acoes button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.temas{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0}.temas button{background:var(--card)!important;color:var(--mut)!important;border:1px solid var(--bd2)!important;border-radius:999px!important;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;box-shadow:none!important}.temas button.on{background:var(--acbg)!important;color:var(--tx2)!important;border-color:var(--ac)!important;font-weight:600}.lk[data-emp]{cursor:pointer;text-decoration:underline dotted}.div{background:rgba(240,81,67,.18)}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:22px 0 4px;border-bottom:1px solid var(--bd)}.tabs button{background:none!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;color:var(--mut)!important;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;box-shadow:none!important}.tabs button.on{color:var(--tx2)!important;border-bottom-color:var(--ac)!important}.heatctl input{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit;min-width:280px}.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden;margin-left:6px}.seg button{background:var(--input)!important;color:var(--mut)!important;border:0!important;border-radius:0!important;padding:6px 12px;font:inherit;cursor:pointer;box-shadow:none!important}.seg button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.kv td:first-child{color:var(--mut);width:40%}.kv td{white-space:normal}.delta{font-size:12px;margin-left:6px}.up{color:var(--ac)}.down{color:var(--rk)}.chips span{display:inline-block;padding:3px 9px;margin:2px 4px 2px 0;border:1px solid var(--bd2);border-radius:999px;font-size:12px}.loader small{color:var(--mut)}#status{font-size:12.5px;color:var(--mut)}#status.err{color:var(--rk)}#status.ok{color:var(--ac)}
-.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px}.topbar img{height:40px;flex:none;margin-top:4px}
-.tagline{color:var(--mut);font-size:13px}.tagline b{color:var(--ac2)}
-.pills{height:4px;margin:14px 0 4px;background:linear-gradient(90deg,var(--ac) 0 60%,#12B8A2 60% 80%,#7C5CE6 80%);border-radius:2px}
+[hidden]{display:none!important}.expbtn{background:var(--card)!important;color:var(--tx2)!important;border:1px solid var(--bd2)!important;border-radius:8px!important;padding:7px 12px!important;font:inherit;font-size:13px!important;cursor:pointer;box-shadow:none!important;white-space:nowrap}.expbtn:hover{border-color:var(--ac)!important}.mh{gap:8px}.mh #mExport{margin-left:auto}.tx-dots{background:none!important;border:0!important;box-shadow:none!important;color:inherit!important;opacity:.35;padding:0 3px!important;margin:0 0 0 4px!important;font-size:13px!important;line-height:1;cursor:pointer;vertical-align:middle}th:hover .tx-dots{opacity:.9}.tx-dots.on{opacity:1;color:var(--ac)!important}th[draggable=true]{cursor:grab}.tx-over{outline:2px dashed var(--ac);outline-offset:-2px}.tx-pop{position:fixed;z-index:9999;background:var(--card);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:8px;min-width:190px;max-width:320px;display:flex;flex-direction:column;gap:4px;font-size:13px;text-align:left;white-space:normal}.tx-pop button{background:none!important;border:0!important;box-shadow:none!important;color:var(--tx)!important;text-align:left;padding:6px 8px!important;border-radius:6px!important;font:inherit;cursor:pointer}.tx-pop button:hover{background:var(--hover)!important}.tx-pop .tx-tit{font-size:12px;color:var(--mut);padding:2px 8px 4px}.tx-busca{padding:5px 8px;border:1px solid var(--bd2);border-radius:6px;background:var(--input);color:var(--tx);font:inherit}.tx-vals{max-height:220px;overflow:auto;display:flex;flex-direction:column}.tx-op{display:flex;gap:6px;align-items:center;padding:2px 6px;cursor:pointer}.tx-op .mut{margin-left:auto;font-size:11px}.tx-acoes{display:flex;justify-content:flex-end;gap:6px;border-top:1px solid var(--bd);padding-top:6px}.tx-acoes button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.temas{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0}.temas button{background:var(--card)!important;color:var(--mut)!important;border:1px solid var(--bd2)!important;border-radius:999px!important;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;box-shadow:none!important}.temas button.on{background:var(--acbg)!important;color:var(--tx2)!important;border-color:var(--ac)!important;font-weight:600}.lk[data-emp]{cursor:pointer;text-decoration:underline dotted}.div{background:rgba(240,81,67,.18)}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:22px 0 4px;border-bottom:1px solid var(--bd)}.tabs button{background:none!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;color:var(--mut)!important;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;box-shadow:none!important}.tabs button.on{color:var(--tx2)!important;border-bottom-color:var(--ac)!important}.heatctl input{padding:6px 10px;margin-left:6px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit;min-width:280px}.seg{display:inline-flex;border:1px solid var(--bd2);border-radius:8px;overflow:hidden;margin-left:6px}.seg button{background:var(--input)!important;color:var(--mut)!important;border:0!important;border-radius:0!important;padding:6px 12px;font:inherit;cursor:pointer;box-shadow:none!important}.seg button.on{background:var(--acbg)!important;color:var(--tx2)!important;font-weight:600}.kv td:first-child{color:var(--mut);width:40%}.kv td{white-space:normal}.delta{font-size:12px;margin-left:6px}.up{color:var(--ac)}.down{color:var(--rk)}.chips span{display:inline-block;padding:3px 9px;margin:2px 4px 2px 0;border:1px solid var(--bd2);border-radius:999px;font-size:12px}.loader small{color:var(--mut)}#status{font-size:12.5px;color:var(--mut)}#status.err{color:var(--rk)}#status.ok{color:var(--ac)}
 .c-red{background:var(--neg-bg)!important;color:var(--neg-fg);font-weight:600}.c-yel{background:var(--warn-bg)!important;color:var(--warn-fg);font-weight:600}.c-grn{background:var(--pos-bg)!important;color:var(--pos-fg);font-weight:600}
-.lg{display:block;font-size:10.5px;color:var(--mut);font-weight:400}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi.ck:hover{border-color:var(--ac)}.tx-pop a.lkop{display:block;padding:6px 8px;border-radius:6px;color:var(--tx);text-decoration:none}.tx-pop a.lkop:hover{background:var(--hover)}.emp-oculta{display:none!important}#empTabela{table-layout:fixed;min-width:860px}#empTabela th,#empTabela td{white-space:normal;overflow-wrap:anywhere;padding:8px 10px;text-align:left}#empTabela td .sm{white-space:normal}#empTabela th{white-space:nowrap}.voltar{background:var(--card)!important;color:var(--tx)!important;border:1px solid var(--bd2)!important;font-weight:500}.kpi{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;box-shadow:var(--sh)}.kpi b{display:block;font-size:22px;color:var(--tx2);font-weight:700}.kpi span{color:var(--mut);font-size:12.5px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px 18px;box-shadow:var(--sh)}
@@ -38,14 +33,14 @@ h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em;font-weight:700;color:var
 .tw{overflow-x:auto;background:var(--card);border:1px solid var(--bd);border-radius:8px;margin-top:10px;box-shadow:var(--sh)}
 table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--bd)}th{color:var(--mut);font-weight:500;font-size:12px;background:var(--card2)}tr:hover td{background:var(--hover)}tr:last-child td{border-bottom:0}.mut{color:var(--mut)}
 table.mx td.hm{text-align:center;color:var(--tx2);font-variant-numeric:tabular-nums}table.mx td.hm span,table.mx th span{display:block;font-size:10.5px;color:var(--mut);font-weight:400}table.mx th{text-align:center}table.mx td.hm span.sd{color:var(--yl);font-size:10px;margin-top:1px}table.mx th:first-child,table.mx td:first-child{text-align:left}
-.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:4px;margin-bottom:6px}.t-e{background:var(--acbg);color:var(--ac2)}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:4px;margin-bottom:6px}
 .note{font-size:12.5px;color:var(--mut);margin-top:10px}
 .chk{margin:12px 0 0}.chk summary{cursor:pointer;color:var(--mut);font-size:12.5px}
 .sb{display:grid;grid-template-columns:210px 1fr 84px;gap:10px;align-items:center;margin:7px 0;font-size:12.5px}.sl small{color:var(--mut);margin-left:4px}
 .sbar{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--card2)}.sbar i{display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:11.5px;font-weight:600;overflow:hidden;white-space:nowrap;min-width:0}
 .bl{display:grid;gap:5px;font-size:12.5px}.blr{display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:center}.blb{height:14px;background:var(--card2);border-radius:4px;overflow:hidden}.blb i{display:block;height:100%}
 a{color:var(--link)}
-.sbar i{color:#fff;text-shadow:0 0 2px rgba(0,0,0,.35)}.stat{display:flex;gap:10px;flex-wrap:wrap}.stat .ck{background:var(--card2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;min-width:160px}.stat .ck b{display:block;font-size:20px;color:var(--tx2)}.stat .ck span{font-size:12px;color:var(--mut)}.stat .ck:hover{border-color:var(--ac)}.wrapc{white-space:normal;display:block;max-width:420px;font-size:12px;color:var(--mut)}
+.sbar i{color:#fff;text-shadow:0 0 2px rgba(0,0,0,.35)}.stat{display:flex;gap:10px;flex-wrap:wrap}.stat .ck{background:var(--card2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;min-width:160px}.stat .ck b{display:block;font-size:20px;color:var(--tx2)}.stat .ck span{font-size:12px;color:var(--mut)}.stat .ck:hover{border-color:var(--ac)}
 .ck{cursor:pointer}.lk{text-decoration:underline dotted;text-underline-offset:3px}.lk:hover{color:var(--ac2);text-decoration-style:solid}td.ck:hover,li.ck:hover,.blr.ck:hover{outline:2px solid var(--ac);outline-offset:-2px}path.ck:hover{opacity:.8}
 dialog{border:1px solid var(--bd);border-radius:8px;box-shadow:0 16px 24px -2px rgba(73,87,105,.16);background:var(--card);color:var(--tx);padding:0;width:min(1040px,94vw);max-height:86vh}dialog::backdrop{background:rgba(0,0,0,.45)}
 .mh{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--card)}.mh h3{font-size:16px}.mh button{border:1px solid var(--bd2);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
@@ -58,12 +53,7 @@ dialog{border:1px solid var(--bd);border-radius:8px;box-shadow:0 16px 24px -2px 
 :root[data-theme="dark"]{--bg:#161619;--card:#222226;--card2:#2C2C31;--hover:#2C2C31;--bd:#323238;--bd2:#4A4A52}
 body{font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 main{max-width:1320px;padding:32px 28px 40px}
-
-/* cabeçalho */
-.topbar{align-items:center;margin-bottom:14px}
 h1{font-size:26px;font-weight:650;letter-spacing:-.02em;line-height:1.2}
-.topbar .lead{font-size:13.5px;max-width:80ch}
-.topbar img{height:34px;margin-top:0}
 
 /* barra de dados (CSM, período, acesso, status) */
 .loader{box-shadow:none;border-radius:var(--r);padding:12px 16px;margin:0 0 6px;gap:8px}
@@ -154,7 +144,6 @@ button:focus-visible,.ck:focus-visible,a:focus-visible{outline:2px solid var(--a
 @media (max-width:1100px){#kpis{grid-template-columns:repeat(3,minmax(0,1fr))}#kpis .khero{grid-row:auto;grid-column:1/-1}.khero b{font-size:48px}}
 @media (max-width:640px){
   main{padding:20px 14px 32px}
-  .topbar{flex-wrap:wrap;gap:12px}.topbar>div:first-child{flex:1 1 100%;order:2}.topright{order:1;width:100%;justify-content:space-between}
   h1{font-size:22px}
   .loader .row{flex-wrap:wrap}.loader select{flex:1 1 140px;min-width:0}
   #manualBtn,#theme{margin-left:0!important;flex:1 1 auto}
@@ -480,16 +469,12 @@ th{background:var(--card2);color:var(--mut);font-weight:600;font-size:11.5px}
 tr:hover td{background:var(--hover)}
 td.ck:hover,li.ck:hover,.blr.ck:hover{outline-color:var(--accent-green)!important}
 #body h2,section h2{padding-left:12px!important;border-left:4px solid var(--accent-green)!important;color:var(--tx2)}
-.tag{border-radius:999px}.t-e{background:rgba(147,245,116,.22);color:#00403e}
-:root[data-theme="dark"] .t-e{color:var(--accent-green)}
+.tag{border-radius:999px}
 .lk:hover{color:var(--accent-purple)}
 .tx-dots.on{color:var(--accent-purple)!important}.tx-over{outline-color:var(--accent-purple)}
 .tx-pop{border-radius:12px}.tx-acoes button.on{background:rgba(147,245,116,.25)!important}
 .mh button{border-radius:10px}
 .pular{background:var(--bg-sidebar);color:#fff}
-
-/* selos (mesmo padrão da referência) */
-.badge-green{background:rgba(147,245,116,.2);color:#00403e}.badge-purple{background:rgba(127,118,255,.15);color:#4a41cc}
 
 /* lista de empresas: coluna de links com espaço para ADM, CX e Octa */
 #empTabela col:nth-child(1){width:24%!important}#empTabela col:nth-child(8){width:15%!important}
@@ -967,7 +952,7 @@ const POS_COLOR = { 'Acima do intervalo': '#34AD61', 'Dentro do intervalo': '#8B
 const PAL = ['#34AD61', '#12B8A2', '#0EA5E9', '#7C5CE6', '#F5A60A', '#F05143', '#77B324', '#66768C', '#5AC782', '#33CCB8', '#60A5FA', '#A78BFA', '#FCCD4C', '#FCA097', '#B5E667', '#97A4B8'];
 const hue = i => PAL[i % PAL.length];
 
-let ALL = [], ACC = [], META = { fonte: '', data: '' };
+let ALL = [], ACC = [];
 let LISTS = []; // registro de listas clicáveis: índice -> {title, acc, sort?, resumo?}
 function reg(title, acc, opts) { LISTS.push(Object.assign({ title, acc }, opts || {})); return LISTS.length - 1; }
 const L = (title, acc, text) => (acc && acc.length ? `<span class="ck lk" data-l="${reg(title, acc)}">${text}</span>` : text);
@@ -1630,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ABAS: Gestão de Carteira · Visão da Empresa · Visão de Gestão (Histórico Elite)
 // =====================================================================
 let TAB = 'carteira', EMP_ID = '', EMP_CSM = null, HIST = {}, HIST_CARREGANDO = {};
-const HV2 = { sub: 'elite', gran: 'mes', carteira: '', empresa: '', csm: '' };
+const HV2 = { sub: 'elite', gran: 'mes', carteira: '', empresa: '', csm: '', escopo: 'csm' };   // escopo: 'csm' (só CSMs) ou 'total' (conta inteira, igual ao CX)
 const renderCarteira = render;
 render = function () {
   for (const k in HIST) if (HIST[k] && HIST[k].erro) delete HIST[k];   // dados recarregados: tenta o histórico de novo
@@ -1648,7 +1633,6 @@ function trocarAba(t) {
 document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) trocarAba(b.dataset.tab); });
 { const m = location.hash.match(/^#(empresa|historico|localizacao)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); setTimeout(() => trocarAba(m[1]), 0); } }
 
-const lst = v => Array.isArray(v) ? v.filter(Boolean).join(', ') : S(v);
 const kpiBox = (v, l, extra = '') => `<div class="kpi"><b>${v}</b><span>${l}</span>${extra ? `<div>${extra}</div>` : ''}</div>`;
 const temDados = () => typeof ALL !== 'undefined' && ALL && ALL.length;
 const chips = arr => { const a = (Array.isArray(arr) ? arr : S(arr).split(/\s*[,|]\s*/)).filter(Boolean); return a.length ? `<div class="chips">${a.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '<p class="note">—</p>'; };
@@ -1712,7 +1696,7 @@ async function carregarHist(gran, silencioso) {
     const d = cacheOk ? c.d : await chamarWebApp('acao=historico&gran=' + gran);
     if (VERSAO && !cacheOk) IDB.put('hist:' + gran, { ver: VERSAO, d });
     const per = Object.keys(d.periodos || {}).sort();
-    HIST[gran] = { per, snap: Object.fromEntries(per.map(p => [p, resumoParaContas(d.periodos[p])])), tarefas: d.tarefas, atrasadas: d.atrasadas };
+    HIST[gran] = { per, snap: Object.fromEntries(per.map(p => [p, resumoParaContas(d.periodos[p])])), tarefas: d.tarefas };
   } catch (e) { HIST[gran] = silencioso ? undefined : { erro: e ? e.message : 'Informe o código de acesso no campo acima.' }; }
   HIST_CARREGANDO[gran] = false; if (TAB !== 'carteira') renderAbaAtual(); return HIST[gran];
 }
@@ -1766,7 +1750,6 @@ const UF_NOME = { AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: '
 const locNorm = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const locNormCid = t => locNorm(t).replace(/^municipio de /, '').replace(/['’`´]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const UF_POR_NOME = Object.fromEntries(Object.entries(UF_NOME).map(([k, v]) => [locNorm(v), k]));
-const UF_NOMES_LONGOS = Object.keys(UF_POR_NOME).sort((p, q) => q.length - p.length);
 // faixas de CEP por estado (5 primeiros dígitos)
 const CEP_UF = [[1000, 19999, 'SP'], [20000, 28999, 'RJ'], [29000, 29999, 'ES'], [30000, 39999, 'MG'], [40000, 48999, 'BA'], [49000, 49999, 'SE'], [50000, 56999, 'PE'], [57000, 57999, 'AL'], [58000, 58999, 'PB'], [59000, 59999, 'RN'], [60000, 63999, 'CE'], [64000, 64999, 'PI'], [65000, 65999, 'MA'], [66000, 68899, 'PA'], [68900, 68999, 'AP'], [69000, 69299, 'AM'], [69300, 69399, 'RR'], [69400, 69899, 'AM'], [69900, 69999, 'AC'], [70000, 72799, 'DF'], [72800, 72999, 'GO'], [73000, 73699, 'DF'], [73700, 76799, 'GO'], [76800, 76999, 'RO'], [77000, 77999, 'TO'], [78000, 78899, 'MT'], [79000, 79999, 'MS'], [80000, 87999, 'PR'], [88000, 89999, 'SC'], [90000, 99999, 'RS']];
 function ufDoCep(v) {
@@ -1883,7 +1866,6 @@ const LOC_PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 
 let LOC_D = null, LOC_BB = {};
 const locBase = () => { const c = $('#csm').value; return c === '__all__' ? ALL : ALL.filter(a => a.csm === c); };
 const locCarteiraTxt = () => $('#csm').value === '__all__' ? 'todas as carteiras' : 'carteira ' + $('#csm').value;
-const locUfDe = a => locInfo(a).uf || '__sem__';
 const locCidDe = a => locInfo(a).cidKey || '__semcid__';
 const locEhUf = u => !!UF_NOME[u];
 const locNomeUf = u => u === '__sem__' ? 'Sem estado identificado' : u === '__todos__' ? 'Todos os estados' : `${UF_NOME[u]} (${u})`;
@@ -2616,16 +2598,17 @@ function abrirTarefasCmp(chave) {
   $('#mtitle').textContent = `${L.titulo} · ${regs.length} tarefa${regs.length === 1 ? '' : 's'} · ${CMP_LISTAS.periodo}`;
   $('#mbody').innerHTML = regs.length ? tabela(['Tarefa', 'Empresa', 'Origem', 'Agendada', 'Concluída', 'Criada', 'Link'], regs.map(r => {
     const [, o, c, i, f, z, , cod, tit, cli, cliNome] = r, lk = link(r), emp = cliNome || nomeEmp(cli);
-    return [`${esc(tit || 'Sem título')}${cod ? `<br><span class="mut sm">${esc(cod)}</span>` : ''}`, esc(emp || '—'), o ? 'Jornada' : 'Board',
+    return [`${tit ? esc(tit) : '<span class="mut">Título não guardado (tarefa de quem não é CSM)</span>'}${cod ? `<br><span class="mut sm">${esc(cod)}</span>` : ''}`, esc(emp || '—'), o ? 'Jornada' : 'Board',
       i || f ? `${dt(i || f)}${i && f ? ' – ' + new Date(f * 6e4).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}` : '—', dt(z), dt(c),
       lk ? `<a class="lbtn" href="${esc(lk.url)}" target="_blank" rel="noopener">${lk.txt}</a>` : '—'];
   })) : '<p class="note">Nenhuma tarefa.</p>';
   $('#modal').showModal();
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-cmpl]'); if (t) abrirTarefasCmp(t.dataset.cmpl); });
+document.addEventListener('click', e => { const t = e.target.closest('[data-escopo]'); if (!t) return; HV2.escopo = t.dataset.escopo; const y = window.scrollY; renderHistorico(); window.scrollTo(0, y); });
 document.addEventListener('keydown', e => { const t = e.target.closest && e.target.closest('[data-cmpl]'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirTarefasCmp(t.dataset.cmpl); } });
-function comparativoCsm(T, csms, sel) {
-  const L = T.lista, C = T.comparativo;
+function comparativoCsm(T, csms, sel, escopo = 'csm') {
+  const L = T.lista;
   if (!L || !L.tarefas) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Sem dados para o comparativo.</b> O resumo de tarefas publicado é de ${esc(T.gerado_em || 'data desconhecida')} e foi gerado por uma versão anterior do Apps Script. Rode <b>iniciarColetaCustomerX</b> no Apps Script (ou aguarde a coleta da madrugada) e recarregue a página quando a coleta terminar.</p>`;
   if (!csms.length) return `<h3 class="sp">Comparativo por CSM</h3><p class="note"><b>Nenhum CSM encontrado.</b> O comparativo lista quem é "Responsável: Analista Principal" de alguma empresa Elite; confira se os dados do CustomerX de hoje foram carregados.</p>`;
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -2664,84 +2647,95 @@ function comparativoCsm(T, csms, sel) {
   const ordem = csms.slice().sort((p, q) => (posFim(p) - posFim(q)) || p.nome.localeCompare(q.nome));
   const lin = ordem.map(u => [sel && sel.id === u.id ? `<b>${esc(u.nome)}</b> <span class="mut">· selecionado</span>` : esc(u.nome),
     ...COLS.map(([k, l]) => cel(val(AT, u, k), val(AN, u, k), false, k, guardaLista(u.id + '|' + k, `${l} · ${u.nome}`, ((AT[u.id] || {})._t || {})[k] || [])))]);
-  const tot = R => Object.fromEntries(COLS.map(([k]) => [k, csms.reduce((s2, u) => s2 + val(R, u, k), 0)]));
-  const tA = tot(AT), tP = tot(AN), n = csms.length || 1;
-  lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(tA[k] / n, tP[k] / n, true, k))]);
-  lin.push(['<b>Total</b>', ...COLS.map(([k, l]) => cel(tA[k], tP[k], false, k, guardaLista('total|' + k, `${l} · todos os CSMs`, csms.flatMap(u => ((AT[u.id] || {})._t || {})[k] || []))))]);
+  // além dos CSMs: automação e usuários sem carteira Elite ("outros") e tarefas sem responsável (usuário 0)
+  const idsCsm = new Set(csms.map(u => String(u.id)));
+  const grupo = (R, filtro) => { const g = { _t: { atrasadas: [], pendentes: [], sem_agendamento: [], concluidas: [] } };
+    COLS.forEach(([k]) => { g[k] = 0; });
+    Object.keys(R).filter(filtro).forEach(uid => COLS.forEach(([k]) => { g[k] += R[uid][k] || 0; if (R[uid]._t) g._t[k].push(...R[uid]._t[k]); }));
+    return g; };
+  const ehOutro = uid => uid !== '0' && !idsCsm.has(uid), ehSemResp = uid => uid === '0';
+  const outA = grupo(AT, ehOutro), outP = grupo(AN, ehOutro), semA = grupo(AT, ehSemResp), semP = grupo(AN, ehSemResp);
+  const temOut = COLS.some(([k]) => outA[k] || outP[k]), temSem = COLS.some(([k]) => semA[k] || semP[k]);
+  const csmTot = R => Object.fromEntries(COLS.map(([k]) => [k, csms.reduce((s2, u) => s2 + val(R, u, k), 0)]));
+  const cA = csmTot(AT), cP = csmTot(AN), n = csms.length || 1;
+  const tA = Object.fromEntries(COLS.map(([k]) => [k, cA[k] + outA[k] + semA[k]])), tP = Object.fromEntries(COLS.map(([k]) => [k, cP[k] + outP[k] + semP[k]]));
+  const tudo = escopo === 'total';
+  if (tudo && temOut) lin.push(['<span class="mut">Outros responsáveis</span> <span class="mut sm">(automação e usuários sem carteira Elite)</span>', ...COLS.map(([k, l]) => cel(outA[k], outP[k], false, k, guardaLista('outros|' + k, `${l} · outros responsáveis`, outA._t[k])))]);
+  if (tudo && temSem) lin.push(['<span class="mut">Sem responsável</span>', ...COLS.map(([k, l]) => cel(semA[k], semP[k], false, k, guardaLista('semresp|' + k, `${l} · sem responsável`, semA._t[k])))]);
+  lin.push(['<b>Média por CSM</b>', ...COLS.map(([k]) => cel(cA[k] / n, cP[k] / n, true, k))]);
+  if (tudo) lin.push(['<b>Total da conta</b>', ...COLS.map(([k, l]) => cel(tA[k], tP[k], false, k, guardaLista('total|' + k, `${l} · total da conta`, [...csms.flatMap(u => ((AT[u.id] || {})._t || {})[k] || []), ...outA._t[k], ...semA._t[k]])))]);
+  else lin.push(['<b>Total dos CSMs</b>', ...COLS.map(([k, l]) => cel(cA[k], cP[k], false, k, guardaLista('totalcsm|' + k, `${l} · total dos CSMs`, csms.flatMap(u => ((AT[u.id] || {})._t || {})[k] || []))))]);
   const mp = new Date(agora.getFullYear(), agora.getMonth() - 1, 1), mpf = new Date(agora.getFullYear(), agora.getMonth(), 0);
   const atalho = (a, b, l) => `<button type="button" data-cmpmes="${iso(a)}|${iso(b)}" class="${iso(a) === iso(de) && iso(b) === iso(ate) ? 'on' : ''}">${l}</button>`;
   return `<h3 class="sp">Comparativo por CSM · ${br(de)} a ${br(ate)}</h3>
     <div class="heatctl"><label>De <input type="date" data-cmpper="de" value="${iso(de)}"></label><label>Até <input type="date" data-cmpper="ate" value="${iso(ate)}"></label>
       <span class="seg">${atalho(iniMes, fimMes, 'Este mês')}${atalho(mp, mpf, 'Mês passado')}</span></div>
     <p class="note" style="margin-top:4px">Coleta de ${brh(agora)}, regras do CX. Setas: diferença para <b>${br(deA)} a ${br(ateA)}</b> no mesmo ponto (${brh(new Date(MA))}) · ▲ aumentou · ▼ diminuiu · <b class="mv-up">verde</b> = melhorou (menos atrasadas e sem agendamento; mais pendentes e concluídas) · <b class="mv-dn">vermelho</b> = piorou · clique num número para ver as tarefas.</p>
+    <p class="note" style="margin-top:0">${tudo ? 'Aba <b>Totais</b>: igual ao CX sem filtro de responsável (CSMs + outros responsáveis + tarefas sem responsável).' : 'Aba <b>CSMs</b>: só as tarefas dos CSMs; o total é a soma das linhas acima.'}</p>
     <div class="cmpt">${tabela(['CSM', ...COLS.map(([, l]) => l)], lin)}</div>`;
 }
+// chave de período de uma data: '2026-11' (mês) ou '2026-S46' (semana ISO, como no Apps Script)
+function chavePeriodo(ms, gran) {
+  const d = new Date(ms);
+  if (gran === 'mes') return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), dia = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dia);
+  const ano = t.getUTCFullYear(); return ano + '-S' + String(Math.ceil(((t - Date.UTC(ano, 0, 1)) / 864e5 + 1) / 7)).padStart(2, '0');
+}
+// Histórico das carteiras: tarefas com as regras do CX (Tarefas › Acompanhamento de tarefas, filtro de data).
+// Abas: CSMs (só quem é responsável por empresas Elite) e Totais (conta inteira, igual ao CX sem filtro); com um CSM escolhido, só ele.
 function histCsm(H) {
-  const T = H.tarefas;
-  if (!T) return '<p class="note">O histórico das carteiras aparece depois da primeira coleta completa do CustomerX com a leitura de tarefas (madrugada).</p>';
-  const tab = HV2.gran === 'mes' ? T.mensal : T.semanal, atr = (H.atrasadas && (HV2.gran === 'mes' ? H.atrasadas.mensal : H.atrasadas.semanal)) || {};
-  // só até o período atual (tarefas agendadas para o futuro criam períodos que ainda não começaram)
-  const agoraP = (T.lista && T.lista.momento_ms) || Date.now();
-  const pers = Object.keys(tab || {}).filter(p => { const fx = faixaPeriodo(p); return !fx || fx[0] <= agoraP; }).sort().slice(HV2.gran === 'mes' ? -12 : -16);
+  const T = H.tarefas, LT = T && T.lista && T.lista.tarefas ? T.lista : null;
+  if (!LT) return `<p class="note"><b>Sem dados de tarefas.</b> O resumo publicado${T && T.gerado_em ? ' (de ' + esc(T.gerado_em) + ')' : ''} foi gerado por uma versão anterior do Apps Script. Rode <b>iniciarColetaCustomerX</b> e recarregue a página quando a coleta terminar.</p>`;
+  const momL = LT.momento_ms || Date.now(), tab = (HV2.gran === 'mes' ? T.mensal : T.semanal) || {};
+  // períodos: os que têm alguma tarefa (criada, agendada ou concluída), só até o período atual
+  const chaves = new Set(Object.keys(tab)), lim = chavePeriodo(momL, HV2.gran);
+  for (const [, , c, i, f, z] of LT.tarefas) for (const m of [c, i || f, z]) if (m) chaves.add(chavePeriodo(m * 6e4, HV2.gran));
+  const pers = [...chaves].filter(p => p <= lim).sort().slice(HV2.gran === 'mes' ? -12 : -16);
   const ultSnap = H.per.length ? H.snap[H.per[H.per.length - 1]] : [];
-  // usuários que são responsáveis por alguma empresa Elite vêm primeiro
-  const respEmails = new Set([...ultSnap.map(x => x.resp), ...ALL.map(respDe)].filter(Boolean));   // fotos + dados de hoje
+  // CSMs = responsáveis por alguma empresa Elite (fotos + dados de hoje)
+  const respEmails = new Set([...ultSnap.map(x => x.resp), ...ALL.map(respDe)].filter(Boolean));
   const users = Object.entries(T.usuarios || {}).map(([id, u]) => ({ id, nome: u.nome || u.email, email: S(u.email).toLowerCase() }))
-    .filter(u => pers.some(p => tab[p][u.id]) || respEmails.has(u.email)).sort((p, q) => (respEmails.has(q.email) - respEmails.has(p.email)) || p.nome.localeCompare(q.nome));
+    .filter(u => pers.some(p => (tab[p] || {})[u.id]) || respEmails.has(u.email)).sort((p, q) => (respEmails.has(q.email) - respEmails.has(p.email)) || p.nome.localeCompare(q.nome));
   // carteira do CSM: primeiro pelos dados de hoje (responsável atual); se não houver, pela última foto
   const carteiraDe = u => { const vivo = carteiraAoVivoDe(u.email); if (vivo) return vivo; const cont = {}; ultSnap.filter(x => x.resp === u.email).forEach(x => { cont[x.csm] = (cont[x.csm] || 0) + 1; }); const top = Object.entries(cont).sort((p, q) => q[1] - p[1])[0]; return top ? top[0] : ''; };
   const sel = users.find(u => u.id === HV2.csm);
-  let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos os CSMs (soma)</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label></div>`;
-  // "Todos" soma só quem é responsável por empresas Elite (CSMs); usuários de automação (ex.: admin) ficam de fora
-  const doTime = users.filter(u => respEmails.has(u.email)), alvo = () => sel ? [sel] : doTime;
-  const soma = (p, k) => alvo().reduce((s, u) => s + (((tab[p] || {})[u.id] || {})[k] || 0), 0);
-  const atrasP = p => alvo().reduce((s, u) => s + (((atr[p] || {})[u.id]) || 0), 0);
+  let h = `<div class="heatctl"><label>CSM: <select data-h2f="csm"><option value="">Todos os CSMs</option>${users.map(u => `<option value="${u.id}"${u.id === HV2.csm ? ' selected' : ''}>${esc(u.nome)}${respEmails.has(u.email) ? '' : ' (sem carteira Elite)'}</option>`).join('')}</select></label>${HV2.csm ? '' : `<span class="seg" role="tablist" aria-label="O que somar">${[['csm', 'CSMs'], ['total', 'Totais']].map(([v, l]) => `<button type="button" role="tab" data-escopo="${v}" aria-selected="${(HV2.escopo === 'total' ? 'total' : 'csm') === v}" class="${(HV2.escopo === 'total' ? 'total' : 'csm') === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="dica"><button type="button" class="dica-i" aria-label="Por que duas abas" aria-describedby="dica-escopo">i</button><span class="dica-txt" role="tooltip" id="dica-escopo"><p><b>CSMs</b>: só as tarefas dos CSMs (a soma de cada um, 1 a 1).</p><p><b>Totais</b>: igual ao CX sem filtro. Inclui também tarefas de jornada sem responsável + tarefas do usuário de automação + usuários sem carteira.</p></span></span>`}</div>`;
+  const doTime = users.filter(u => respEmails.has(u.email));
+  // escopo: um CSM escolhido → só ele · aba CSMs → soma dos CSMs · aba Totais → conta inteira (igual ao CX sem filtro)
+  const escopo = HV2.escopo === 'total' ? 'total' : 'csm';
+  const idsAlvo = sel ? new Set([String(sel.id)]) : escopo === 'csm' ? new Set(doTime.map(u => String(u.id))) : null;
+  const somaR = (R, k) => Object.entries(R || {}).reduce((s2, [uid, x]) => s2 + (!idsAlvo || idsAlvo.has(String(uid)) ? ((x || {})[k] || 0) : 0), 0);
+  const soma = (p, k) => somaR(tab[p], k);
   const cart = sel ? carteiraDe(sel) : '';
   const hsP = p => { const s = H.snap[p]; if (!s) return null; const a = sel ? s.filter(x => x.resp === sel.email) : s; const m = avg(a, x => /^finalizad/i.test(x.status) ? null : x.hs); return m == null ? null : Math.round(m); };
   const nP = p => { const s = H.snap[p]; if (!s) return null; return (sel ? s.filter(x => x.resp === sel.email) : s).length; };
   const labs = pers.map(rotulo);
-  const O = T.origens, temOrigem = pers.some(p => Object.values(tab[p] || {}).some(b => b.finalizadas_jornada != null));
-  // situação de agora por CSM (mesmas abas do CX: Atrasadas · Pendentes · Sem agendamento) + concluídas no período mais recente
-  const AB = T.abertas_agora || null;
-  const aberta = (u, k) => AB ? ((AB[u.id] || {})[k] || 0) : (k === 'atrasadas' ? ((T.atrasadas_agora || {})[u.id] || 0) : null);
-  const somaAb = k => alvo().reduce((s2, u) => s2 + (aberta(u, k) || 0), 0);
-  const ultP = pers[pers.length - 1];
-  const mAb = T.abertas_mes ? rotulo(T.abertas_mes) : 'este mês';
-  // mesma contagem do comparativo e do CX: cada período como aparece hoje no CX filtrando por ele
-  const LT = T.lista && T.lista.tarefas ? T.lista : null, momL = LT ? (LT.momento_ms || Date.now()) : 0;
-  const cxPer = {}; if (LT) pers.forEach(p => { const fx = faixaPeriodo(p); if (fx) cxPer[p] = contarTarefasCx(LT, fx[0], fx[1], momL, false); });
-  const cxSoma = (p, k) => cxPer[p] ? alvo().reduce((s2, u) => s2 + (((cxPer[p][u.id]) || {})[k] || 0), 0) : null;
-  const fxMes = LT ? (() => { const d = new Date(momL); return [new Date(d.getFullYear(), d.getMonth(), 1).getTime(), new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime()]; })() : null;
-  const cxMes = LT ? contarTarefasCx(LT, fxMes[0], fxMes[1], momL, false) : null;
-  const cxMesSoma = k => alvo().reduce((s2, u) => s2 + (((cxMes || {})[u.id] || {})[k] || 0), 0);
-  const abasCxNovo = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(cxMesSoma('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('pendentes')), `pendentes · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('sem_agendamento')), `sem agendamento · ${esc(mAb)}`)}${kpiBox(fmtInt(cxMesSoma('concluidas')), `concluídas · ${esc(mAb)}`)}</div>`;
-  const abasCx = () => LT ? abasCxNovo() : abasCxAntigo();
-  const abasCxAntigo = () => `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">${kpiBox(fmtInt(somaAb('atrasadas')), `atrasadas · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('pendentes')) : '–', `pendentes · ${esc(mAb)}`)}${kpiBox(AB ? fmtInt(somaAb('sem_agendamento')) : '–', `sem agendamento · ${esc(mAb)}`)}${kpiBox(ultP ? fmtInt(soma(ultP, 'finalizadas')) : '–', `concluídas em ${ultP ? esc(rotulo(ultP)) : '–'}${temOrigem && ultP ? ` · ${fmtInt(soma(ultP, 'finalizadas_jornada'))} de jornada + ${fmtInt(soma(ultP, 'finalizadas_board'))} de board` : ''}`)}</div>`
-    + (AB ? '' : '<p class="note" style="margin-top:4px">Pendentes e sem agendamento aparecem depois da próxima coleta da madrugada.</p>');
-  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : 'Todos os CSMs'} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')} (boards e jornadas somados)</p>`
-    + (O && O.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(O.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
-    + abasCx()
-    + (!O ? `<p class="note">Estes números ainda são só das tarefas dos boards. A partir da próxima coleta da madrugada entram também as tarefas atreladas às contas (jornadas), como em Tarefas › Acompanhamento de tarefas no CX.</p>` : '');
-  h += comparativoCsm(T, doTime, sel);
-  h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : ' · todos os CSMs'}</h3><div class="grid">${card('Tarefas', LT ? 'criadas, concluídas e concluídas depois do horário agendado (regras do CX)' : 'criadas, finalizadas e finalizadas fora do prazo', LT ? linhas([{ nome: 'Criadas', vals: pers.map(p => cxSoma(p, 'criadas')) }, { nome: 'Concluídas', vals: pers.map(p => cxSoma(p, 'concluidas')) }, { nome: 'Concluídas com atraso', vals: pers.map(p => cxSoma(p, 'concluidas_atraso')), cor: 'var(--rk)' }], labs) : linhas([{ nome: 'Criadas', vals: pers.map(p => soma(p, 'criadas')) }, { nome: 'Finalizadas', vals: pers.map(p => soma(p, 'finalizadas')) }, { nome: 'Finalizadas com atraso', vals: pers.map(p => soma(p, 'finalizadas_com_atraso')), cor: 'var(--rk)' }], labs))}${card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs))}</div>`;
+  // cada período como aparece hoje no CX quando se filtra por ele
+  const cxPer = {}; pers.forEach(p => { const fx = faixaPeriodo(p); if (fx) cxPer[p] = contarTarefasCx(LT, fx[0], fx[1], momL, false); });
+  const cxSoma = (p, k) => cxPer[p] ? somaR(cxPer[p], k) : null;
+  const dM = new Date(momL), mAb = rotulo(chavePeriodo(momL, 'mes'));
+  const cxMes = contarTarefasCx(LT, new Date(dM.getFullYear(), dM.getMonth(), 1).getTime(), new Date(dM.getFullYear(), dM.getMonth() + 1, 0, 23, 59, 59, 999).getTime(), momL, false);
+  const cartoes = `<div class="kpis" title="Mesmas regras de Tarefas › Acompanhamento de tarefas do CX, filtro ${esc(mAb)}: atrasadas = agendadas no mês com o horário vencido · pendentes = horário ainda por vir · sem agendamento = criadas no mês sem data · concluídas = data de conclusão no mês">`
+    + [['atrasadas', 'atrasadas'], ['pendentes', 'pendentes'], ['sem_agendamento', 'sem agendamento'], ['concluidas', 'concluídas']].map(([k, l]) => kpiBox(fmtInt(somaR(cxMes, k)), `${l} · ${esc(mAb)}`)).join('') + '</div>';
+  h += `<p class="lead">${sel ? esc(sel.nome) + (cart ? ' · carteira ' + esc(cart) : '') : (escopo === 'total' ? 'Totais · conta inteira, igual ao CX sem filtro' : 'CSMs · só as tarefas dos CSMs')} · tarefas lidas do CustomerX em ${esc(T.gerado_em || '–')} (boards e jornadas somados)</p>`
+    + (T.erro_jornadas ? `<p class="note"><b style="color:var(--rk)">⚠ As tarefas das jornadas não foram lidas</b> (${esc(T.erro_jornadas)}). Os números abaixo têm só as tarefas dos boards.</p>` : '')
+    + cartoes;
+  h += comparativoCsm(T, doTime, sel, escopo);
+  h += `<h3 class="sp">Evolução ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}${sel ? ' · ' + esc(sel.nome) : escopo === 'total' ? ' · totais' : ' · CSMs'}</h3><div class="grid">`
+    + card('Tarefas', 'criadas, concluídas e concluídas depois do horário agendado (regras do CX)', linhas([{ nome: 'Criadas', vals: pers.map(p => cxSoma(p, 'criadas')) }, { nome: 'Concluídas', vals: pers.map(p => cxSoma(p, 'concluidas')) }, { nome: 'Concluídas com atraso', vals: pers.map(p => cxSoma(p, 'concluidas_atraso')), cor: 'var(--rk)' }], labs))
+    + card('Relacionamento', 'reuniões e empresas contatadas', linhas([{ nome: 'Reuniões', vals: pers.map(p => soma(p, 'reunioes')) }, { nome: 'Empresas contatadas', vals: pers.map(p => soma(p, 'empresas_contatadas')) }], labs)) + '</div>';
   const per = pers.map((p, i) => i).reverse();
   const vCx = (i, k) => { const v = cxSoma(pers[i], k); return v == null ? '–' : fmtInt(v); };
-  const linhasCx = LT ? [
+  h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
     ['<b>Atrasadas</b>', ...per.map(i => vCx(i, 'atrasadas'))], ['<b>Pendentes</b>', ...per.map(i => vCx(i, 'pendentes'))],
     ['<b>Sem agendamento</b>', ...per.map(i => vCx(i, 'sem_agendamento'))], ['<b>Concluídas</b>', ...per.map(i => vCx(i, 'concluidas'))],
     ['Concluídas com atraso', ...per.map(i => vCx(i, 'concluidas_atraso'))],
     ['% concluídas no horário', ...per.map(i => { const c = cxSoma(pers[i], 'concluidas'); return c ? pct(c - cxSoma(pers[i], 'concluidas_atraso'), c) : '–'; })],
     ['Tarefas criadas', ...per.map(i => vCx(i, 'criadas'))],
-  ] : [
-    ['Tarefas criadas', ...per.map(i => fmtInt(soma(pers[i], 'criadas')))], ['Tarefas finalizadas', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas')))],
-    ['Finalizadas com atraso', ...per.map(i => fmtInt(soma(pers[i], 'finalizadas_com_atraso')))],
-  ];
-  h += `<h3 class="sp">Tabela ${HV2.gran === 'mes' ? 'mês a mês' : 'semana a semana'}</h3>` + tabela(['Indicador', ...per.map(i => labs[i])], [
-    ...linhasCx,
     ['Reuniões realizadas', ...per.map(i => fmtInt(soma(pers[i], 'reunioes')))], ['Empresas contatadas', ...per.map(i => fmtInt(soma(pers[i], 'empresas_contatadas')))],
     [sel ? 'Empresas no Elite (do CSM)' : 'Empresas no Elite', ...per.map(i => H.snap[pers[i]] ? fmtInt(nP(pers[i])) : '–')], [sel ? 'Health Score médio (do CSM)' : 'Health Score médio', ...per.map(i => H.snap[pers[i]] ? (hsP(pers[i]) ?? '–') : '–')],
   ]);
-
   h += `<p class="note">Como contamos: <b>atrasadas, pendentes, sem agendamento e concluídas</b> seguem as regras de Tarefas › Acompanhamento de tarefas do CX e mostram cada ${HV2.gran === 'mes' ? 'mês' : 'semana'} como ele aparece hoje no CX quando você filtra por ele (por isso, em períodos passados, as tarefas que ficaram abertas aparecem como atrasadas). Boards e jornadas somados. <b>Concluídas com atraso</b> = concluídas depois do horário agendado. <b>Criadas</b> = criadas no período, para o responsável. <b>Reuniões</b> = concluídas com "reunião", "check-in", "call", "meet", "kick-off", "apresentação" ou "alinhamento" no título ou nas etiquetas. <b>Empresas contatadas</b> = empresas distintas com tarefa concluída no período. <b>Empresas no Elite</b> e <b>Health Score médio</b> vêm da foto do plano Elite de cada período.</p>`;
   return h;
 }
