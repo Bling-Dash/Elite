@@ -624,7 +624,8 @@ h3.tit-ctl .dica{margin-left:0}
 #tab-historico p.hsub b{color:var(--tx2);font-weight:600}
 .hkpis .kpi b{white-space:nowrap;font-size:22px}
 .hmov{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px;font:500 12.5px/1.2 var(--ff);color:var(--mut)}
-.hmov span:not(:first-child){padding:5px 10px;border-radius:999px;background:var(--card2);color:var(--tx2)}
+.hmov>:not(:first-child){padding:5px 10px;border-radius:999px;background:var(--card2);color:var(--tx2);border:1px solid transparent;font:inherit}
+button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--accent-green)}button[data-hmov]::after{content:' ›';color:var(--mut)}
 .hmov .up b{color:var(--ac)}.hmov .dn b{color:var(--rk)}
 @media (max-width:960px){#tab-historico>.heatctl{display:flex}#tab-historico .heatctl input{min-width:0;width:100%}}
 </style>
@@ -2366,6 +2367,48 @@ function movimentacao(antes, depois, chave, ordem, nome, labA = 'antes', labB = 
   });
   return { html: `<div class="mvt">${tabela(cab, lin)}</div>`, mudou };
 }
+// ===== Janela das movimentações (entraram / saíram / IF0) do Histórico do plano Elite =====
+// A foto do histórico não guarda CNPJ, links nem plano: vêm da base completa do mês no Drive (?periodo=AAAA-MM; hoje = base carregada).
+let HMOV = null;
+const CONTAS_PER = {};
+const mesDoPer = p => {                                           // 2026-S46 → mês do domingo da semana (dia da última foto)
+  if (!/S\d+$/.test(p)) return p;
+  const [a, w] = p.split('-S'), j4 = Date.UTC(+a, 0, 4), dj4 = new Date(j4).getUTCDay() || 7;
+  return new Date(j4 - (dj4 - 1) * 864e5 + (w - 1) * 7 * 864e5 + 6 * 864e5).toISOString().slice(0, 7);
+};
+function contasDoMes(m) {
+  const hoje = new Date().toISOString().slice(0, 7);
+  if (m >= hoje && $('#periodo') && $('#periodo').value === 'atual' && temDados()) return Promise.resolve(ALL);
+  return CONTAS_PER[m] || (CONTAS_PER[m] = (async () => {
+    const p = prepararPayload(await chamarWebApp('periodo=' + (m >= hoje ? 'atual' : m)));
+    const t = montarTabelas(p.metaRows, p.cxRows), tk = TICKETS, tkx = buildAccounts.TK;
+    TICKETS = null;                                               // não mexe nos tickets da tela aberta
+    try { return buildAccounts(t.cxRows, t.metaRows); } finally { TICKETS = tk; buildAccounts.TK = tkx; }
+  })().catch(e => { delete CONTAS_PER[m]; throw e; }));
+}
+async function abrirMovimento(tipo) {
+  const M = HMOV; if (!M) return;
+  const tit = { entraram: 'Entraram na base', sairam: 'Saíram da base', if0: 'Passaram para IF0 (cancelaram)' }[tipo], lista = M[tipo];
+  $('#mtitle').textContent = `${tit} · ${rotulo(M.antes)} → ${rotulo(M.agora)} · ${lista.length} empresa${lista.length === 1 ? '' : 's'}`;
+  $('#mbody').innerHTML = '<p class="note">Buscando CNPJ, links e plano das empresas…</p>';
+  if (!$('#modal').open) $('#modal').showModal();
+  let cA = [], cN = [], aviso = '';
+  try { [cA, cN] = await Promise.all([contasDoMes(mesDoPer(M.antes)), contasDoMes(mesDoPer(M.agora))]); }
+  catch (e) { aviso = `<p class="note">Não deu para buscar CNPJ, links e plano (${esc(e ? e.message : 'informe o código de acesso no topo da página')}).</p>`; }
+  const mapa = l => new Map(l.map(a => [a.id, a])), A = mapa(cA), N = mapa(cN);
+  const fA = new Map(M.antesA.map(x => [x.id, x])), fN = new Map(M.atualA.map(x => [x.id, x]));
+  const lnk = (u, t) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>` : '<span class="mut">—</span>';
+  const linhas = lista.map(x => {
+    const a = N.get(x.id) || A.get(x.id) || {}, ma = (fA.get(x.id) || {}).mrr, mn = (fN.get(x.id) || {}).mrr;
+    const pa = (A.get(x.id) || {}).plano, pn = (N.get(x.id) || {}).plano;
+    const ev = ma == null ? `<span class="mut">entrou com</span> ${fmtMil(mn)}` : mn == null ? `${fmtMil(ma)} <span class="mut">→ saiu</span>` : `${fmtMil(ma)} → ${fmtMil(mn)} ${delta(mn, ma, fmtMil)}`;
+    return { mrr: mn ?? ma ?? 0, cel: [`<span class="lk" data-emp="${esc(x.id)}">${esc(a.razao || x.nome)}</span>`, esc(fmtCnpj(a.cnpjTxt)) || '<span class="mut">—</span>',
+      lnk(a.link, 'ADM'), lnk(a.linkCx, 'CX'), fmtMil(mn ?? ma), pa ? esc(pa) : '<span class="mut">não estava na base</span>', pn ? esc(pn) : '<span class="mut">não está mais na base</span>', ev] };
+  }).sort((p, q) => q.mrr - p.mrr);
+  if (!$('#modal').open) return;
+  $('#mbody').innerHTML = aviso + tabela(['Razão social', 'CNPJ', 'Link ADM', 'Link CX', 'MRR', 'Plano antigo', 'Plano novo', 'Evolução do MRR'], linhas.map(l => l.cel));
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-hmov]'); if (b) abrirMovimento(b.dataset.hmov); });
 function histElite(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas. A primeira entra na próxima publicação do Drive.</p>';
   const ult = H.snap[H.per[H.per.length - 1]];
@@ -2393,10 +2436,9 @@ function histElite(H) {
     const idsAntes = new Set(antesA.map(x => x.id)), idsAgora = new Set(atualA.map(x => x.id));
     const entraram = atualA.filter(x => !idsAntes.has(x.id)), sairam = antesA.filter(x => !idsAgora.has(x.id));
     const viraramIF0 = atualA.filter(x => x.IF === 'IF0' && (antesA.find(y => y.id === x.id) || {}).IF !== 'IF0');
-    const lk = l => l.map(x => `<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`).join(', ');
-    h += `<div class="hmov"><span>Desde ${nomePer}</span><span${entraram.length ? ' class="up"' : ''}><b>${entraram.length ? '+' : ''}${entraram.length}</b> entraram</span><span${sairam.length ? ' class="dn"' : ''}><b>${sairam.length ? '−' : ''}${sairam.length}</b> saíram</span><span${viraramIF0.length ? ' class="dn"' : ''}><b>${viraramIF0.length}</b> passaram para IF0 (cancelaram)</span></div>`
-      + (entraram.length ? `<details><summary>Ver as ${entraram.length} empresas que entraram</summary><p class="note">${lk(entraram)}</p></details>` : '')
-      + (sairam.length ? `<details><summary>Ver as ${sairam.length} empresas que saíram</summary><p class="note">${lk(sairam)}</p></details>` : '');
+    HMOV = { antes: H.per[k - 1], agora: H.per[k], antesA, atualA, entraram, sairam, if0: viraramIF0 };
+    const chip = (q, cls, txt, tit) => q ? `<button type="button" class="${cls}" data-hmov="${tit}">${txt}</button>` : `<span>${txt}</span>`;
+    h += `<div class="hmov"><span>Desde ${nomePer}</span>${chip(entraram.length, 'up', `<b>+${entraram.length}</b> entraram`, 'entraram')}${chip(sairam.length, 'dn', `<b>−${sairam.length}</b> saíram`, 'sairam')}${chip(viraramIF0.length, 'dn', `<b>${viraramIF0.length}</b> passaram para IF0 (cancelaram)`, 'if0')}</div>`;
     const mf = movimentacao(antesA, atualA, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa', labs[k - 1], labs[k]);
     const mi = movimentacao(antesA, atualA, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => f, labs[k - 1], labs[k]);
     const snapsF = H.per.map(p => filtra(H.snap[p]));
@@ -2807,7 +2849,7 @@ function extrasCarteira() {
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-top]'); if (t) { TOP_POR = t.dataset.top; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   const fx = e.target.closest('[data-topfx]'); if (fx) { TOP_FAIXA = fx.dataset.topfx; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
-  const em = e.target.closest('[data-emp]'); if (em) { EMP_ID = em.dataset.emp; trocarAba('empresa'); window.scrollTo({ top: 0 }); }
+  const em = e.target.closest('[data-emp]'); if (em) { if ($('#modal').open) $('#modal').close(); EMP_ID = em.dataset.emp; trocarAba('empresa'); window.scrollTo({ top: 0 }); }
 });
 
 // ===== Fontes dos dados (documentação de origem e frequência) =====
