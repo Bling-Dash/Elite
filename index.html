@@ -612,6 +612,21 @@ h3.tit-ctl .dica{margin-left:0}
 
 /* GEM: formulário de inclusão */
 #gemform input{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
+
+/* Histórico: filtros numa linha, no mesmo estilo dos seletores do topo; cards e resumo mais limpos */
+#tab-historico>.heatctl{display:inline-flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:16px 18px 0 0!important;vertical-align:middle}
+#tab-historico .heatctl label{display:inline-flex;align-items:center;gap:8px;font:500 13px/1.2 var(--ff);color:var(--mut)}
+#tab-historico .heatctl .seg{margin-left:0!important}
+#tab-historico .heatctl label:has(> .seg button[data-h2="sub"]){display:none}
+#tab-historico .heatctl select{appearance:none;-webkit-appearance:none;margin:0;padding:7px 34px 7px 14px!important;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23999' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center/12px 8px!important;color:var(--tx2)!important;font-weight:500!important;cursor:pointer;min-width:150px}
+#tab-historico .heatctl input{margin:0;padding:7px 14px!important;background:var(--card)!important;min-width:260px}
+#tab-historico p.hsub{margin:18px 0 12px;font:400 13px/1.4 var(--ff);color:var(--mut)}
+#tab-historico p.hsub b{color:var(--tx2);font-weight:600}
+.hkpis .kpi b{white-space:nowrap;font-size:22px}
+.hmov{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px;font:500 12.5px/1.2 var(--ff);color:var(--mut)}
+.hmov span:not(:first-child){padding:5px 10px;border-radius:999px;background:var(--card2);color:var(--tx2)}
+.hmov .up b{color:var(--ac)}.hmov .dn b{color:var(--rk)}
+@media (max-width:960px){#tab-historico>.heatctl{display:flex}#tab-historico .heatctl input{min-width:0;width:100%}}
 </style>
 </head>
 <body>
@@ -965,6 +980,8 @@ const fmtMoney = n => n == null ? '–' : 'R$ ' + n.toLocaleString('pt-BR', { mi
 const fmtPctExact = n => n == null ? '–' : n.toLocaleString('pt-BR', { maximumFractionDigits: 10 }) + '%';
 const fmtPct1 = n => n == null ? '–' : n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 const fmtMil = n => (n == null ? '–' : 'R$ ' + Math.round(n).toLocaleString('pt-BR'));
+// valor curto para cards estreitos: R$ 3,17 mi · R$ 1,09 bi · R$ 30,6 mil
+const fmtCurto = n => n == null ? '–' : Math.abs(n) >= 1e9 ? 'R$ ' + (n / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' bi' : Math.abs(n) >= 1e6 ? 'R$ ' + (n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi' : Math.abs(n) >= 1e3 ? 'R$ ' + (n / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : fmtMil(n);
 const fmtMi = n => (n == null ? '–' : 'R$ ' + (n / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mi');
 const pct = (a, b) => (b ? (100 * a / b).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%' : '–');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2258,7 +2275,7 @@ function renderHistorico() {
   const box = document.getElementById('tab-historico');
   seletorCarteiraHist(false);                                     // histCsm mostra de novo quando for a visão das carteiras
   const seg = (k, ops) => `<span class="seg">${ops.map(([v, l]) => `<button type="button" data-h2="${k}" data-v="${v}" class="${HV2[k] === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
-  let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)'], ['comparar', 'Comparador']])}</label><label>Período:${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
+  let h = `<div class="heatctl" style="margin-top:16px"><label>Visão:${seg('sub', [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras (CSM)'], ['comparar', 'Comparador']])}</label><label>Período${seg('gran', [['mes', 'Mês a mês'], ['semana', 'Semana a semana']])}</label></div>`;
   if (!histDisponivel()) { box.innerHTML = h + '<p class="note">O histórico usa os dados automáticos do Drive (configure o WEBAPP_URL).</p>'; return; }
   const H = HIST[HV2.gran];
   if (!H) { box.innerHTML = h + '<p class="note">Carregando histórico…</p>'; carregarHist(HV2.gran); return; }
@@ -2355,8 +2372,8 @@ function histElite(H) {
   const carteiras = [...new Set([...H.per.flatMap(p => H.snap[p].map(x => x.csm)), ...carteirasAoVivo()].filter(Boolean))].sort();
   const empresas = ult.filter(x => !HV2.carteira || x.csm === HV2.carteira).sort((p, q) => p.nome.localeCompare(q.nome));
   const empSel = HV2.empresa ? ult.find(x => x.id === HV2.empresa) : null;
-  let h = `<div class="heatctl"><label>Carteira: <select data-h2f="carteira"><option value="">Todas</option>${carteiras.map(c => `<option${c === HV2.carteira ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
-    <label>Empresa: <input data-h2f="empresa" list="h2emp" placeholder="Todas as empresas" value="${empSel ? esc(empSel.nome + ' · ' + empSel.id) : ''}"></label><datalist id="h2emp">${empresas.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">`).join('')}</datalist></div>`;
+  let h = `<div class="heatctl"><label>Carteira<select data-h2f="carteira"><option value="">Todas</option>${carteiras.map(c => `<option${c === HV2.carteira ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+    <label>Empresa<input data-h2f="empresa" list="h2emp" placeholder="Todas as empresas" value="${empSel ? esc(empSel.nome + ' · ' + empSel.id) : ''}"></label><datalist id="h2emp">${empresas.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">`).join('')}</datalist></div>`;
   const labs = H.per.map(rotulo);
   const filtra = arr => arr.filter(x => (!HV2.carteira || x.csm === HV2.carteira) && (!HV2.empresa || x.id === HV2.empresa));
   const P = H.per.map(p => metricas(filtra(H.snap[p])));
@@ -2364,11 +2381,11 @@ function histElite(H) {
   if (HV2.carteira && !H.per.some(p => H.snap[p].some(x => x.csm === HV2.carteira)))
     h += `<p class="note">A carteira <b>${esc(HV2.carteira)}</b> é nova: já está nos dados de hoje (${fmtInt(ALL.filter(a => a.csm === HV2.carteira).length)} empresas), mas ainda não entrou em nenhuma foto gravada do histórico. Os números dela aparecem aqui a partir da próxima foto, sem precisar fazer nada. Enquanto isso, veja a carteira em Gestão de Carteira escolhendo ${esc(HV2.carteira)} no seletor do topo.</p>`;
   const nomePer = HV2.gran === 'mes' ? 'o mês anterior' : 'a semana anterior';
-  h += `<p class="lead">${empSel ? esc(empSel.nome) : (HV2.carteira ? 'Carteira ' + esc(HV2.carteira) : 'Todo o plano Elite')} · último período: <b>${rotulo(H.per[k])}</b>${prev ? ' · setas comparam com ' + nomePer : ''}</p>`;
-  h += `<div class="kpis">${[
+  h += `<p class="lead hsub"><b>${empSel ? esc(empSel.nome) : (HV2.carteira ? 'Carteira ' + esc(HV2.carteira) : 'Todo o plano Elite')}</b> · ${rotulo(H.per[k])}${prev ? ` · comparado com ${rotulo(H.per[k - 1])}` : ''}</p>`;
+  h += `<div class="kpis hkpis">${[
     kpiBox(fmtInt(pk.n), 'empresas', delta(pk.n, prev && prev.n)), kpiBox(fmtInt(pk.ativos), 'com contrato ativo', delta(pk.ativos, prev && prev.ativos)),
     kpiBox((pk.hs == null ? '–' : Math.round(pk.hs)), 'Health Score médio', delta(pk.hs && Math.round(pk.hs), prev && prev.hs && Math.round(prev.hs))),
-    kpiBox(fmtMil(pk.mrr), 'MRR', delta(pk.mrr, prev && prev.mrr, fmtMil)), kpiBox(fmtMi(pk.gmv), 'GMV (CustomerX)', delta(pk.gmv, prev && prev.gmv, fmtMi)),
+    kpiBox(fmtCurto(pk.mrr), 'MRR', delta(pk.mrr, prev && prev.mrr, fmtCurto)), kpiBox(fmtCurto(pk.gmv), 'GMV (CustomerX)', delta(pk.gmv, prev && prev.gmv, fmtCurto)),
     kpiBox(fmtInt(pk.IFc.IF0), 'IF0 · cancelados', delta(pk.IFc.IF0, prev && prev.IFc.IF0, fmtInt, true)), kpiBox(fmtInt(pk.risco), 'com motivo de risco', delta(pk.risco, prev && prev.risco, fmtInt, true)),
   ].join('')}</div>`;
   if (prev) {
@@ -2376,7 +2393,10 @@ function histElite(H) {
     const idsAntes = new Set(antesA.map(x => x.id)), idsAgora = new Set(atualA.map(x => x.id));
     const entraram = atualA.filter(x => !idsAntes.has(x.id)), sairam = antesA.filter(x => !idsAgora.has(x.id));
     const viraramIF0 = atualA.filter(x => x.IF === 'IF0' && (antesA.find(y => y.id === x.id) || {}).IF !== 'IF0');
-    h += `<p class="note">Desde ${nomePer}: <b>${entraram.length}</b> entraram na base · <b>${sairam.length}</b> saíram · <b>${viraramIF0.length}</b> passaram para IF0 (cancelaram).${entraram.length ? ' Entraram: ' + entraram.slice(0, 12).map(x => esc(x.nome)).join(', ') + (entraram.length > 12 ? '…' : '') : ''}</p>`;
+    const lk = l => l.map(x => `<span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span>`).join(', ');
+    h += `<div class="hmov"><span>Desde ${nomePer}</span><span${entraram.length ? ' class="up"' : ''}><b>${entraram.length ? '+' : ''}${entraram.length}</b> entraram</span><span${sairam.length ? ' class="dn"' : ''}><b>${sairam.length ? '−' : ''}${sairam.length}</b> saíram</span><span${viraramIF0.length ? ' class="dn"' : ''}><b>${viraramIF0.length}</b> passaram para IF0 (cancelaram)</span></div>`
+      + (entraram.length ? `<details><summary>Ver as ${entraram.length} empresas que entraram</summary><p class="note">${lk(entraram)}</p></details>` : '')
+      + (sairam.length ? `<details><summary>Ver as ${sairam.length} empresas que saíram</summary><p class="note">${lk(sairam)}</p></details>` : '');
     const mf = movimentacao(antesA, atualA, x => x.fx, [0, 1, 2, 3, 4, 5, 6, 7], f => f ? 'Faixa ' + f : 'Sem faixa', labs[k - 1], labs[k]);
     const mi = movimentacao(antesA, atualA, x => x.IF, ['IF0', 'IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'], f => f, labs[k - 1], labs[k]);
     const snapsF = H.per.map(p => filtra(H.snap[p]));
