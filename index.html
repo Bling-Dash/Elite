@@ -601,6 +601,9 @@ h3.tit-ctl .dica{margin-left:0}
 /* "i" dentro do título de um cartão */
 .card h3 .dica-card{margin-left:6px;vertical-align:middle}
 .card h3 .dica-card .dica-txt{font-weight:400}
+
+/* GEM: formulário de inclusão */
+#gemform input{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
 </style>
 </head>
 <body>
@@ -645,6 +648,7 @@ h3.tit-ctl .dica{margin-left:0}
 <section id="tab-empresa" hidden></section>
 <section id="tab-historico" hidden></section>
 <section id="tab-localizacao" hidden></section>
+<section id="tab-gems" hidden></section>
 <footer class="rodape">O crescimento do empreendedor flui primeiro através de nós.</footer>
 </main>
 </div>
@@ -1556,7 +1560,7 @@ render = function () {
   for (const k in HIST) if (HIST[k] && HIST[k].erro) delete HIST[k];   // dados recarregados: tenta o histórico de novo
   renderCarteira(); if (temDados()) { extrasCarteira(); organizarTemas(); } renderAbaAtual();
 };
-function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); }
+function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); else if (TAB === 'gems') renderGems(); }
 // Histórico das carteiras: mostra o campo "Carteira" ao lado de "Dados de" e esconde o seletor do topo (senão o nome aparece duas vezes)
 (function statusNoI() {
   const st = document.getElementById('status'), hint = document.querySelector('.loader > .hint');
@@ -1578,13 +1582,13 @@ function trocarAba(t) {
   TAB = t;
   seletorCarteiraHist(false);                                     // o seletor de carteira só existe no Histórico das carteiras
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['carteira', 'empresa', 'historico', 'localizacao'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
+  ['carteira', 'empresa', 'historico', 'localizacao', 'gems'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
   const h = t === 'carteira' ? '' : '#' + t + (t === 'empresa' && EMP_ID ? '=' + encodeURIComponent(EMP_ID) : '');
   history.replaceState(null, '', location.pathname + location.search + h);
   renderAbaAtual();
 }
 document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) trocarAba(b.dataset.tab); });
-{ const m = location.hash.match(/^#(empresa|historico|localizacao)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); setTimeout(() => trocarAba(m[1]), 0); } }
+{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); setTimeout(() => trocarAba(m[1]), 0); } }
 
 const kpiBox = (v, l, extra = '') => `<div class="kpi"><b>${v}</b><span>${l}</span>${extra ? `<div>${extra}</div>` : ''}</div>`;
 const temDados = () => typeof ALL !== 'undefined' && ALL && ALL.length;
@@ -2969,6 +2973,40 @@ document.getElementById('exportAll').addEventListener('click', e => {
 });
 </script>
 <script>
+// ===== GEM: atalhos para os Gems do Gemini, num lugar só =====
+// O Gemini não deixa abrir um Gem dentro de outra página e a API não acessa Gems salvos, então cada card abre o Gem numa nova aba.
+const GEMS_FIXOS = [
+  { nome: 'CS - Copilot', url: 'https://gemini.google.com/gem/1czD-O-WDh81dNhEotdSbmw7LCQNYHsIb',
+    resumo: 'Reúne treinamentos, processos e conteúdos da Central de Ajuda para esclarecer dúvidas técnicas e apoiar os CSMs em atendimentos mais seguros e autônomos.' },
+  { nome: 'Gem CS Ops', url: 'https://gemini.google.com/gem/1xCqTOwpRZWbyrAWbE0QfnAhJoH-YhPqX',
+    resumo: 'Analisa a planilha Base Elite Clientes: responde perguntas sobre a carteira Elite a partir dos dados da base.' },
+];
+// ponytail: Gems incluídos pelo usuário ficam só no navegador dele (localStorage). Para todos verem, mover para o Apps Script.
+const gemsMeus = () => { try { return JSON.parse(localStorage.getItem('gemsMeus')) || []; } catch (_) { return []; } };
+const gemsSalvar = l => { try { localStorage.setItem('gemsMeus', JSON.stringify(l)); } catch (_) {} };
+function renderGems() {
+  const card = (g, i) => `<div class="card"><h3>${esc(g.nome)}</h3><p class="note">${esc(g.resumo || 'Sem descrição.')}</p>
+    <p style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><a class="expbtn" href="${esc(g.url)}" target="_blank" rel="noopener">Abrir no Gemini ↗</a>${i == null ? '' : `<button type="button" class="expbtn" data-gemdel="${i}">Remover</button>`}</p></div>`;
+  document.getElementById('tab-gems').innerHTML = `<h2>GEM</h2><p class="note">Assistentes do Gemini usados na operação. Cada um abre numa nova aba.</p>
+  <div class="grid">${GEMS_FIXOS.map(g => card(g)).join('')}${gemsMeus().map(card).join('')}</div>
+  <form class="card" id="gemform" style="margin-top:12px;display:grid;gap:8px"><h3>Incluir Gem</h3>
+    <input id="gemnome" required maxlength="80" placeholder="Nome do Gem" aria-label="Nome do Gem">
+    <input id="gemurl" required type="url" pattern="https://gemini\.google\.com/.+" title="Link do Gem (https://gemini.google.com/gem/...)" placeholder="https://gemini.google.com/gem/..." aria-label="Link do Gem">
+    <input id="gemresumo" maxlength="300" placeholder="Breve resumo (opcional)" aria-label="Breve resumo">
+    <p><button type="submit" class="expbtn">Incluir</button> <span class="note">Fica salvo só neste navegador.</span></p></form>`;
+}
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'gemform') return;
+  e.preventDefault();
+  const v = id => document.getElementById(id).value.trim();
+  gemsSalvar([...gemsMeus(), { nome: v('gemnome'), url: v('gemurl'), resumo: v('gemresumo') }]); renderGems();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-gemdel]'); if (!b || !confirm('Remover este Gem da lista?')) return;
+  const l = gemsMeus(); l.splice(+b.dataset.gemdel, 1); gemsSalvar(l); renderGems();
+});
+</script>
+<script>
 // ===== Navegação no estilo do Bling: menu lateral com submenus + menus suspensos na barra =====
 (function () {
   const ICO = {
@@ -2976,6 +3014,7 @@ document.getElementById('exportAll').addEventListener('click', e => {
     empresa: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg>',
     historico: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>',
     localizacao: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    gems: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>',
   };
   const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
   const SETA = '<svg class="seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -3000,10 +3039,11 @@ document.getElementById('exportAll').addEventListener('click', e => {
       return r;
     }
     if (tab === 'localizacao') return [{ k: 'mapa', l: 'Estados e cidades', on: TAB === 'localizacao' }];
+    if (tab === 'gems') return [{ k: 'lista', l: 'Meus Gems', on: TAB === 'gems' }];
     return [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras'], ['comparar', 'Comparador']].map(([k, l]) => ({ k, l, on: TAB === 'historico' && HV2.sub === k }));
   }
-  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização']];
-  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false };
+  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização'], ['gems', 'GEM']];
+  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false, gems: false };
 
   function syncNav() {
     aberto[TAB] = true;
@@ -3023,6 +3063,7 @@ document.getElementById('exportAll').addEventListener('click', e => {
     if (g === 'carteira') { TEMA = k; try { localStorage.setItem('tema', k); } catch (_) {} trocarAba('carteira'); if (temDados()) organizarTemas(); }
     else if (g === 'empresa') { if (k === 'lista') EMP_ID = ''; trocarAba('empresa'); }
     else if (g === 'localizacao') trocarAba('localizacao');
+    else if (g === 'gems') trocarAba('gems');
     else { HV2.sub = k; trocarAba('historico'); }
     window.scrollTo({ top: 0 });
     fecharGaveta();
