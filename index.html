@@ -217,6 +217,12 @@ body{font-family:var(--ff);font-size:14px;background:var(--bg);scrollbar-color:v
 .pagehead{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 22px 12px}
 .ph-l{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
 .crumb{color:var(--btn);font-weight:700;font-size:18px;letter-spacing:.02em}
+/* divisor do título alinhado ao fim do menu lateral (4px + 248px do .shell − 22px do .pagehead) e filtros alinhados ao conteúdo */
+.ph-tit{display:flex;align-items:center;gap:10px;box-sizing:border-box;min-width:230px;padding-right:16px;margin-right:8px;border-right:1px solid var(--bd2)}
+.ph-tit h1#title{border-right:0;padding-right:0;margin:0}
+body.side-off .ph-tit{min-width:0}
+#tab-gems .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#tab-gems .grid>.card{display:flex;flex-direction:column}
 h1#title{font-size:22px;font-weight:700;letter-spacing:0;margin:0 6px 0 0;padding-right:16px;border-right:1px solid var(--bd2);line-height:1.2}
 .pillsel select{appearance:none;-webkit-appearance:none;padding:7px 34px 7px 14px;border:1px solid var(--bd2);border-radius:var(--r);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23999' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center/12px 8px;color:var(--tx2);font:500 13px/1.2 var(--ff);cursor:pointer;max-width:320px}
 .ph-r{display:flex;gap:10px;align-items:center}
@@ -315,6 +321,8 @@ button:focus-visible,.ck:focus-visible,a:focus-visible,select:focus-visible,inpu
   .pagehead{padding:12px 14px}
   h1#title{font-size:19px;border-right:0;padding-right:0}
   .crumb{display:none}
+  .ph-tit{min-width:0;border-right:0;padding-right:0;margin-right:0}
+  #tab-gems .grid{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){.ph-r{width:100%}.ph-r>*{flex:1}.pillsel,.pillsel select{width:100%;max-width:none}.frow>.row,.fld,.fld .inl{width:100%}#periodo,#wtoken{min-width:0;flex:1}}
 @media (prefers-reduced-motion:reduce){.side,.sg>button .chev{transition:none}}
@@ -619,7 +627,7 @@ h3.tit-ctl .dica{margin-left:0}
   <div class="appact"><button id="theme" type="button" class="iconbtn" title="Alternar tema" aria-label="Alternar tema"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></button></div>
 </header>
 <div class="pagehead">
-  <div class="ph-l"><span class="crumb" aria-hidden="true">… ›</span><h1 id="title">Gestão de Carteira</h1>
+  <div class="ph-l"><div class="ph-tit"><span class="crumb" aria-hidden="true">… ›</span><h1 id="title">Gestão de Carteira</h1></div>
     <div class="ph-filtros">
       <label class="pillsel fld-inl" id="fldCarteira"><span>Carteira</span><select id="csm"><option>—</option></select></label>
       <label class="pillsel fld-inl" id="fldCarteiraHist" hidden><span>Carteira</span><select id="hCarteira" data-h2f="csm"></select></label>
@@ -1588,7 +1596,7 @@ function trocarAba(t) {
   renderAbaAtual();
 }
 document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) trocarAba(b.dataset.tab); });
-{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); setTimeout(() => trocarAba(m[1]), 0); } }
+{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); document.addEventListener('DOMContentLoaded', () => trocarAba(m[1])); } } // espera os <script> seguintes (renderGems etc.)
 
 const kpiBox = (v, l, extra = '') => `<div class="kpi"><b>${v}</b><span>${l}</span>${extra ? `<div>${extra}</div>` : ''}</div>`;
 const temDados = () => typeof ALL !== 'undefined' && ALL && ALL.length;
@@ -2980,6 +2988,8 @@ const GEMS_FIXOS = [
     resumo: 'Reúne treinamentos, processos e conteúdos da Central de Ajuda para esclarecer dúvidas técnicas e apoiar os CSMs em atendimentos mais seguros e autônomos.' },
   { nome: 'Gem CS Ops', url: 'https://gemini.google.com/gem/1xCqTOwpRZWbyrAWbE0QfnAhJoH-YhPqX',
     resumo: 'Analisa a planilha Base Elite Clientes: responde perguntas sobre a carteira Elite a partir dos dados da base.' },
+  { nome: 'Especialista API & Rate Limit – CSM Bling', url: 'https://gemini.google.com/gem/1HafWKox5peQ2ApzyPo_AEKE8bViHbl0h',
+    resumo: 'Analisa logs e métricas de API do Bling a partir de planilhas e prints do Metabase e sugere a abordagem com o cliente. Ex.: "Analise a conta do cliente XXXX e gere a abordagem."' },
 ];
 // Gems incluídos pelos usuários: lista única no Apps Script (acao=gems, gemsLista_ em gems.gs), todos veem a mesma.
 let GEMS_COMP = null, GEMS_MSG = '';
@@ -2991,7 +3001,7 @@ async function gemsChamar(extra) {
 function renderGems() {
   if (GEMS_COMP === null && !GEMS_MSG) { GEMS_MSG = 'Carregando os Gems da equipe…'; gemsChamar(''); }
   const card = g => `<div class="card"><h3>${esc(g.nome)}</h3><p class="note">${esc(g.resumo || 'Sem descrição.')}</p>
-    <p style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><a class="expbtn" href="${esc(g.url)}" target="_blank" rel="noopener">Abrir no Gemini ↗</a>${g.id ? `<button type="button" class="expbtn" data-gemdel="${esc(g.id)}">Remover</button>` : ''}</p></div>`;
+    <p style="margin-top:auto;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap"><a class="expbtn" href="${esc(g.url)}" target="_blank" rel="noopener">Abrir no Gemini ↗</a>${g.id ? `<button type="button" class="expbtn" data-gemdel="${esc(g.id)}">Remover</button>` : ''}</p></div>`;
   document.getElementById('tab-gems').innerHTML = `<h2>GEM</h2><p class="note">Assistentes do Gemini usados na operação. Cada um abre numa nova aba.</p>
   <div class="grid">${GEMS_FIXOS.map(card).join('')}${(GEMS_COMP || []).map(card).join('')}</div>${GEMS_MSG ? `<p class="note" role="status">${esc(GEMS_MSG)}</p>` : ''}
   <form class="card" id="gemform" style="margin-top:12px;display:grid;gap:8px"><h3>Incluir Gem</h3>
