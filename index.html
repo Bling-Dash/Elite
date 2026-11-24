@@ -682,6 +682,7 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 <section id="tab-historico" hidden></section>
 <section id="tab-localizacao" hidden></section>
 <section id="tab-gems" hidden></section>
+<section id="tab-qbr" hidden></section>
 <footer class="rodape">O crescimento do empreendedor flui primeiro através de nós.</footer>
 </main>
 </div>
@@ -1596,7 +1597,9 @@ render = function () {
   for (const k in HIST) if (HIST[k] && HIST[k].erro) delete HIST[k];   // dados recarregados: tenta o histórico de novo
   renderCarteira(); if (temDados()) { extrasCarteira(); organizarTemas(); } renderAbaAtual();
 };
-function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); else if (TAB === 'gems') renderGems(); }
+function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); else if (TAB === 'gems') renderGems(); else if (TAB === 'qbr') renderQbr(); }
+// QBR (revisão trimestral do cliente): por enquanto só a estrutura da aba
+function renderQbr() { document.getElementById('tab-qbr').innerHTML = '<h2>QBR</h2><p class="note">Revisão trimestral de negócios (Quarterly Business Review). Em construção.</p>'; }
 // Histórico das carteiras: mostra o campo "Carteira" ao lado de "Dados de" e esconde o seletor do topo (senão o nome aparece duas vezes)
 (function statusNoI() {
   const st = document.getElementById('status'), hint = document.querySelector('.loader > .hint');
@@ -1617,12 +1620,12 @@ function seletorCarteiraHist(mostrar) {
 function trocarAba(t) {
   TAB = t;
   seletorCarteiraHist(false);                                     // o seletor de carteira só existe no Histórico das carteiras
-  ['carteira', 'empresa', 'historico', 'localizacao', 'gems'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
+  ['carteira', 'empresa', 'historico', 'localizacao', 'gems', 'qbr'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
   const h = t === 'carteira' ? '' : '#' + t + (t === 'empresa' && EMP_ID ? '=' + encodeURIComponent(EMP_ID) : '');
   history.replaceState(null, '', location.pathname + location.search + h);
   renderAbaAtual();
 }
-{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); document.addEventListener('DOMContentLoaded', () => trocarAba(m[1])); } } // espera os <script> seguintes (renderGems etc.)
+{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems|qbr)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); document.addEventListener('DOMContentLoaded', () => trocarAba(m[1])); } } // espera os <script> seguintes (renderGems etc.)
 
 const kpiBox = (v, l, extra = '') => `<div class="kpi"><b>${v}</b><span>${l}</span>${extra ? `<div>${extra}</div>` : ''}</div>`;
 const temDados = () => typeof ALL !== 'undefined' && ALL && ALL.length;
@@ -3100,6 +3103,7 @@ document.addEventListener('click', e => {
     empresa: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg>',
     historico: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>',
     localizacao: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    qbr: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 14v3M12 12v5M16 15v2"/></svg>',
     gems: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>',
   };
   const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
@@ -3125,11 +3129,12 @@ document.addEventListener('click', e => {
       return r;
     }
     if (tab === 'localizacao') return [{ k: 'mapa', l: 'Estados e cidades', on: TAB === 'localizacao' }];
+    if (tab === 'qbr') return [{ k: 'qbr', l: 'Revisão trimestral', on: TAB === 'qbr' }];
     if (tab === 'gems') return [{ k: 'lista', l: 'Meus Gems', on: TAB === 'gems' }];
     return [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras'], ['comparar', 'Comparador']].map(([k, l]) => ({ k, l, on: TAB === 'historico' && HV2.sub === k }));
   }
-  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização'], ['gems', 'GEM']];
-  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false, gems: false };
+  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização'], ['gems', 'GEM'], ['qbr', 'QBR']];
+  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false, gems: false, qbr: false };
 
   function syncNav() {
     aberto[TAB] = true;
@@ -3146,6 +3151,7 @@ document.addEventListener('click', e => {
     else if (g === 'empresa') { if (k === 'lista') EMP_ID = ''; trocarAba('empresa'); }
     else if (g === 'localizacao') trocarAba('localizacao');
     else if (g === 'gems') trocarAba('gems');
+    else if (g === 'qbr') trocarAba('qbr');
     else { HV2.sub = k; trocarAba('historico'); }
     window.scrollTo({ top: 0 });
     fecharGaveta();
