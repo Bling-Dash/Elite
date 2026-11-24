@@ -628,6 +628,17 @@ h3.tit-ctl .dica{margin-left:0}
 button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--accent-green)}button[data-hmov]::after{content:' ›';color:var(--mut)}
 .hmov .up b{color:var(--ac)}.hmov .dn b{color:var(--rk)}
 @media (max-width:960px){#tab-historico>.heatctl{display:flex}#tab-historico .heatctl input{min-width:0;width:100%}}
+/* KPIs do topo: Health Score ocupando 3 linhas + 3×3 cards do mesmo tamanho, número sem quebra */
+#kpis{grid-template-columns:minmax(220px,1fr) repeat(3,minmax(0,1fr))!important;gap:12px}
+#kpis .khero{grid-row:span 3}
+#kpis .kpi:not(.khero){min-height:118px;padding:16px 18px}
+#kpis .kpi:not(.khero) b{font-size:26px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;margin-bottom:4px}
+#kpis .kpi:not(.khero)>span{font-size:13px;line-height:1.35}
+#kpis .kpi:not(.khero) .kx{margin-top:auto;padding-top:8px}
+#kpis .kxl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#kpis .kxl .lk{white-space:nowrap}
+@media (max-width:1100px){#kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}#kpis .khero{grid-row:auto}}
+@media (max-width:640px){#kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}#kpis .kpi:not(.khero) b{font-size:22px}}
 </style>
 </head>
 <body>
@@ -1161,18 +1172,19 @@ function render() {
       [fmtScore(hsM), `Health Score médio · ${sub('Health Score · Crítico', crit, plural(crit.length, 'crítica', 'críticas'))}${hs0.length ? ` · ${sub('Status Finalizado · fora da média', hs0, `${plural(hs0.length, 'finalizada', 'finalizadas')} fora da média`, { resumo: 'Contas com Status "Finalizado" na Exportação de Clientes não entram na média, igual à plataforma CX.' })}` : ''}`,
         'Health Score médio · contas que entram na média', hsAcc, { resumo: hsAcc.length ? `Média = soma dos HS (${fmtInt(hsSoma)}) ÷ ${hsAcc.length} contas = <b>${hsM.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>. Contas com Status Finalizado ficam fora (${hs0.length}).` : '' }],
       [fmtInt(ACC.length), 'empresas', 'Empresas', ACC, { resumo: `${ACC.length} contas da Exportação de Clientes neste filtro.` }],
-      [fmtMi(gmvT), 'GMV último mês', 'GMV último mês', gmvAcc, { sort: desc('gmv'), resumo: `Soma do GMV do último mês de ${gmvAcc.length} contas: <b>${fmtMoney(gmvT)}</b>. Ordenado do maior para o menor.` }],
-      [fmtInt(pedT), 'pedidos/mês (média 3 meses)', 'Pedidos/mês (média 3 meses)', pedAcc, { sort: desc('media'), resumo: `Soma da média de pedidos (marketplace + API) de ${pedAcc.length} contas: <b>${fmtInt(pedT)}</b>.` }],
-      [fmtMil(sum(ACC, a => a.mrr)), `MRR (${cnt(ACC, a => a.mrr)} contas com dado)`, 'MRR', mrrAcc, { sort: desc('mrr'), resumo: `Soma do MRR de ${mrrAcc.length} contas: <b>${fmtMoney(sum(ACC, a => a.mrr))}</b>.` }],
-      [fmtInt(sum(ACC, a => a.tickets)), `tickets nos últimos 90 dias · ${ACC.some(a => a.ticketsSug != null) ? `<span class="tkdiv"><span>${fmtInt(sum(ACC, a => a.ticketsDP))} dúvidas e problemas</span><span>${fmtInt(sum(ACC, a => a.ticketsSug))} sugestões</span></span>` : ''}${sub('Contas com mais de 5 tickets nos últimos 90 dias', tk3, plural(tk3.length, 'conta com mais de 5', 'contas com mais de 5'), { sort: desc('tickets') })}`, 'Clientes que mais abriram tickets nos últimos 90 dias', tkAcc, { ticketsRanking: true, sort: desc('tickets'), resumo: `Total de ${fmtInt(sum(ACC, a => a.tickets))} tickets em ${tkAcc.length} contas.` }],
-      [fmtInt(certAl.length), `certificados vencidos ou vencendo em ${CERT_DIAS} dias · <span class="tkdiv"><span>${sub('Certificado digital vencido', certVen, plural(certVen.length, 'vencido', 'vencidos'), certOpts)}</span><span>${sub(`Certificado digital vence nos próximos ${CERT_DIAS} dias`, certPrx, `${fmtInt(certPrx.length)} vence${certPrx.length === 1 ? '' : 'm'} em até ${CERT_DIAS} dias`, certOpts)}</span></span>`, `Certificado digital vencido ou vencendo nos próximos ${CERT_DIAS} dias`, certAl, certOpts],
-      [nSeg, `grupos de segmento ${sub('Sem segmento na Cx', semSeg, `(+${semSeg.length} sem segmento)`)}`, 'Contas com segmento na Cx', comSeg, { sort: (a, b) => String(a.segGrupo).localeCompare(String(b.segGrupo)) || a.score - b.score }],
-      [`${acima.length}/${comp.length}`, 'contas com volume acima da faixa', 'Volume acima da faixa contratada', acima, { sort: desc('media'), resumo: `${acima.length} de ${comp.length} contas com faixa na tag estão acima da faixa contratada.` }],
+      [[fmtMi(gmvT), fmtMoney(gmvT)], 'GMV último mês', 'GMV último mês', gmvAcc, { sort: desc('gmv'), resumo: `Soma do GMV do último mês de ${gmvAcc.length} contas: <b>${fmtMoney(gmvT)}</b>. Ordenado do maior para o menor.` }],
+      [[pedT >= 1e6 ? (pedT / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi' : pedT >= 1e5 ? Math.round(pedT / 1e3).toLocaleString('pt-BR') + ' mil' : fmtInt(pedT), fmtInt(pedT) + ' pedidos'], 'pedidos/mês · média dos últimos 3 meses', 'Pedidos/mês (média 3 meses)', pedAcc, { sort: desc('media'), resumo: `Soma da média de pedidos (marketplace + API) de ${pedAcc.length} contas: <b>${fmtInt(pedT)}</b>.` }],
+      [[fmtCurto(sum(ACC, a => a.mrr)), fmtMoney(sum(ACC, a => a.mrr))], `MRR · ${cnt(ACC, a => a.mrr)} contas com dado`, 'MRR', mrrAcc, { sort: desc('mrr'), resumo: `Soma do MRR de ${mrrAcc.length} contas: <b>${fmtMoney(sum(ACC, a => a.mrr))}</b>.` }],
+      [fmtInt(sum(ACC, a => a.tickets)), `tickets nos últimos 90 dias · ${ACC.some(a => a.ticketsSug != null) ? `${fmtInt(sum(ACC, a => a.ticketsDP))} dúvidas e problemas · ${fmtInt(sum(ACC, a => a.ticketsSug))} sugestões · ` : ''}${sub('Contas com mais de 5 tickets nos últimos 90 dias', tk3, plural(tk3.length, 'conta com mais de 5', 'contas com mais de 5'), { sort: desc('tickets') })}`, 'Clientes que mais abriram tickets nos últimos 90 dias', tkAcc, { ticketsRanking: true, sort: desc('tickets'), resumo: `Total de ${fmtInt(sum(ACC, a => a.tickets))} tickets em ${tkAcc.length} contas.` }],
+      [fmtInt(certAl.length), `certificados em alerta · ${sub('Certificado digital vencido', certVen, plural(certVen.length, 'vencido', 'vencidos'), certOpts)} · ${sub(`Certificado digital vence nos próximos ${CERT_DIAS} dias`, certPrx, `${fmtInt(certPrx.length)} vence${certPrx.length === 1 ? '' : 'm'} em até ${CERT_DIAS} dias`, certOpts)}`, `Certificado digital vencido ou vencendo nos próximos ${CERT_DIAS} dias`, certAl, certOpts],
+      [nSeg, `grupos de segmento${semSeg.length ? ` · ${sub('Sem segmento na Cx', semSeg, `+${semSeg.length} sem segmento`)}` : ''}`, 'Contas com segmento na Cx', comSeg, { sort: (a, b) => String(a.segGrupo).localeCompare(String(b.segGrupo)) || a.score - b.score }],
+      [`${acima.length}/${comp.length}`, 'acima da faixa de volume', 'Volume acima da faixa contratada', acima, { sort: desc('media'), resumo: `${acima.length} de ${comp.length} contas com faixa na tag estão acima da faixa contratada.` }],
       [`${mot.length}/${ACC.length}`, 'contas com motivo de risco', 'Contas com motivo de risco', mot]
     ];
     const regua = hsM == null ? '' : `<i class="kmeter" aria-hidden="true" style="--hb1:${HEALTH_BANDS.atencao}%;--hb2:${HEALTH_BANDS.saudavel}%"><i style="left:${Math.max(0, Math.min(100, hsM)).toFixed(1)}%"></i></i><span class="kscale" aria-hidden="true"><span>0</span><span style="left:${HEALTH_BANDS.atencao}%">${HEALTH_BANDS.atencao}</span><span style="left:${HEALTH_BANDS.saudavel}%">${HEALTH_BANDS.saudavel}</span><span>100</span></span>`;
     $('#kpis').innerHTML = tiles.map(([b, txt, title, acc, opts], i) => { const k = txt.indexOf(' · '), l1 = k >= 0 ? txt.slice(0, k) : txt, l2 = k >= 0 ? txt.slice(k + 3) : '';
-      return `<div class="kpi ck${i === 0 ? ' khero' : ''}" data-l="${reg(title, acc, opts)}" title="Clique para ver as contas"><b>${b}</b><span>${l1}</span>${l2 ? `<small class="kx">${l2}</small>` : ''}${i === 0 ? regua : ''}</div>`; }).join('');
+      const [bv, bt] = Array.isArray(b) ? b : [b, ''];
+      return `<div class="kpi ck${i === 0 ? ' khero' : ''}" data-l="${reg(title, acc, opts)}" title="${bt ? bt + ' · ' : ''}Clique para ver as contas"><b>${bv}</b><span>${l1}</span>${l2 ? `<small class="kx">${l2.split(' · ').map(x => `<span class="kxl">${x}</span>`).join('')}</small>` : ''}${i === 0 ? regua : ''}</div>`; }).join('');
   }
   { // Conferência: valores lidos da planilha (para comparar com o Excel)
     const st = arr => { const v = arr.filter(x => x != null).sort((p, q) => p - q); return v.length ? { n: v.length, min: v[0], med: v[v.length >> 1], max: v[v.length - 1], sum: v.reduce((p, q) => p + q, 0), acima100: v.filter(x => x > 100).length } : null; };
