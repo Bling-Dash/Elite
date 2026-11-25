@@ -643,6 +643,7 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 #kpis .kxl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:1100px){#kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}#kpis .khero{grid-row:auto}}
 @media (max-width:640px){#kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}#kpis .kpi:not(.khero) b{font-size:clamp(20px,11cqw,32px)}}
+.kseta{font-style:normal;font-size:.6em;margin-left:6px;vertical-align:middle}.kseta.up{color:var(--ac)}.kseta.down{color:var(--rk)}
 </style>
 </head>
 <body>
@@ -2148,9 +2149,10 @@ function renderEmpresa() {
   const m = a._m || {}, M = n => col(m, n);
   const req7 = N(M('Total Requisições Últimos 7 Dias')), apps = N(M('Aplicativos com Uso na API'));
   h += `<h2>${esc(a.nome)}</h2><p class="lead ident">${esc(a.razao)} · CNPJ ${esc(fmtCnpj(S(col(a._r, 'CNPJ/CPF')) || S(M('CNPJ'))))} · código ${esc(a.id)} · carteira <b>${esc(a.csm || '—')}</b> · ${esc(a.statusCx || '—')}</p>${a.link || a.linkCx || a.linkOcta ? `<div class="lbtns">${a.link ? `<a class="lbtn" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir no ADM ↗</a>` : ''}${a.linkCx ? `<a class="lbtn" href="${esc(a.linkCx)}" target="_blank" rel="noopener">Abrir no CX ↗</a>` : ''}${a.linkOcta ? `<a class="lbtn" href="${esc(a.linkOcta)}" target="_blank" rel="noopener">Abrir no Octa ↗</a>` : ''}</div>` : ''}`;
+  const ant = contasMesAnterior(), aAnt = ant.l && ant.l.find(x => x.id === a.id);
   h += `<div class="kpis">${[
     kpiBox(a.score == null ? '–' : a.score, `Health Score · ${esc(a.banda)} (${esc(a.scoreFonte)})`).replace('<b>', `<b style="color:${BAND_COLOR[a.banda] || 'inherit'}">`), kpiBox(esc(a.IF), esc(a.ifLabel || '')), kpiBox(esc(a.fx ? 'Faixa ' + a.fx : '—'), esc(a.fxLabel || 'sem faixa na tag')),
-    kpiBox(fmtMoney(a.mrr), 'MRR'), kpiBox(fmtMi(a.gmv), 'GMV último mês'), kpiBox(fmtInt(a.pedUlt), 'pedidos último mês'), kpiBox(fmtInt(a.media), 'pedidos/mês (média 3m)'),
+    kpiBox(fmtMoney(a.mrr), 'MRR'), kpiBox(fmtMi(a.gmv), 'GMV último mês'), kpiVsAnt(a.pedUlt, aAnt && aAnt.pedUlt, 'pedidos último mês', ant), kpiVsAnt(a.media, aAnt && aAnt.media, 'pedidos/mês (média 3m)', ant),
     `<div class="kpi ck" data-tk="${esc(a.id)}" title="Clique para ver os tickets"><b>${fmtInt(a.tickets)}</b><span class="lk">tickets nos últimos 90 dias</span>${a.ticketsSug != null ? `<span class="kx">${fmtInt(a.ticketsDP)} dúvidas e problemas · ${fmtInt(a.ticketsSug)} sugestões</span>` : ''}</div>`, kpiBox(fmtInt(req7), 'requisições de API (7 dias)'), kpiBox(fmtInt(apps), 'aplicativos com uso na API'),
     `<div class="kpi${a.certAlerta === 1 ? ' kpi-alerta' : ''}"><b>${fmtDate(a.certVenc)}</b><span>vencimento do certificado digital${a.certVenc ? ' · ' + certSitTxt(a) : ''}</span><small class="kx">comprou certificado no Bling: ${esc(certCompraTxt(a))}</small>${a.certAlerta === 1 ? '<small class="kalerta">⚠ Contatar o cliente para oferecer o certificado digital</small>' : ''}</div>`,
     kpiBox(a.api == null ? '–' : fmtPctExact(a.api), 'saúde da API (% 2xx)'), kpiBox(a.arm == null ? '–' : fmtPctExact(a.arm), 'armazenamento utilizado'),
@@ -2390,6 +2392,29 @@ function movimentacao(antes, depois, chave, ordem, nome, labA = 'antes', labB = 
 // A foto do histórico não guarda CNPJ, links nem plano: vêm da base completa do mês no Drive (?periodo=AAAA-MM; hoje = base carregada).
 let HMOV = null;
 const CONTAS_PER = {};
+// Ficha da empresa: contas do mês anterior ao que está aberto (cópia do fim do mês no Drive), para as setas de pedidos.
+// Carrega em segundo plano e redesenha a ficha; sem o mês no Drive, os KPIs ficam sem seta.
+const CONTAS_ANT = {};
+function contasMesAnterior() {
+  const per = $('#periodo') && $('#periodo').value !== 'atual' ? $('#periodo').value : new Date().toISOString().slice(0, 7);
+  const d = new Date(+per.slice(0, 4), +per.slice(5, 7) - 2, 1), m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  if (!(m in CONTAS_ANT)) {
+    CONTAS_ANT[m] = null;
+    if (histDisponivel()) contasDoMes(m).then(l => { CONTAS_ANT[m] = l; if (TAB === 'empresa') renderEmpresa(); }).catch(() => { CONTAS_ANT[m] = []; });
+  }
+  return { m, l: CONTAS_ANT[m] };
+}
+// KPI com seta (subiu/caiu em relação ao mês anterior) e o valor anterior no tooltip
+function kpiVsAnt(v, vAnt, l, ant) {
+  const mes = rotulo(ant.m);
+  let seta = '', dica = ant.l ? `Sem dado em ${mes}` : `Buscando ${mes}…`;
+  if (ant.l && v != null && vAnt != null) {
+    const dif = v - vAnt, pct = vAnt ? ` (${dif > 0 ? '+' : ''}${(dif / vAnt * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%)` : '';
+    dica = `Mês anterior (${mes}): ${fmtInt(vAnt)}${dif ? pct : ' · sem mudança'}`;
+    if (dif) seta = `<i class="kseta ${dif > 0 ? 'up' : 'down'}" aria-label="${dif > 0 ? 'subiu' : 'caiu'}">${dif > 0 ? '▲' : '▼'}</i>`;
+  }
+  return `<div class="kpi" title="${esc(dica)}"><b>${fmtInt(v)}${seta}</b><span>${l}</span></div>`;
+}
 const mesDoPer = p => {                                           // 2026-S46 → mês do domingo da semana (dia da última foto)
   if (!/S\d+$/.test(p)) return p;
   const [a, w] = p.split('-S'), j4 = Date.UTC(+a, 0, 4), dj4 = new Date(j4).getUTCDay() || 7;
@@ -2400,9 +2425,9 @@ function contasDoMes(m) {
   if (m >= hoje && $('#periodo') && $('#periodo').value === 'atual' && temDados()) return Promise.resolve(ALL);
   return CONTAS_PER[m] || (CONTAS_PER[m] = (async () => {
     const p = prepararPayload(await chamarWebApp('periodo=' + (m >= hoje ? 'atual' : m)));
-    const t = montarTabelas(p.metaRows, p.cxRows), tk = TICKETS, tkx = buildAccounts.TK;
-    TICKETS = null;                                               // não mexe nos tickets da tela aberta
-    try { return buildAccounts(t.cxRows, t.metaRows); } finally { TICKETS = tk; buildAccounts.TK = tkx; }
+    const t = montarTabelas(p.metaRows, p.cxRows), tk = TICKETS, tkx = buildAccounts.TK, ref = buildAccounts.REF, itk = buildAccounts.iTipoTk;
+    TICKETS = null;                                               // não mexe nos tickets nem na data de referência da tela aberta
+    try { return buildAccounts(t.cxRows, t.metaRows); } finally { TICKETS = tk; buildAccounts.TK = tkx; buildAccounts.REF = ref; buildAccounts.iTipoTk = itk; }
   })().catch(e => { delete CONTAS_PER[m]; throw e; }));
 }
 async function abrirMovimento(tipo) {
