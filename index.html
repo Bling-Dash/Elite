@@ -3219,6 +3219,9 @@ function envBotao() {
   const b = document.getElementById('envEnviar'); if (!b || ENVD.enviando) return;
   const cs = envMarcados(), n = cs.length, e = cs.reduce((t, a) => t + envMails(a).filter(m => m.on).length, 0);
   b.disabled = !n; b.textContent = `${ENVD.futuro ? 'Agendar' : 'Enviar'} para ${n} cliente${n === 1 ? '' : 's'}${e > n ? ` (${e} e-mails)` : ''}`;
+  // "marcar todos" acompanha a seleção: marcado com todos, traço com parte, vazio sem nenhum (assim dá para desmarcar todos)
+  const t = document.querySelector('[data-env="todos"]'), comMail = ENVD.lista.filter(a => envMails(a).length).length;
+  if (t) { t.checked = !!n && n === comMail; t.indeterminate = !!n && n < comMail; }
 }
 function envAdicionar(id) {
   const inp = document.querySelector(`[data-envnovo="${CSS.escape(id)}"]`), v = S(inp.value).toLowerCase(), a = ENVD.lista.find(x => x.id === id), ms = envMails(a);
