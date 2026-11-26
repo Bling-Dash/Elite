@@ -3131,7 +3131,7 @@ document.addEventListener('click', e => {
 });
 // ===== Envio massivo (e-mail): sai do Gmail de quem envia, pelo Apps Script "Envio massivo" (envio-massivo/ no repositório do CRM Elite) =====
 // O mesmo serviço do CRM: o último envio massivo de cada cliente é compartilhado, e quem já recebeu num dia some da lista desse dia.
-const ENVIO_URL = ''; // /exec do Apps Script "Envio massivo"
+const ENVIO_URL = 'https://script.google.com/a/macros/bling.com.br/s/AKfycbxDSQIHUZpxj-DjZASGN9CZKYbKHcFi00aN1QfELmmmECTzUK2tYbksE9NDtiLhYwRMNw/exec'; // /exec do Apps Script "Envio massivo"
 const ENVIO_VARS = [['empresa', 'Nome da empresa'], ['razao_social', 'Razão social'], ['cnpj', 'CNPJ'], ['contato', 'Nome do contato'], ['csm', 'CSM responsável']];
 const ENVD = { canal: 'email', passo: 1, quando: '', assunto: '', corpo: '', eu: null, erroEu: '', envios: null, mails: {}, msg: '', enviando: false };
 function envJsonp(params, ms = 60000) {
