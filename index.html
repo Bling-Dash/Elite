@@ -617,6 +617,8 @@ h3.tit-ctl .dica{margin-left:0}
 #tab-envio .env{display:grid;gap:10px;margin-top:10px}#tab-envio .env label{display:grid;gap:4px;font-size:13px;color:var(--mut)}#tab-envio .env-2{display:grid;align-items:start;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 #tab-envio .env input:not([type=checkbox]),#tab-envio .env textarea{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}#tab-envio .env textarea{min-height:200px;resize:vertical}
 #tab-envio .env-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#tab-envio .env-pri{background:var(--accent-green)!important;color:var(--bg-sidebar)!important}#tab-envio .env-pri:disabled{opacity:.5;cursor:default}
+#tab-envio .env-emp td{border-top:2px solid var(--bd2)}#tab-envio .env-mail td{border:0;padding-top:2px;padding-bottom:2px}#tab-envio .env-mail label{display:flex;gap:8px;align-items:center;color:var(--tx)}
+#tab-envio .env-add{display:flex;gap:8px;align-items:center;margin:2px 0 8px;max-width:520px}#tab-envio .env-add input{flex:1;padding:7px 10px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
 #envPrev{width:100%;height:320px;border:1px solid var(--bd);border-radius:8px;background:#fff}
 #gemform input{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
 
@@ -3131,17 +3133,28 @@ document.addEventListener('click', e => {
 // O mesmo serviço do CRM: o último envio massivo de cada cliente é compartilhado, e quem já recebeu num dia some da lista desse dia.
 const ENVIO_URL = ''; // /exec do Apps Script "Envio massivo"
 const ENVIO_VARS = [['empresa', 'Nome da empresa'], ['razao_social', 'Razão social'], ['cnpj', 'CNPJ'], ['contato', 'Nome do contato'], ['csm', 'CSM responsável']];
-const ENVD = { canal: 'email', passo: 1, quando: '', assunto: '', corpo: '', eu: null, erroEu: '', envios: null, sel: new Set(), msg: '', enviando: false };
+const ENVD = { canal: 'email', passo: 1, quando: '', assunto: '', corpo: '', eu: null, erroEu: '', envios: null, mails: {}, msg: '', enviando: false };
 function envJsonp(params, ms = 60000) {
   return jsonp(ENVIO_URL + '?' + new URLSearchParams(params), ms).then(d => { if (!d || !d.ok) throw new Error((d && d.erro) || 'Erro no serviço de envio.'); return d; },
     e => { throw new Error(/serviço de dados/.test(e.message) ? 'Não consegui falar com o serviço de envio (autorize o Gmail no botão acima).' : e.message); });
 }
 const envAgora = () => { const d = new Date(); d.setSeconds(0, 0); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
 const envDia = d => d ? d.split('-').reverse().join('/') : '—';
-const envTrocar = (t, v) => String(t).replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (v[k] != null ? String(v[k]) : ''));
-const envHtml = (v, assin) => `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${esc(envTrocar(ENVD.corpo, v)).replace(/\r?\n/g, '<br>')}</div>${assin ? `<br><div>${assin}</div>` : ''}`;
-const envVars = a => ({ empresa: a.nome, razao_social: a.razao || a.nome, cnpj: a.cnpjTxt || '', contato: S(col(a._r, 'Nome Contato Principal')), csm: a.csm || '' });
-const envEmail = a => { const e = S(col(a._r, 'E-mail Contato Principal')).split(/[;,\s]+/)[0]; return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+const envTrocar = (t, v, fn = String) => String(t).replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (v[k] != null ? fn(v[k]) : ''));
+// mesma montagem do Apps Script: o conteúdo aceita HTML simples (<b>…</b>), os valores das variáveis são escapados
+const envHtml = (v, assin) => `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${envTrocar(ENVD.corpo, v, esc).replace(/\r?\n/g, '<br>')}</div>${assin ? `<br><div>${assin}</div>` : ''}`;
+const envVars = (a, nome) => ({ empresa: a.nome, razao_social: a.razao || a.nome, cnpj: a.cnpjTxt || '', contato: nome || '', csm: a.csm || '' });
+const envOk = e => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(e);
+// E-mails do cliente no CX: o do contato principal primeiro; depois o "Email Cliente". Nada vem marcado: marcar a empresa marca o primeiro.
+function envMails(a) {
+  if (!ENVD.mails[a.id]) {
+    const nome = S(col(a._r, 'Nome Contato Principal')), vistos = new Set(), r = [];
+    [[col(a._r, 'E-mail Contato Principal'), nome], [col(a._r, 'Email Cliente', 'E-mail Cliente'), '']].forEach(([v, n]) => S(v).split(/[;,\s]+/).forEach(e => {
+      e = e.toLowerCase(); if (envOk(e) && !vistos.has(e)) { vistos.add(e); r.push({ email: e, nome: n, on: false }); } }));
+    ENVD.mails[a.id] = r;
+  }
+  return ENVD.mails[a.id];
+}
 async function envCarregarEu() {
   ENVD.erroEu = '';
   try { ENVD.eu = await envJsonp({ acao: 'quem' }); } catch (e) { ENVD.erroEu = e.message; }
@@ -3168,7 +3181,7 @@ function renderEnvio() {
       <div class="env-2"><label>Data e hora do envio<input type="datetime-local" name="quando" value="${esc(ENVD.quando)}" required><small class="note">Agora envia na hora; data futura fica agendada.</small></label>
       <label>Assunto<input name="assunto" maxlength="200" value="${esc(ENVD.assunto)}" required></label></div>
       <label>Conteúdo<textarea name="corpo" maxlength="3000" rows="10" required>${esc(ENVD.corpo)}</textarea></label>
-      <p class="env-acoes"><span class="note">Variáveis:</span>${ENVIO_VARS.map(([k, r]) => `<button type="button" class="expbtn" data-envvar="${k}" title="Insere {{${k}}}">${esc(r)}</button>`).join('')}</p>
+      <p class="env-acoes"><button type="button" class="expbtn" data-env="negrito" title="Deixa o trecho selecionado em negrito"><b>N</b> Negrito</button><span class="note">Variáveis:</span>${ENVIO_VARS.map(([k, r]) => `<button type="button" class="expbtn" data-envvar="${k}" title="Insere {{${k}}}">${esc(r)}</button>`).join('')}</p>
       <h3>Pré-visualização</h3><iframe id="envPrev" sandbox="allow-popups" title="Pré-visualização do e-mail"></iframe>
       <p class="env-acoes"><button type="button" class="expbtn env-pri" data-env="avancar">Avançar</button></p></form>`;
     envPrev();
@@ -3177,15 +3190,20 @@ function renderEnvio() {
   const sel = document.getElementById('csm').value, dia = ENVD.quando.slice(0, 10), env = ENVD.envios || {};
   const base = ALL.filter(a => sel === '__all__' || a.csm === sel), ja = base.filter(a => env[a.id] && env[a.id].dia === dia);
   const lista = base.filter(a => !ja.includes(a)), futuro = new Date(ENVD.quando) > Date.now() + 12e4;
-  [...ENVD.sel].forEach(id => { if (!lista.some(a => a.id === id && envEmail(a))) ENVD.sel.delete(id); });
   ENVD.futuro = futuro; ENVD.lista = lista;
+  const semMail = lista.filter(a => !envMails(a).length).length;
+  const linhas = a => {
+    const id = esc(a.id), ms = envMails(a), u = env[a.id];
+    return `<tr class="env-emp"><td><input type="checkbox" data-envemp="${id}" ${ms.some(m => m.on) ? 'checked' : ''} aria-label="${esc(a.nome)}"></td><td><b>${esc(a.nome)}</b></td><td>${esc(a.csm)}</td><td>${u ? `${envDia(u.dia)} <span class="note">${esc(u.por.split('@')[0])}</span>` : '—'}</td></tr>`
+      + ms.map((m, i) => `<tr class="env-mail"><td></td><td colspan="3"><label><input type="checkbox" data-envmail="${id}|${i}" ${m.on ? 'checked' : ''}> ${esc(m.email)}${m.nome ? ` <span class="note">· ${esc(m.nome)}</span>` : ''}</label></td></tr>`).join('')
+      + `<tr class="env-mail"><td></td><td colspan="3"><span class="env-add"><input type="email" data-envnovo="${id}" placeholder="${ms.length ? 'Adicionar outro e-mail' : 'Sem e-mail no CX: digite o e-mail'}" aria-label="Novo e-mail para ${esc(a.nome)}"><button type="button" class="expbtn" data-env="add" data-id="${id}">+ Adicionar</button></span></td></tr>`;
+  };
   el.innerHTML = tit + `<p class="note">2 de 2 · Clientes da carteira escolhida no topo. "${esc(ENVD.assunto)}" · ${futuro ? 'agendado para ' + envDia(dia) + ' ' + ENVD.quando.slice(11) : 'envio agora'}.</p>
   ${ENVD.msg ? `<p class="note" role="status">${esc(ENVD.msg)}</p>` : ''}
   ${!ENVD.envios ? '<p class="note">Carregando os envios anteriores…</p>' : `
-  <p class="note">${lista.length} cliente(s)${ja.length ? ` · ${ja.length} já receberam envio massivo em ${envDia(dia)} e não aparecem` : ''}${lista.some(a => !envEmail(a)) ? ` · ${lista.filter(a => !envEmail(a)).length} sem e-mail do contato principal no CX` : ''}.</p>
-  <div class="card env" style="overflow:auto"><table><thead><tr><th><input type="checkbox" data-env="todos" aria-label="Marcar todos com e-mail"></th><th>Cliente</th><th>Contato</th><th>E-mail</th><th>CSM</th><th>Último envio massivo</th></tr></thead>
-  <tbody>${lista.map(a => { const e = envEmail(a), u = env[a.id]; return `<tr><td>${e ? `<input type="checkbox" data-envsel="${esc(a.id)}" ${ENVD.sel.has(a.id) ? 'checked' : ''} aria-label="${esc(a.nome)}">` : ''}</td>
-    <td><b>${esc(a.nome)}</b></td><td>${esc(envVars(a).contato)}</td><td>${e ? esc(e) : '<span class="note">sem e-mail</span>'}</td><td>${esc(a.csm)}</td><td>${u ? `${envDia(u.dia)} <span class="note">${esc(u.por.split('@')[0])}</span>` : '—'}</td></tr>`; }).join('')}</tbody></table></div>`}
+  <p class="note">${lista.length} cliente(s)${ja.length ? ` · ${ja.length} já receberam envio massivo em ${envDia(dia)} e não aparecem` : ''}${semMail ? ` · ${semMail} sem e-mail no CX (digite na linha do cliente)` : ''}.</p>
+  <div class="card env" style="overflow:auto"><table class="env-tab"><thead><tr><th><input type="checkbox" data-env="todos" aria-label="Marcar todos"></th><th>Cliente e e-mails</th><th>CSM</th><th>Último envio massivo</th></tr></thead>
+  <tbody>${lista.map(linhas).join('')}</tbody></table></div>`}
   <p class="env-acoes"><button type="button" class="expbtn" data-env="voltar">Voltar</button><button type="button" class="expbtn env-pri" data-env="enviar" id="envEnviar" disabled>Enviar</button></p>`;
   envBotao();
 }
@@ -3194,17 +3212,26 @@ function envPrev() {
   const ex = { empresa: 'Empresa Exemplo', razao_social: 'Empresa Exemplo LTDA', cnpj: '00.000.000/0001-00', contato: 'Maria', csm: 'Carteira' };
   f.srcdoc = `<base target="_blank"><p style="font:600 14px Arial;margin:0 0 10px">${esc(envTrocar(ENVD.assunto, ex)) || '(sem assunto)'}</p>` + envHtml(ex, ENVD.eu.assinatura);
 }
+const envMarcados = () => (ENVD.lista || []).filter(a => envMails(a).some(m => m.on));
 function envBotao() {
-  const b = document.getElementById('envEnviar'), n = ENVD.sel.size; if (!b || ENVD.enviando) return;
-  b.disabled = !n; b.textContent = `${ENVD.futuro ? 'Agendar' : 'Enviar'} para ${n} cliente${n === 1 ? '' : 's'}`;
+  const b = document.getElementById('envEnviar'); if (!b || ENVD.enviando) return;
+  const cs = envMarcados(), n = cs.length, e = cs.reduce((t, a) => t + envMails(a).filter(m => m.on).length, 0);
+  b.disabled = !n; b.textContent = `${ENVD.futuro ? 'Agendar' : 'Enviar'} para ${n} cliente${n === 1 ? '' : 's'}${e > n ? ` (${e} e-mails)` : ''}`;
+}
+function envAdicionar(id) {
+  const inp = document.querySelector(`[data-envnovo="${CSS.escape(id)}"]`), v = S(inp.value).toLowerCase(), a = ENVD.lista.find(x => x.id === id), ms = envMails(a);
+  if (!envOk(v)) { alert('Digite um e-mail válido.'); inp.focus(); return; }
+  if (ms.some(m => m.email === v)) { alert('Este e-mail já está na lista do cliente.'); return; }
+  ms.push({ email: v, nome: '', on: true }); renderEnvio();
 }
 // Manda em lotes: cada chamada JSONP vai na URL, que precisa ficar curta
 async function envEnviar() {
-  const sel = ENVD.lista.filter(a => ENVD.sel.has(a.id)), futuro = ENVD.futuro;
-  if (!sel.length || !confirm(`${futuro ? 'Agendar' : 'Enviar'} o e-mail "${ENVD.assunto}" para ${sel.length} cliente(s)?`)) return;
+  const futuro = ENVD.futuro, itens = envMarcados().map(a => { const ms = envMails(a).filter(m => m.on); return { id: a.id, para: ms.map(m => ({ email: m.email, nome: m.nome })), v: envVars(a, ms[0].nome) }; });
+  const nm = itens.reduce((t, x) => t + x.para.length, 0);
+  if (!itens.length || !confirm(`${futuro ? 'Agendar' : 'Enviar'} o e-mail "${ENVD.assunto}" para ${itens.length} cliente(s), ${nm} e-mail(s)?`)) return;
   const base = { acao: 'enviar', quando: String(new Date(ENVD.quando).getTime()), assunto: ENVD.assunto, corpo: ENVD.corpo };
   const tam = l => new URLSearchParams({ ...base, lista: JSON.stringify(l) }).toString().length, lotes = [];
-  for (const it of sel.map(a => ({ id: a.id, para: envEmail(a), v: envVars(a) }))) {
+  for (const it of itens) {
     const ult = lotes[lotes.length - 1];
     if (ult && ult.length < 50 && tam([...ult, it]) < 7000) ult.push(it); else lotes.push([it]);
   }
@@ -3219,21 +3246,28 @@ async function envEnviar() {
     }
   } finally { ENVD.enviando = false; }
   ENVD.msg = `${futuro ? 'Agendado para' : 'Enviado para'} ${r.enviados} cliente(s)${r.pulados ? ` · ${r.pulados} já tinham recebido nesse dia` : ''}${r.erros.length ? ` · ${r.erros.length} erro(s): ${r.erros[0]}` : ''}.`;
-  ENVD.sel.clear(); ENVD.envios = null; renderEnvio(); envCarregarEnvios();
+  ENVD.mails = {}; ENVD.envios = null; renderEnvio(); envCarregarEnvios();
 }
 document.addEventListener('input', e => {
   const f = e.target.form; if (!f || f.id !== 'envForm') return;
   ENVD.quando = f.quando.value; ENVD.assunto = f.assunto.value; ENVD.corpo = f.corpo.value; envPrev();
 });
 // os botões de variável não tiram o foco do campo (a variável entra onde está o cursor)
-document.addEventListener('mousedown', e => { if (e.target.closest('[data-envvar]')) e.preventDefault(); });
+document.addEventListener('mousedown', e => { if (e.target.closest('[data-envvar],[data-env="negrito"]')) e.preventDefault(); });
 document.addEventListener('change', e => {
-  const cb = e.target.closest('[data-envsel]'), todos = e.target.closest('[data-env="todos"]');
-  if (todos) document.querySelectorAll('[data-envsel]').forEach(c => { c.checked = todos.checked; todos.checked ? ENVD.sel.add(c.dataset.envsel) : ENVD.sel.delete(c.dataset.envsel); });
-  else if (cb) cb.checked ? ENVD.sel.add(cb.dataset.envsel) : ENVD.sel.delete(cb.dataset.envsel);
-  else return;
-  envBotao();
+  const t = e.target, achar = id => ENVD.lista.find(a => a.id === id);
+  if (t.closest('[data-env="todos"]')) { ENVD.lista.forEach(a => { const ms = envMails(a); if (!t.checked) ms.forEach(m => (m.on = false)); else if (ms.length && !ms.some(m => m.on)) ms[0].on = true; }); renderEnvio(); }
+  else if (t.dataset.envemp) {
+    const ms = envMails(achar(t.dataset.envemp));
+    if (t.checked && !ms.length) { t.checked = false; document.querySelector(`[data-envnovo="${CSS.escape(t.dataset.envemp)}"]`).focus(); return; }
+    if (t.checked) ms[0].on = true; else ms.forEach(m => (m.on = false));
+    renderEnvio();
+  } else if (t.dataset.envmail) {
+    const [id, i] = t.dataset.envmail.split('|'), ms = envMails(achar(id)); ms[i].on = t.checked;
+    document.querySelector(`[data-envemp="${CSS.escape(id)}"]`).checked = ms.some(m => m.on); envBotao();
+  }
 });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.envnovo) { e.preventDefault(); envAdicionar(e.target.dataset.envnovo); } });
 document.addEventListener('click', e => {
   const v = e.target.closest('[data-envvar]');
   if (v) { const f = document.getElementById('envForm'), alvo = document.activeElement === f.assunto ? f.assunto : f.corpo, t = `{{${v.dataset.envvar}}}`, i = alvo.selectionStart ?? alvo.value.length;
@@ -3241,13 +3275,15 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-env]'); if (!b || b.dataset.env === 'todos') return;
   const a = b.dataset.env;
   if (a === 'autorizei') { ENVD.erroEu = ''; renderEnvio(); }
+  else if (a === 'add') envAdicionar(b.dataset.id);
+  else if (a === 'negrito') { const c = document.getElementById('envForm').corpo, i = c.selectionStart, j = c.selectionEnd; c.setRangeText(`<b>${c.value.slice(i, j) || 'texto'}</b>`, i, j, 'select'); c.focus(); c.dispatchEvent(new Event('input', { bubbles: true })); }
   else if (a === 'voltar') { ENVD.passo = 1; ENVD.msg = ''; renderEnvio(); }
   else if (a === 'enviar') envEnviar();
   else if (a === 'avancar') {
     const erro = !ENVD.assunto.trim() ? 'Informe o assunto.' : !ENVD.corpo.trim() ? 'Escreva o conteúdo do e-mail.' : !ENVD.quando ? 'Informe a data do envio.' : new Date(ENVD.quando) < Date.now() - 36e5 ? 'A data do envio já passou.' : '';
     if (erro) { document.getElementById('envErro').innerHTML = `<p class="note" role="alert" style="color:var(--rk)">${esc(erro)}</p>`; return; }
     if (!temDados()) { document.getElementById('envErro').innerHTML = '<p class="note" role="alert" style="color:var(--rk)">Os dados das carteiras ainda não carregaram.</p>'; return; }
-    ENVD.passo = 2; ENVD.sel.clear(); ENVD.msg = ''; renderEnvio(); if (!ENVD.envios) envCarregarEnvios();
+    ENVD.passo = 2; ENVD.msg = ''; renderEnvio(); if (!ENVD.envios) envCarregarEnvios();
   }
 });
 </script>
