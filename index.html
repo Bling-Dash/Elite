@@ -35,7 +35,7 @@ table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}th,t
 table.mx td.hm{text-align:center;color:var(--tx2);font-variant-numeric:tabular-nums}table.mx td.hm span,table.mx th span{display:block;font-size:10.5px;color:var(--mut);font-weight:400}table.mx th{text-align:center}table.mx td.hm span.sd{color:var(--yl);font-size:10px;margin-top:1px}table.mx th:first-child,table.mx td:first-child{text-align:left}
 .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:4px;margin-bottom:6px}
 .note{font-size:12.5px;color:var(--mut);margin-top:10px}
-.chk{margin:12px 0 0}.chk summary{cursor:pointer;color:var(--mut);font-size:12.5px}
+
 .sb{display:grid;grid-template-columns:210px 1fr 84px;gap:10px;align-items:center;margin:7px 0;font-size:12.5px}.sl small{color:var(--mut);margin-left:4px}
 .sbar{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--card2)}.sbar i{display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:11.5px;font-weight:600;overflow:hidden;white-space:nowrap;min-width:0}
 .bl{display:grid;gap:5px;font-size:12.5px}.blr{display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:center}.blb{height:14px;background:var(--card2);border-radius:4px;overflow:hidden}.blb i{display:block;height:100%}
@@ -685,7 +685,6 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 </div>
 <section id="tab-carteira">
 <div class="kpis" id="kpis"></div>
-<div id="check"></div>
 <nav class="temas" id="temas"></nav>
 <div id="body"><p class="note">Aguardando dados.</p></div>
 </section>
@@ -1203,12 +1202,6 @@ function render() {
       const [bv, bt] = Array.isArray(b) ? b : [b, ''];
       return `<div class="kpi ck${i === 0 ? ' khero' : ''}" data-l="${reg(title, acc, opts)}" title="${bt ? bt + ' · ' : ''}Clique para ver as contas"><b>${bv}</b><span>${l1}</span>${l2 ? `<small class="kx">${l2.split(' · ').map(x => `<span class="kxl">${x}</span>`).join('')}</small>` : ''}${i === 0 ? regua : ''}</div>`; }).join('');
   }
-  { // Conferência: valores lidos da planilha (para comparar com o Excel)
-    const st = arr => { const v = arr.filter(x => x != null).sort((p, q) => p - q); return v.length ? { n: v.length, min: v[0], med: v[v.length >> 1], max: v[v.length - 1], sum: v.reduce((p, q) => p + q, 0), acima100: v.filter(x => x > 100).length } : null; };
-    const sm = st(ACC.map(a => a.mrr)), sa = st(ACC.map(a => a.arm)), sp = st(ACC.map(a => a.api));
-    const row = (nome, x, f, extra) => x ? `<tr><td>${nome}</td><td>${x.n}</td><td>${f(x.min)}</td><td>${f(x.med)}</td><td>${f(x.max)}</td><td>${extra(x)}</td></tr>` : `<tr><td>${nome}</td><td colspan="5" class="mut">sem dado</td></tr>`;
-    $('#check').innerHTML = `<details class="chk"><summary>Conferência dos valores lidos da planilha (MRR, armazenamento, API)</summary><div class="tw"><table><thead><tr><th>Campo</th><th>Contas com valor</th><th>Menor</th><th>Mediana</th><th>Maior</th><th>Observação</th></tr></thead><tbody>${row('MRR', sm, fmtMoney, x => 'soma ' + fmtMoney(x.sum))}${row('% Armazenamento Utilizado', sa, fmtPctExact, x => x.acima100 + ' conta(s) acima de 100%')}${row('Saúde da API (% 2xx)', sp, fmtPctExact, x => x.acima100 + ' conta(s) acima de 100%')}</tbody></table></div><p class="note">Passe o mouse sobre o MRR, o armazenamento ou a API na lista de clientes para ver o texto exato que veio na planilha. Contas sem linha na Tabela Meta: ${ACC.filter(a => !a.naMeta).length}.</p></details>`;
-  }
   if (!ACC.length) { $('#body').innerHTML = '<p class="note">Nenhuma empresa para este filtro.</p>'; return; }
 
   const ifGroups = IF_ORDER.map(k => ({ key: k, short: k, label: IF_LABEL[k], acc: ACC.filter(a => a.IF === k) })).filter(g => g.acc.length || ['IF1', 'IF2', 'IF3', 'IF4', 'IF5', 'Sem IF'].includes(g.key));
@@ -1222,7 +1215,10 @@ function render() {
   let h = '';
 
   // 0. Health Score e engajamento
-  const bands = ['Saudável', 'Atenção', 'Crítico'].map(k => ({ label: k, acc: ACC.filter(a => a.banda === k) }));
+  // Saúde da carteira pelo IF (pedido do time): Churn = IF0 · Crítico = IF1 · Atenção = IF2 e IF3 · Saudável = IF4 e IF5
+  const SAUDE_IF = [['Saudável', ['IF4', 'IF5']], ['Atenção', ['IF2', 'IF3']], ['Crítico', ['IF1']], ['Churn', ['IF0']], ['Sem IF', ['Sem IF']]];
+  const SAUDE_COR = Object.assign({ Churn: IF_COLOR.IF0, 'Sem IF': IF_COLOR['Sem IF'] }, BAND_COLOR);
+  const bands = SAUDE_IF.map(([k, ifs]) => ({ label: k, acc: ACC.filter(a => ifs.includes(a.IF)) })).filter(b => b.acc.length || b.label !== 'Sem IF');
   const ref = buildAccounts.REF;
   const bucket = (v, cuts) => v == null ? 'Sem dado' : cuts.find(c => v <= c[0])?.[1] || cuts[cuts.length - 1][1];
   // login em dias úteis sem entrar (só quem tem 2 ou mais; "Sem dado" = sem data de login na Meta)
@@ -1236,7 +1232,7 @@ function render() {
   const penTop = {}; ACC.forEach(a => a.penalidades.forEach(p => { if (p[1] > 0) (penTop[p[0]] = penTop[p[0]] || []).push(a); }));
   const criticas = ACC.filter(a => a.banda !== 'Saudável').sort((a, b) => a.score - b.score);
   h += `<h2>Health Score e engajamento</h2><p class="lead">Score de 0 a 100 por conta: começa em 100 e desconta pontos por IF, queda de pedidos, API, armazenamento, tickets, inadimplência, engajamento, preço, dias sem interação e sem login. Pesos editáveis no código (HEALTH). Data de referência: ${fmtDate(ref)}.</p><div class="grid">`
-    + card('Distribuição do Health Score', `média ${fmtScore(scoreMedia(ACC))} (sem Finalizadas) · Saudável ≥ ${HEALTH_BANDS.saudavel} · Atenção ≥ ${HEALTH_BANDS.atencao}`, pie(bands.map(b => ({ label: b.label, value: b.acc.length, color: BAND_COLOR[b.label], text: b.acc.length + ' emp.', acc: b.acc })), 'Health Score'))
+    + card('Saúde da carteira por IF', 'Saudável = IF4 e IF5 · Atenção = IF2 e IF3 · Crítico = IF1 · Churn = IF0', pie(bands.map(b => ({ label: b.label, value: b.acc.length, color: SAUDE_COR[b.label], text: b.acc.length + ' emp.', acc: b.acc })), 'Saúde por IF'))
     + card('Score médio por IF', 'quanto menor, mais frágil', barList(ifPresent.map(g => ({ label: g.label, value: Math.round(scoreMedia(g.acc) ?? 0), color: IF_COLOR[g.key], acc: g.acc })), v => v + ' pts'))
     + card('Sinais de risco mais comuns', 'contas afetadas por cada sinal (informativo; o score vem da coluna HS da Exportação)', barList(Object.entries(penTop).filter(([k]) => !IF_ORDER.some(i => k.startsWith(i))).sort((a, b) => b[1].length - a[1].length).slice(0, 10).map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + ' emp.'))
     + '</div><div class="grid">'
@@ -1246,7 +1242,7 @@ function render() {
     + card(`Última interação do CSM${dicaCard('dica-interacao', '<p><b>Última interação = data da última tarefa concluída com esse cliente</b> (tarefas de board e de jornada, lidas do CustomerX).</p><p>Sem nenhuma tarefa concluída com o cliente, ele aparece em "Sem dado".</p>')}`,
         `${cnt(ACC, a => a.diasInteracao)} contas com tarefa concluída · dias desde a última`, pie(mkBuckets(a => a.diasInteracao, interCuts), 'Última interação'))
     + '</div>';
-  h += `<div class="stat" style="margin-top:12px">${['Crítico', 'Atenção', 'Saudável'].map(k => { const acc = ACC.filter(a => a.banda === k); return `<div class="ck" data-l="${reg('Health Score · ' + k, acc)}" title="Clique para ver a lista" style="--bc:${BAND_COLOR[k]}"><b style="color:${BAND_COLOR[k]}">${acc.length}</b><span>${k}</span></div>`; }).join('')}</div>`;
+  h += `<div class="stat" style="margin-top:12px">${bands.slice().reverse().map(({ label: k, acc }) => `<div class="ck" data-l="${reg('Saúde por IF · ' + k, acc)}" title="Clique para ver a lista" style="--bc:${SAUDE_COR[k]}"><b style="color:${SAUDE_COR[k]}">${acc.length}</b><span>${k}</span></div>`).join('')}</div>`;
 
   // Visão geral
   h += `<h2>Visão geral por segmento</h2><p class="lead">Segmentos da Tabela Cx agrupados (${Object.keys(SEG_GRUPO).length} grupos; o segmento original aparece na lista de clientes).</p><div class="grid">` + card('Segmentos da carteira (agrupados)', `% das ${ACC.length} contas`, pie(segGroups.map(g => ({ label: g.label, value: g.acc.length, color: g.color, text: g.acc.length + ' emp.', acc: g.acc })), 'Segmentos')) + '</div>';
@@ -2826,7 +2822,7 @@ function histCsm(H) {
 // =====================================================================
 // GESTÃO DE CARTEIRA: guias por objetivo + Top 20 em risco + convergência IF × HS
 // =====================================================================
-const TEMAS = [['geral', 'Visão geral da carteira'], ['risco', 'Análise de risco'], ['expansao', 'Expansão'], ['integracoes', 'Integrações'], ['portfolio', 'Portfólio'], ['tudo', 'Tudo']];
+const TEMAS = [['geral', 'Visão da carteira'], ['risco', 'Análise de risco'], ['expansao', 'Expansão'], ['integracoes', 'Integrações'], ['portfolio', 'Portfólio'], ['tudo', 'Tudo']];
 let TEMA = localStorage.getItem('tema') || 'geral', TOP_POR = 'mrr', TOP_FAIXA = 'critico';
 // Faixas do Top 20 clientes em risco: Crítico 0–39 · Atenção 40–59 · Saudável 60–79 · Excelente 80–100
 const TOP_BANDAS = { atencao: 40, saudavel: 60, excelente: 80 };
@@ -3424,7 +3420,7 @@ document.addEventListener('click', e => {
     aberto[TAB] = true;
     const tg = GRUPOS.find(g => g[0] === TAB); if (tg) document.getElementById('title').textContent = tg[1];
     const resumo = TEMA === 'geral' || TEMA === 'tudo';
-    ['kpis', 'check'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = !resumo; });
+    ['kpis'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = !resumo; });
     document.getElementById('sideNav').innerHTML = GRUPOS.map(([g, l]) => `<div class="sg" data-aberto="${aberto[g] ? 1 : 0}">
       <button type="button" data-grupo="${g}" aria-expanded="${aberto[g]}">${ICO[g]}<span>${l}</span>${CHEV}</button>
       <div class="side-sub">${itens(g).map(i => `<button type="button" data-ir="${g}:${i.k}"${i.on ? ' class="on" aria-current="page"' : ''}>${SETA}<span class="nm">${escN(i.l)}</span></button>`).join('')}</div></div>`).join('');
