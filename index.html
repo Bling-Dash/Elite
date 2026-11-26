@@ -252,7 +252,10 @@ main{max-width:none!important;margin:0!important;padding:0 0 40px!important;min-
 .side-sub button.on{background:var(--sel);color:var(--seltx);font-weight:700;padding-left:14px}
 .side-sub button .seta{display:none;width:16px;height:16px;flex:none;margin-right:10px}
 .side-sub button.on .seta{display:block}
-.side-sub button .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sub button .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* sem isso o nome longo da empresa alarga o menu inteiro (itens de grid não encolhem) */
+#sideNav,.side-sub{grid-template-columns:minmax(0,1fr)}
+.kv td{padding:8px 6px}.kv td:first-child{padding-left:0}.kv td+td{overflow-wrap:anywhere}
 body.side-off .shell{grid-template-columns:0 minmax(0,1fr);gap:0 40px}
 body.side-off .side{display:none}
 body.side-off #sideNav{display:none}
