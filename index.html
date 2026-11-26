@@ -614,6 +614,10 @@ h3.tit-ctl .dica{margin-left:0}
 .card h3 .dica-card .dica-txt{font-weight:400}
 
 /* GEM: formulário de inclusão */
+#tab-envio .env{display:grid;gap:10px;margin-top:10px}#tab-envio .env label{display:grid;gap:4px;font-size:13px;color:var(--mut)}#tab-envio .env-2{display:grid;align-items:start;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+#tab-envio .env input:not([type=checkbox]),#tab-envio .env textarea{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}#tab-envio .env textarea{min-height:200px;resize:vertical}
+#tab-envio .env-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#tab-envio .env-pri{background:var(--accent-green)!important;color:var(--bg-sidebar)!important}#tab-envio .env-pri:disabled{opacity:.5;cursor:default}
+#envPrev{width:100%;height:320px;border:1px solid var(--bd);border-radius:8px;background:#fff}
 #gemform input{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
 
 /* Histórico: filtros numa linha, no mesmo estilo dos seletores do topo; cards e resumo mais limpos */
@@ -687,6 +691,7 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 <section id="tab-localizacao" hidden></section>
 <section id="tab-gems" hidden></section>
 <section id="tab-qbr" hidden></section>
+<section id="tab-envio" hidden></section>
 <footer class="rodape">O crescimento do empreendedor flui primeiro através de nós.</footer>
 </main>
 </div>
@@ -1601,7 +1606,7 @@ render = function () {
   for (const k in HIST) if (HIST[k] && HIST[k].erro) delete HIST[k];   // dados recarregados: tenta o histórico de novo
   renderCarteira(); if (temDados()) { extrasCarteira(); organizarTemas(); } renderAbaAtual();
 };
-function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); else if (TAB === 'gems') renderGems(); else if (TAB === 'qbr') renderQbr(); }
+function renderAbaAtual() { if (TAB === 'empresa') renderEmpresa(); else if (TAB === 'historico') renderHistorico(); else if (TAB === 'localizacao') renderLocalizacao(); else if (TAB === 'gems') renderGems(); else if (TAB === 'qbr') renderQbr(); else if (TAB === 'envio') renderEnvio(); }
 // QBR (revisão trimestral do cliente): por enquanto só a estrutura da aba
 function renderQbr() { document.getElementById('tab-qbr').innerHTML = '<h2>QBR</h2><p class="note">Revisão trimestral de negócios (Quarterly Business Review). Em construção.</p>'; }
 // Histórico das carteiras: mostra o campo "Carteira" ao lado de "Dados de" e esconde o seletor do topo (senão o nome aparece duas vezes)
@@ -1624,12 +1629,12 @@ function seletorCarteiraHist(mostrar) {
 function trocarAba(t) {
   TAB = t;
   seletorCarteiraHist(false);                                     // o seletor de carteira só existe no Histórico das carteiras
-  ['carteira', 'empresa', 'historico', 'localizacao', 'gems', 'qbr'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
+  ['carteira', 'empresa', 'historico', 'localizacao', 'gems', 'qbr', 'envio'].forEach(k => { document.getElementById('tab-' + k).hidden = k !== t; });
   const h = t === 'carteira' ? '' : '#' + t + (t === 'empresa' && EMP_ID ? '=' + encodeURIComponent(EMP_ID) : '');
   history.replaceState(null, '', location.pathname + location.search + h);
   renderAbaAtual();
 }
-{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems|qbr)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); document.addEventListener('DOMContentLoaded', () => trocarAba(m[1])); } } // espera os <script> seguintes (renderGems etc.)
+{ const m = location.hash.match(/^#(empresa|historico|localizacao|gems|qbr|envio)(?:=(.*))?$/); if (m) { if (m[2]) EMP_ID = decodeURIComponent(m[2]); document.addEventListener('DOMContentLoaded', () => trocarAba(m[1])); } } // espera os <script> seguintes (renderGems etc.)
 
 const kpiBox = (v, l, extra = '') => `<div class="kpi"><b>${v}</b><span>${l}</span>${extra ? `<div>${extra}</div>` : ''}</div>`;
 const temDados = () => typeof ALL !== 'undefined' && ALL && ALL.length;
@@ -3122,6 +3127,129 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-gemdel]'); if (!b || !confirm('Remover este Gem da lista de todos?')) return;
   GEMS_MSG = 'Removendo…'; renderGems(); gemsChamar('&remover=' + encodeURIComponent(b.dataset.gemdel));
 });
+// ===== Envio massivo (e-mail): sai do Gmail de quem envia, pelo Apps Script "Envio massivo" (envio-massivo/ no repositório do CRM Elite) =====
+// O mesmo serviço do CRM: o último envio massivo de cada cliente é compartilhado, e quem já recebeu num dia some da lista desse dia.
+const ENVIO_URL = ''; // /exec do Apps Script "Envio massivo"
+const ENVIO_VARS = [['empresa', 'Nome da empresa'], ['razao_social', 'Razão social'], ['cnpj', 'CNPJ'], ['contato', 'Nome do contato'], ['csm', 'CSM responsável']];
+const ENVD = { canal: 'email', passo: 1, quando: '', assunto: '', corpo: '', eu: null, erroEu: '', envios: null, sel: new Set(), msg: '', enviando: false };
+function envJsonp(params, ms = 60000) {
+  return jsonp(ENVIO_URL + '?' + new URLSearchParams(params), ms).then(d => { if (!d || !d.ok) throw new Error((d && d.erro) || 'Erro no serviço de envio.'); return d; },
+    e => { throw new Error(/serviço de dados/.test(e.message) ? 'Não consegui falar com o serviço de envio (autorize o Gmail no botão acima).' : e.message); });
+}
+const envAgora = () => { const d = new Date(); d.setSeconds(0, 0); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+const envDia = d => d ? d.split('-').reverse().join('/') : '—';
+const envTrocar = (t, v) => String(t).replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (v[k] != null ? String(v[k]) : ''));
+const envHtml = (v, assin) => `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${esc(envTrocar(ENVD.corpo, v)).replace(/\r?\n/g, '<br>')}</div>${assin ? `<br><div>${assin}</div>` : ''}`;
+const envVars = a => ({ empresa: a.nome, razao_social: a.razao || a.nome, cnpj: a.cnpjTxt || '', contato: S(col(a._r, 'Nome Contato Principal')), csm: a.csm || '' });
+const envEmail = a => { const e = S(col(a._r, 'E-mail Contato Principal')).split(/[;,\s]+/)[0]; return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : ''; };
+async function envCarregarEu() {
+  ENVD.erroEu = '';
+  try { ENVD.eu = await envJsonp({ acao: 'quem' }); } catch (e) { ENVD.erroEu = e.message; }
+  if (TAB === 'envio') renderEnvio();
+}
+async function envCarregarEnvios() {
+  try { ENVD.envios = (await envJsonp({ acao: 'envios' })).envios; } catch (e) { ENVD.envios = {}; ENVD.msg = 'Não consegui ler os envios anteriores: ' + e.message; }
+  if (TAB === 'envio') renderEnvio();
+}
+function renderEnvio() {
+  const el = document.getElementById('tab-envio'), tit = '<h2>Envio massivo · ' + (ENVD.canal === 'whats' ? 'WhatsApp' : 'E-mail') + '</h2>';
+  if (ENVD.canal === 'whats') { el.innerHTML = tit + '<p class="note">Em breve.</p>'; return; }
+  if (!ENVIO_URL) { el.innerHTML = tit + '<p class="note">O serviço de envio ainda não foi publicado (ENVIO_URL vazio).</p>'; return; }
+  if (!ENVD.quando) ENVD.quando = envAgora();
+  if (!ENVD.eu && !ENVD.erroEu) { el.innerHTML = tit + '<p class="note">Conferindo seu Gmail…</p>'; envCarregarEu(); return; }
+  if (ENVD.erroEu) {
+    el.innerHTML = tit + `<div class="card env"><h3>Autorize o envio pelo seu Gmail</h3><p>Na primeira vez, o Google pede permissão para enviar e-mails em seu nome e ler sua assinatura.</p>
+      <p class="env-acoes"><a class="expbtn" href="${esc(ENVIO_URL)}" target="_blank" rel="noopener">Autorizar ↗</a><button type="button" class="expbtn" data-env="autorizei">Já autorizei</button></p><p class="note">Detalhe: ${esc(ENVD.erroEu)}</p></div>`;
+    return;
+  }
+  if (ENVD.passo === 1) {
+    el.innerHTML = tit + `<p class="note">1 de 2 · Mensagem. Sai do Gmail de ${esc(ENVD.eu.email)}, com a sua assinatura padrão.</p>
+    <form class="card env" id="envForm" onsubmit="return false"><div id="envErro"></div>
+      <div class="env-2"><label>Data e hora do envio<input type="datetime-local" name="quando" value="${esc(ENVD.quando)}" required><small class="note">Agora envia na hora; data futura fica agendada.</small></label>
+      <label>Assunto<input name="assunto" maxlength="200" value="${esc(ENVD.assunto)}" required></label></div>
+      <label>Conteúdo<textarea name="corpo" maxlength="3000" rows="10" required>${esc(ENVD.corpo)}</textarea></label>
+      <p class="env-acoes"><span class="note">Variáveis:</span>${ENVIO_VARS.map(([k, r]) => `<button type="button" class="expbtn" data-envvar="${k}" title="Insere {{${k}}}">${esc(r)}</button>`).join('')}</p>
+      <h3>Pré-visualização</h3><iframe id="envPrev" sandbox="allow-popups" title="Pré-visualização do e-mail"></iframe>
+      <p class="env-acoes"><button type="button" class="expbtn env-pri" data-env="avancar">Avançar</button></p></form>`;
+    envPrev();
+    return;
+  }
+  const sel = document.getElementById('csm').value, dia = ENVD.quando.slice(0, 10), env = ENVD.envios || {};
+  const base = ALL.filter(a => sel === '__all__' || a.csm === sel), ja = base.filter(a => env[a.id] && env[a.id].dia === dia);
+  const lista = base.filter(a => !ja.includes(a)), futuro = new Date(ENVD.quando) > Date.now() + 12e4;
+  [...ENVD.sel].forEach(id => { if (!lista.some(a => a.id === id && envEmail(a))) ENVD.sel.delete(id); });
+  ENVD.futuro = futuro; ENVD.lista = lista;
+  el.innerHTML = tit + `<p class="note">2 de 2 · Clientes da carteira escolhida no topo. "${esc(ENVD.assunto)}" · ${futuro ? 'agendado para ' + envDia(dia) + ' ' + ENVD.quando.slice(11) : 'envio agora'}.</p>
+  ${ENVD.msg ? `<p class="note" role="status">${esc(ENVD.msg)}</p>` : ''}
+  ${!ENVD.envios ? '<p class="note">Carregando os envios anteriores…</p>' : `
+  <p class="note">${lista.length} cliente(s)${ja.length ? ` · ${ja.length} já receberam envio massivo em ${envDia(dia)} e não aparecem` : ''}${lista.some(a => !envEmail(a)) ? ` · ${lista.filter(a => !envEmail(a)).length} sem e-mail do contato principal no CX` : ''}.</p>
+  <div class="card env" style="overflow:auto"><table><thead><tr><th><input type="checkbox" data-env="todos" aria-label="Marcar todos com e-mail"></th><th>Cliente</th><th>Contato</th><th>E-mail</th><th>CSM</th><th>Último envio massivo</th></tr></thead>
+  <tbody>${lista.map(a => { const e = envEmail(a), u = env[a.id]; return `<tr><td>${e ? `<input type="checkbox" data-envsel="${esc(a.id)}" ${ENVD.sel.has(a.id) ? 'checked' : ''} aria-label="${esc(a.nome)}">` : ''}</td>
+    <td><b>${esc(a.nome)}</b></td><td>${esc(envVars(a).contato)}</td><td>${e ? esc(e) : '<span class="note">sem e-mail</span>'}</td><td>${esc(a.csm)}</td><td>${u ? `${envDia(u.dia)} <span class="note">${esc(u.por.split('@')[0])}</span>` : '—'}</td></tr>`; }).join('')}</tbody></table></div>`}
+  <p class="env-acoes"><button type="button" class="expbtn" data-env="voltar">Voltar</button><button type="button" class="expbtn env-pri" data-env="enviar" id="envEnviar" disabled>Enviar</button></p>`;
+  envBotao();
+}
+function envPrev() {
+  const f = document.getElementById('envPrev'); if (!f) return;
+  const ex = { empresa: 'Empresa Exemplo', razao_social: 'Empresa Exemplo LTDA', cnpj: '00.000.000/0001-00', contato: 'Maria', csm: 'Carteira' };
+  f.srcdoc = `<base target="_blank"><p style="font:600 14px Arial;margin:0 0 10px">${esc(envTrocar(ENVD.assunto, ex)) || '(sem assunto)'}</p>` + envHtml(ex, ENVD.eu.assinatura);
+}
+function envBotao() {
+  const b = document.getElementById('envEnviar'), n = ENVD.sel.size; if (!b || ENVD.enviando) return;
+  b.disabled = !n; b.textContent = `${ENVD.futuro ? 'Agendar' : 'Enviar'} para ${n} cliente${n === 1 ? '' : 's'}`;
+}
+// Manda em lotes: cada chamada JSONP vai na URL, que precisa ficar curta
+async function envEnviar() {
+  const sel = ENVD.lista.filter(a => ENVD.sel.has(a.id)), futuro = ENVD.futuro;
+  if (!sel.length || !confirm(`${futuro ? 'Agendar' : 'Enviar'} o e-mail "${ENVD.assunto}" para ${sel.length} cliente(s)?`)) return;
+  const base = { acao: 'enviar', quando: String(new Date(ENVD.quando).getTime()), assunto: ENVD.assunto, corpo: ENVD.corpo };
+  const tam = l => new URLSearchParams({ ...base, lista: JSON.stringify(l) }).toString().length, lotes = [];
+  for (const it of sel.map(a => ({ id: a.id, para: envEmail(a), v: envVars(a) }))) {
+    const ult = lotes[lotes.length - 1];
+    if (ult && ult.length < 50 && tam([...ult, it]) < 7000) ult.push(it); else lotes.push([it]);
+  }
+  if (lotes.some(l => tam(l) >= 7000)) { alert('O conteúdo está longo demais para enviar. Encurte o texto.'); return; }
+  const r = { enviados: 0, pulados: 0, erros: [] }, b = document.getElementById('envEnviar');
+  ENVD.enviando = true; b.disabled = true;
+  try {
+    for (let i = 0; i < lotes.length; i++) {
+      b.textContent = `${futuro ? 'Agendando' : 'Enviando'}… ${i + 1}/${lotes.length}`;
+      try { const d = await envJsonp({ ...base, lista: JSON.stringify(lotes[i]) }, 300000); r.enviados += d.enviados.length; r.pulados += d.pulados.length; r.erros.push(...d.erros.map(e => e.msg)); }
+      catch (e) { r.erros.push(e.message); }
+    }
+  } finally { ENVD.enviando = false; }
+  ENVD.msg = `${futuro ? 'Agendado para' : 'Enviado para'} ${r.enviados} cliente(s)${r.pulados ? ` · ${r.pulados} já tinham recebido nesse dia` : ''}${r.erros.length ? ` · ${r.erros.length} erro(s): ${r.erros[0]}` : ''}.`;
+  ENVD.sel.clear(); ENVD.envios = null; renderEnvio(); envCarregarEnvios();
+}
+document.addEventListener('input', e => {
+  const f = e.target.form; if (!f || f.id !== 'envForm') return;
+  ENVD.quando = f.quando.value; ENVD.assunto = f.assunto.value; ENVD.corpo = f.corpo.value; envPrev();
+});
+// os botões de variável não tiram o foco do campo (a variável entra onde está o cursor)
+document.addEventListener('mousedown', e => { if (e.target.closest('[data-envvar]')) e.preventDefault(); });
+document.addEventListener('change', e => {
+  const cb = e.target.closest('[data-envsel]'), todos = e.target.closest('[data-env="todos"]');
+  if (todos) document.querySelectorAll('[data-envsel]').forEach(c => { c.checked = todos.checked; todos.checked ? ENVD.sel.add(c.dataset.envsel) : ENVD.sel.delete(c.dataset.envsel); });
+  else if (cb) cb.checked ? ENVD.sel.add(cb.dataset.envsel) : ENVD.sel.delete(cb.dataset.envsel);
+  else return;
+  envBotao();
+});
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-envvar]');
+  if (v) { const f = document.getElementById('envForm'), alvo = document.activeElement === f.assunto ? f.assunto : f.corpo, t = `{{${v.dataset.envvar}}}`, i = alvo.selectionStart ?? alvo.value.length;
+    alvo.setRangeText(t, i, alvo.selectionEnd ?? i, 'end'); alvo.focus(); alvo.dispatchEvent(new Event('input', { bubbles: true })); return; }
+  const b = e.target.closest('[data-env]'); if (!b || b.dataset.env === 'todos') return;
+  const a = b.dataset.env;
+  if (a === 'autorizei') { ENVD.erroEu = ''; renderEnvio(); }
+  else if (a === 'voltar') { ENVD.passo = 1; ENVD.msg = ''; renderEnvio(); }
+  else if (a === 'enviar') envEnviar();
+  else if (a === 'avancar') {
+    const erro = !ENVD.assunto.trim() ? 'Informe o assunto.' : !ENVD.corpo.trim() ? 'Escreva o conteúdo do e-mail.' : !ENVD.quando ? 'Informe a data do envio.' : new Date(ENVD.quando) < Date.now() - 36e5 ? 'A data do envio já passou.' : '';
+    if (erro) { document.getElementById('envErro').innerHTML = `<p class="note" role="alert" style="color:var(--rk)">${esc(erro)}</p>`; return; }
+    if (!temDados()) { document.getElementById('envErro').innerHTML = '<p class="note" role="alert" style="color:var(--rk)">Os dados das carteiras ainda não carregaram.</p>'; return; }
+    ENVD.passo = 2; ENVD.sel.clear(); ENVD.msg = ''; renderEnvio(); if (!ENVD.envios) envCarregarEnvios();
+  }
+});
 </script>
 <script>
 // ===== Navegação no estilo do Bling: menu lateral com submenus + menus suspensos na barra =====
@@ -3132,6 +3260,7 @@ document.addEventListener('click', e => {
     historico: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>',
     localizacao: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
     qbr: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 14v3M12 12v5M16 15v2"/></svg>',
+    envio: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>',
     gems: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>',
   };
   const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>';
@@ -3159,10 +3288,11 @@ document.addEventListener('click', e => {
     if (tab === 'localizacao') return [{ k: 'mapa', l: 'Estados e cidades', on: TAB === 'localizacao' }];
     if (tab === 'qbr') return [{ k: 'qbr', l: 'Revisão trimestral', on: TAB === 'qbr' }];
     if (tab === 'gems') return [{ k: 'lista', l: 'Meus Gems', on: TAB === 'gems' }];
+    if (tab === 'envio') return [['email', 'E-mail'], ['whats', 'WhatsApp']].map(([k, l]) => ({ k, l, on: TAB === 'envio' && ENVD.canal === k }));
     return [['elite', 'Histórico do plano Elite'], ['csm', 'Histórico das carteiras'], ['comparar', 'Comparador']].map(([k, l]) => ({ k, l, on: TAB === 'historico' && HV2.sub === k }));
   }
-  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização'], ['gems', 'GEM'], ['qbr', 'QBR']];
-  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false, gems: false, qbr: false };
+  const GRUPOS = [['carteira', 'Gestão de Carteira'], ['empresa', 'Visão da Empresa'], ['historico', 'Visão de Gestão'], ['localizacao', 'Localização'], ['gems', 'GEM'], ['qbr', 'QBR'], ['envio', 'Envio massivo']];
+  const aberto = { carteira: true, empresa: false, historico: false, localizacao: false, gems: false, qbr: false, envio: false };
 
   function syncNav() {
     aberto[TAB] = true;
@@ -3180,6 +3310,7 @@ document.addEventListener('click', e => {
     else if (g === 'localizacao') trocarAba('localizacao');
     else if (g === 'gems') trocarAba('gems');
     else if (g === 'qbr') trocarAba('qbr');
+    else if (g === 'envio') { ENVD.canal = k; trocarAba('envio'); }
     else { HV2.sub = k; trocarAba('historico'); }
     window.scrollTo({ top: 0 });
     fecharGaveta();
