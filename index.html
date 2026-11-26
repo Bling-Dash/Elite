@@ -2469,8 +2469,12 @@ function kpiVsAnt(v, vAnt, l, ant) {
     dica = `Mês anterior (${mes}): ${fmtInt(vAnt)}${dif ? pct : ' · sem mudança'}`;
     if (dif) seta = `<i class="kseta ${dif > 0 ? 'up' : 'down'}" aria-label="${dif > 0 ? 'subiu' : 'caiu'}">${dif > 0 ? '▲' : '▼'}</i>`;
   }
-  return `<div class="kpi" title="${esc(dica)}"><b>${fmtInt(v)}${seta}</b><span>${l}</span></div>`;
+  // além do mouse (title), clicar no card mostra a comparação embaixo (funciona no celular e quando o navegador não exibe a dica)
+  return `<div class="kpi ck" data-kvs role="button" tabindex="0" aria-expanded="false" title="${esc(dica)} · clique para ver"><b>${fmtInt(v)}${seta}</b><span>${l}</span><small class="kx" hidden>${esc(dica)}</small></div>`;
 }
+const kvsAbrir = el => { const x = el.querySelector('small.kx'); x.hidden = !x.hidden; el.setAttribute('aria-expanded', String(!x.hidden)); };
+document.addEventListener('click', e => { const el = e.target.closest('[data-kvs]'); if (el) kvsAbrir(el); });
+document.addEventListener('keydown', e => { const el = e.target.closest && e.target.closest('[data-kvs]'); if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); kvsAbrir(el); } });
 const mesDoPer = p => {                                           // 2026-S46 → mês do domingo da semana (dia da última foto)
   if (!/S\d+$/.test(p)) return p;
   const [a, w] = p.split('-S'), j4 = Date.UTC(+a, 0, 4), dj4 = new Date(j4).getUTCDay() || 7;
