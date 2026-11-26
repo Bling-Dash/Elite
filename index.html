@@ -654,6 +654,15 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 @media (max-width:1100px){#kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}#kpis .khero{grid-row:auto}}
 @media (max-width:640px){#kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}#kpis .kpi:not(.khero) b{font-size:clamp(20px,11cqw,32px)}}
 .kseta{font-style:normal;font-size:.6em;margin-left:6px;vertical-align:middle}.kseta.up{color:var(--ac)}.kseta.down{color:var(--rk)}
+/* Precisa de atenção · filtros rápidos da lista · ficha em blocos · título com caminho · celular */
+.atn-l{list-style:none;margin:0;padding:0}.atn-l li{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(0,2.4fr) auto;gap:6px 14px;align-items:center;padding:9px 0;border-top:1px solid var(--bd)}.atn-l li:first-child{border-top:0}
+.atn-n{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--tx2);text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--bd2);text-underline-offset:3px}.atn-n:hover{color:var(--link)}.atn-v{color:var(--mut);font-size:12.5px;white-space:nowrap}
+@media (max-width:640px){.atn-l li{grid-template-columns:minmax(0,1fr) auto}.atn-l li .atn-m{grid-column:1/-1;order:3}}
+.empf{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.empf button{border:1px solid var(--bd2);background:var(--card);color:var(--tx);border-radius:999px;padding:4px 12px;font:inherit;font-size:12.5px;cursor:pointer}.empf button[aria-pressed="true"]{background:var(--btn);border-color:var(--btn);color:var(--ac2);font-weight:600}.empf button span{opacity:.7;margin-left:4px}
+.fgrp{margin:18px 0 8px;font-size:13px;font-weight:600;color:var(--mut)}
+.crumb{font-size:14px!important;font-weight:500!important;color:var(--mut)!important;letter-spacing:0!important;white-space:nowrap}
+@media (max-width:640px){#kpis .kxl{white-space:normal;overflow:visible}}
+@media (max-width:960px){body{padding-bottom:84px}}
 </style>
 </head>
 <body>
@@ -663,7 +672,7 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
   <div class="appact"><button id="theme" type="button" class="iconbtn" title="Alternar tema" aria-label="Alternar tema"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></button></div>
 </header>
 <div class="pagehead">
-  <div class="ph-l"><div class="ph-tit"><span class="crumb" aria-hidden="true">… ›</span><h1 id="title">Gestão de Carteira</h1></div>
+  <div class="ph-l"><div class="ph-tit"><span class="crumb"></span><h1 id="title">Gestão de Carteira</h1></div>
     <div class="ph-filtros">
       <label class="pillsel fld-inl" id="fldCarteira"><span>Carteira</span><select id="csm"><option>—</option></select></label>
       <label class="pillsel fld-inl" id="fldCarteiraHist" hidden><span>Carteira</span><select id="hCarteira" data-h2f="csm"></select></label>
@@ -1036,6 +1045,10 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-l]')
 const pagSit = a => a.inadSit == null ? null : a.inadSit === 1 ? ['Inadimplente', 'alc-r'] : a.atrasoMes === 1 ? ['Pagamento atrasado', 'alc-r'] : /^ativad/i.test(a.sitEmp) ? ['Em dia', 'alc-g'] : [a.sitEmp || 'Sem situação', 'alc-y'];
 const pagDica = a => a.inadSit == null ? 'Sem linha na Tabela Meta' : `Último pagamento: ${a.dtPag ? fmtDate(a.dtPag) : 'nenhum registrado'}${a.dtCob ? ' · cobrança: ' + fmtDate(a.dtCob) : ''}${a.sitEmp ? ' · situação da empresa: ' + a.sitEmp : ''}`;
 const pagSelo = a => { const s = pagSit(a); return s ? `<span class="alc ${s[1]}" title="${esc(pagDica(a))}">${esc(s[0])}</span>` : `<span class="mut" title="${esc(pagDica(a))}">—</span>`; };
+// "Precisa de atenção": motivos para o CSM agir hoje (r = urgente, y = acompanhar)
+const motivosAtencao = a => [a.inadSit === 1 && ['Inadimplente', 'r'], a.atrasoMes === 1 && ['Pagamento atrasado', 'r'], a.IF === 'IF1' && ['IF1 · verbalizou cancelamento', 'r'],
+  a.certAlerta === 1 && [a.certDias < 0 ? 'Certificado vencido' : `Certificado vence em ${a.certDias} d`, 'y'], a.diasInteracao != null && a.diasInteracao > 60 && [`Sem interação há ${a.diasInteracao} d`, 'y'],
+  a.queda === 1 && ['Pedidos −25% vs. média', 'y']].filter(Boolean);
 const alertasCob = a => [a.atrasoMes === 1 && 'Pagamento atrasado', a.inadSit === 1 && 'Inadimplente', a.divCx === 1 && 'Divergência CX'].filter(Boolean);
 // Certificado digital nas listas: vencimento, situação e se já comprou certificado pelo Bling
 const certCompraTxt = a => { if (a.certCompra == null) return 'sem linha na Meta'; const v = S(a.certCompra); if (!v || /^n[aã]o$/i.test(v)) return 'Não'; const d = toDate(v); return d ? 'Sim · ' + fmtDate(d) : 'Sim'; };
@@ -1094,7 +1107,7 @@ function heat(groups, indicators, totalAcc, tom) {
       const nome = d.g.short || d.g.label;
       if (!d.N) return `<td class="hm${d.tot ? ' tot' : ''}"><span class="pc">–</span></td>`;
       const r = pt ? d.p / pt : (d.p ? 9 : 0);
-      const nivel = d.tot || d.x < 2 ? 0 : r >= 2 ? 3 : r >= 1.5 ? 2 : r >= 1.15 ? 1 : 0;
+      const nivel = d.tot || d.x < 2 || d.N < 5 ? 0 : r >= 2 ? 3 : r >= 1.5 ? 2 : r >= 1.15 ? 1 : 0;
       const fundo = nivel ? ` style="background:rgba(${rgb},${[0, .14, .26, .40][nivel]})"` : '';
       const dica = `${d.x} de ${d.N} empresas (${pct(d.x, d.N)})${d.tot ? '' : ` · Elite: ${pct(T.x, T.N)}${pt ? ` · ${r.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}× a média` : ''}`}`;
       const sd = d.semDado.length ? `<span class="ck sd" data-l="${reg(`${ind.name} · ${nome} · sem dado (${ind.semDado || 'sem dado'})`, d.semDado)}" title="Sem dado: ${esc(ind.semDado || 'sem dado')} — clique para ver">${fmtInt(d.semDado.length)} sem dado</span>` : '';
@@ -1103,7 +1116,7 @@ function heat(groups, indicators, totalAcc, tom) {
     return `<tr><td class="ind">${esc(ind.name)}</td>${cells}</tr>`;
   }).join('');
   const cor = tom === 'red' ? '240,81,67' : '52,173,97';
-  const leg = `<div class="hxleg"><span>Destaque em relação à média do Elite:</span>${[['1,15×', .14], ['1,5×', .26], ['2× ou mais', .40]].map(([t, o]) => `<span><i style="background:rgba(${cor},${o})"></i>${t}</span>`).join('')}<span class="mut">sem cor = na média ou abaixo</span></div>`;
+  const leg = `<div class="hxleg"><span>Destaque em relação à média do Elite:</span>${[['1,15×', .14], ['1,5×', .26], ['2× ou mais', .40]].map(([t, o]) => `<span><i style="background:rgba(${cor},${o})"></i>${t}</span>`).join('')}<span class="mut">sem cor = na média ou abaixo, ou grupo com menos de 5 empresas</span></div>`;
   return `${leg}<div class="tw"><table class="mx hx"><thead><tr><th>Indicador</th>${cab}<th class="tot">Elite<span>n=${fmtInt(totalAcc.length)}</span></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function matrix(rowGroups, colGroups, rowLabel) {
@@ -1189,7 +1202,7 @@ function render() {
     const certSemData = ACC.filter(a => a.certVenc == null).length;
     const certOpts = { certificado: true, sort: porCert, resumo: `Certificado digital vencido ou com vencimento até ${fmtDate(new Date(buildAccounts.REF.getTime() + CERT_DIAS * 864e5))} (${CERT_DIAS} dias a partir da data da base, ${fmtDate(buildAccounts.REF)}). Vencimento: Exportação de Clientes (CX). Compra do certificado: Tabela Meta.${certSemData ? ` ${certSemData} conta${certSemData === 1 ? '' : 's'} sem data de vencimento na CX.` : ''}` };
     const tiles = [
-      [fmtScore(hsM), `Health Score médio · ${sub('Health Score · Crítico', crit, plural(crit.length, 'crítica', 'críticas'))}${hs0.length ? ` · ${sub('Status Finalizado · fora da média', hs0, `${plural(hs0.length, 'finalizada', 'finalizadas')} fora da média`, { resumo: 'Contas com Status "Finalizado" na Exportação de Clientes não entram na média, igual à plataforma CX.' })}` : ''}`,
+      [fmtScore(hsM), `Health Score médio · ${sub(`Health Score abaixo de ${HEALTH_BANDS.atencao}`, crit, `${crit.length} com HS abaixo de ${HEALTH_BANDS.atencao}`)}${hs0.length ? ` · ${sub('Status Finalizado · fora da média', hs0, `${plural(hs0.length, 'finalizada', 'finalizadas')} fora da média`, { resumo: 'Contas com Status "Finalizado" na Exportação de Clientes não entram na média, igual à plataforma CX.' })}` : ''}`,
         'Health Score médio · contas que entram na média', hsAcc, { resumo: hsAcc.length ? `Média = soma dos HS (${fmtInt(hsSoma)}) ÷ ${hsAcc.length} contas = <b>${hsM.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>. Contas com Status Finalizado ficam fora (${hs0.length}).` : '' }],
       [fmtInt(ACC.length), 'empresas', 'Empresas', ACC, { resumo: `${ACC.length} contas da Exportação de Clientes neste filtro.` }],
       [[fmtMi(gmvT), fmtMoney(gmvT)], 'GMV último mês', 'GMV último mês', gmvAcc, { sort: desc('gmv'), resumo: `Soma do GMV do último mês de ${gmvAcc.length} contas: <b>${fmtMoney(gmvT)}</b>. Ordenado do maior para o menor.` }],
@@ -1197,7 +1210,6 @@ function render() {
       [[fmtCurto(sum(ACC, a => a.mrr)), fmtMoney(sum(ACC, a => a.mrr))], `MRR · ${cnt(ACC, a => a.mrr)} contas com dado`, 'MRR', mrrAcc, { sort: desc('mrr'), resumo: `Soma do MRR de ${mrrAcc.length} contas: <b>${fmtMoney(sum(ACC, a => a.mrr))}</b>.` }],
       [fmtInt(sum(ACC, a => a.tickets)), `tickets nos últimos 90 dias · ${ACC.some(a => a.ticketsSug != null) ? `${fmtInt(sum(ACC, a => a.ticketsDP))} dúvidas e problemas · ${fmtInt(sum(ACC, a => a.ticketsSug))} sugestões · ` : ''}${sub('Contas com mais de 5 tickets nos últimos 90 dias', tk3, plural(tk3.length, 'conta com mais de 5', 'contas com mais de 5'), { sort: desc('tickets') })}`, 'Clientes que mais abriram tickets nos últimos 90 dias', tkAcc, { ticketsRanking: true, sort: desc('tickets'), resumo: `Total de ${fmtInt(sum(ACC, a => a.tickets))} tickets em ${tkAcc.length} contas.` }],
       [fmtInt(certAl.length), `certificados em alerta · ${sub('Certificado digital vencido', certVen, plural(certVen.length, 'vencido', 'vencidos'), certOpts)} · ${sub(`Certificado digital vence nos próximos ${CERT_DIAS} dias`, certPrx, `${fmtInt(certPrx.length)} vence${certPrx.length === 1 ? '' : 'm'} em até ${CERT_DIAS} dias`, certOpts)}`, `Certificado digital vencido ou vencendo nos próximos ${CERT_DIAS} dias`, certAl, certOpts],
-      [nSeg, `grupos de segmento${semSeg.length ? ` · ${sub('Sem segmento na Cx', semSeg, `+${semSeg.length} sem segmento`)}` : ''}`, 'Contas com segmento na Cx', comSeg, { sort: (a, b) => String(a.segGrupo).localeCompare(String(b.segGrupo)) || a.score - b.score }],
       [`${acima.length}/${comp.length}`, 'acima da faixa de volume', 'Volume acima da faixa contratada', acima, { sort: desc('media'), resumo: `${acima.length} de ${comp.length} contas com faixa na tag estão acima da faixa contratada.` }],
       [`${mot.length}/${ACC.length}`, 'contas com motivo de risco', 'Contas com motivo de risco', mot]
     ];
@@ -1218,6 +1230,15 @@ function render() {
   const semFx = acc => { const k = acc.filter(a => a.pos === 'Sem faixa na tag').length; return k ? `+${k} sem faixa` : ''; };
   let h = '';
 
+  { // Precisa de atenção: quem pede ação hoje (sem Finalizadas e sem IF0), mais urgentes e maior MRR primeiro
+    const urg = m => m.filter(x => x[1] === 'r').length;
+    const pa = ACC.filter(a => !finalizada(a) && a.IF !== 'IF0').map(a => ({ a, m: motivosAtencao(a) })).filter(x => x.m.length)
+      .sort((p, q) => urg(q.m) - urg(p.m) || q.m.length - p.m.length || (q.a.mrr || 0) - (p.a.mrr || 0));
+    h += `<h2>Precisa de atenção</h2>` + (pa.length ? `<div class="grid" style="grid-template-columns:minmax(0,1fr)">${card(`${pa.length} ${pa.length === 1 ? 'conta pede' : 'contas pedem'} ação`, 'inadimplência, pagamento atrasado, IF1, certificado, mais de 60 dias sem interação ou queda de pedidos · clique no nome para abrir a ficha',
+      `<ul class="atn-l">${pa.slice(0, 10).map(({ a, m }) => `<li><button type="button" class="atn-n" data-emp="${esc(a.id)}">${esc(a.nome)}</button><span class="atn-m">${m.map(([t, c]) => `<span class="alc alc-${c}">${esc(t)}</span>`).join('')}</span><span class="atn-v">${a.mrr ? 'MRR ' + fmtMoney(a.mrr) : ''}</span></li>`).join('')}</ul>`
+      + (pa.length > 10 ? `<p class="note" style="margin:10px 0 0"><span class="ck lk" data-l="${reg('Precisa de atenção', pa.map(x => x.a))}">Ver as ${pa.length} contas</span></p>` : ''))}</div>`
+      : '<p class="note">Nenhuma conta pedindo ação neste recorte.</p>');
+  }
   // 0. Health Score e engajamento
   // Saúde da carteira pelo IF (pedido do time): Churn = IF0 · Crítico = IF1 · Atenção = IF2 e IF3 · Saudável = IF4 e IF5
   const SAUDE_IF = [['Saudável', ['IF4', 'IF5']], ['Atenção', ['IF2', 'IF3']], ['Crítico', ['IF1']], ['Churn', ['IF0']], ['Sem IF', ['Sem IF']]];
@@ -1237,7 +1258,7 @@ function render() {
   const criticas = ACC.filter(a => a.banda !== 'Saudável').sort((a, b) => a.score - b.score);
   h += `<h2>Health Score e engajamento</h2><p class="lead">Score de 0 a 100 por conta: começa em 100 e desconta pontos por IF, queda de pedidos, API, armazenamento, tickets, inadimplência, engajamento, preço, dias sem interação e sem login. Pesos editáveis no código (HEALTH). Data de referência: ${fmtDate(ref)}.</p><div class="grid">`
     + card('Saúde da carteira por IF', 'Saudável = IF4 e IF5 · Atenção = IF2 e IF3 · Crítico = IF1 · Churn = IF0', pie(bands.map(b => ({ label: b.label, value: b.acc.length, color: SAUDE_COR[b.label], text: b.acc.length + ' emp.', acc: b.acc })), 'Saúde por IF'))
-    + card('Score médio por IF', 'quanto menor, mais frágil', barList(ifPresent.map(g => ({ label: g.label, value: Math.round(scoreMedia(g.acc) ?? 0), color: IF_COLOR[g.key], acc: g.acc })), v => v + ' pts'))
+    + card('Score médio por IF', 'quanto menor, mais frágil', barList(ifPresent.filter(g => g.key !== 'IF0').map(g => ({ label: g.label, value: Math.round(scoreMedia(g.acc) ?? 0), color: IF_COLOR[g.key], acc: g.acc })), v => v + ' pts'))
     + card('Sinais de risco mais comuns', 'contas afetadas por cada sinal (informativo; o score vem da coluna HS da Exportação)', barList(Object.entries(penTop).filter(([k]) => !IF_ORDER.some(i => k.startsWith(i))).sort((a, b) => b[1].length - a[1].length).slice(0, 10).map(([k, acc], i) => ({ label: k, value: acc.length, color: hue(i), acc })), v => v + ' emp.'))
     + '</div><div class="grid">'
     + card(`Último login no Bling${dicaCard('dica-login', `<p>Só aparecem clientes com <b>2 dias úteis ou mais</b> sem entrar no Bling. Sábado e domingo não contam.</p><p>Exemplo: hoje (${fmtDate(ref)}) — quem entrou 2 dias úteis antes aparece; quem entrou no dia útil anterior ou hoje não aparece.</p><p>Data do último login: Tabela Meta (coluna "Último Login").</p>`)}`,
@@ -1246,7 +1267,6 @@ function render() {
     + card(`Última interação do CSM${dicaCard('dica-interacao', '<p><b>Última interação = data da última tarefa concluída com esse cliente</b> (tarefas de board e de jornada, lidas do CustomerX).</p><p>Sem nenhuma tarefa concluída com o cliente, ele aparece em "Sem dado".</p>')}`,
         `${cnt(ACC, a => a.diasInteracao)} contas com tarefa concluída · dias desde a última`, pie(mkBuckets(a => a.diasInteracao, interCuts), 'Última interação'))
     + '</div>';
-  h += `<div class="stat" style="margin-top:12px">${bands.slice().reverse().map(({ label: k, acc }) => `<div class="ck" data-l="${reg('Saúde por IF · ' + k, acc)}" title="Clique para ver a lista" style="--bc:${SAUDE_COR[k]}"><b style="color:${SAUDE_COR[k]}">${acc.length}</b><span>${k}</span></div>`).join('')}</div>`;
 
   // Visão geral
   h += `<h2>Visão geral por segmento</h2><p class="lead">Segmentos da Tabela Cx agrupados (${Object.keys(SEG_GRUPO).length} grupos; o segmento original aparece na lista de clientes).</p><div class="grid">` + card('Segmentos da carteira (agrupados)', `% das ${ACC.length} contas`, pie(segGroups.map(g => ({ label: g.label, value: g.acc.length, color: g.color, text: g.acc.length + ' emp.', acc: g.acc })), 'Segmentos')) + '</div>';
@@ -1269,7 +1289,7 @@ function render() {
   // 3. Riscos
   const hr = heatCtl('risco', ifPresent, fxGroups);
   h += `<h2><span class="hn">3. </span>Riscos por ${hr.by === 'IF' ? 'IF' : 'faixa'}</h2><p class="lead">Cada célula mostra o % de empresas do grupo com o indicador e, embaixo, quantas são (ex.: 9 de 34). A barrinha compara os grupos da mesma linha. A cor marca onde o grupo está acima da média do Elite (última coluna): quanto mais forte, mais acima; na média ou abaixo fica sem cor. "Sem dado" são empresas sem a informação daquele indicador (contam como "não tem"); clique para ver quais são. Passe o mouse numa célula para ver a comparação.</p>` + hr.html + heat(hr.groups, RISK_IND, null, 'red');
-  const motivoPie = g => { const items = RISCOS.map(([k], i) => ({ label: k, value: sum(g.acc, a => a.riscos[k]), color: hue(i + 3), text: sum(g.acc, a => a.riscos[k]) + ' citações', acc: g.acc.filter(a => a.riscos[k]) })).filter(i => i.value).sort((a, b) => b.value - a.value); const tit = g.key === 'IF0' ? 'Motivo do cancelamento · IF0' : 'Motivos de risco · ' + g.key; return items.length ? card(tit, `${g.acc.length} contas · uma conta pode citar mais de um motivo`, pie(items, g.key === 'IF0' ? 'Motivo do cancelamento IF0' : 'Motivos ' + g.key)) : ''; };
+  const motivoPie = g => { const items = RISCOS.map(([k], i) => ({ label: k, value: sum(g.acc, a => a.riscos[k]), color: hue(i + 3), text: sum(g.acc, a => a.riscos[k]) + ' citações', acc: g.acc.filter(a => a.riscos[k]) })).filter(i => i.value).sort((a, b) => b.value - a.value); const tit = g.key === 'IF0' ? 'Motivo do cancelamento · IF0' : 'Motivos de risco · ' + g.key; return items.length ? card(tit, `${g.acc.length} contas · uma conta pode citar mais de um motivo`, (items.length >= 3 ? pie(items, g.key === 'IF0' ? 'Motivo do cancelamento IF0' : 'Motivos ' + g.key) : barList(items, v => v + (v === 1 ? ' citação' : ' citações')))) : ''; };
   const topIfs = ifPresent.filter(g => sum(g.acc, a => a.temMotivo) > 0);
   h += `<h3 class="sp">Motivos de risco por IF</h3><p class="lead">Um gráfico para cada IF que tem ao menos uma conta com motivo de risco.</p><div class="grid">${topIfs.map(motivoPie).join('')}</div>`;
   const semMotivo = ifPresent.filter(g => !sum(g.acc, a => a.temMotivo)); if (semMotivo.length) h += `<p class="note">Sem motivo de risco registrado: ${semMotivo.map(g => g.key).join(', ')}.</p>`;
@@ -2152,9 +2172,9 @@ function renderEmpresa() {
   if (!a) {
     // listagem: aparece só quando nenhuma empresa está selecionada
     h += `<p class="note">Clique no nome da empresa para ver a análise dela. Digitar no campo Empresa também filtra a lista.</p>`;
-    const chipsAlerta = x => { const al = alertasCob(x).filter(t => /Diverg/.test(t)); return al.length ? al.map(t => `<span class="alc ${/Diverg/.test(t) ? 'alc-y' : 'alc-r'}">${esc(t)}</span>`).join('') : '<span class="mut">—</span>'; };
-    h += `<div class="tw"><table id="empTabela"><colgroup><col style="width:24%"><col style="width:10%"><col style="width:10%"><col style="width:6%"><col style="width:8%"><col style="width:9%"><col style="width:12%"><col style="width:9%"><col style="width:12%"></colgroup><thead><tr><th>Empresa</th><th>Carteira</th><th>Health Score</th><th>IF</th><th>Faixa</th><th class="num">MRR</th><th>Pagamento</th><th>Alertas</th><th>Links</th></tr></thead><tbody>${base.map(x =>
-      `<tr data-busca="${esc(normBusca([x.nome, x.razao, x.id, x.cnpjTxt, S(x.cnpjTxt).replace(/\D/g, ''), x.csm].join(' ')))}"><td><span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span><span class="mut sm" style="display:block">${x.razao && x.razao !== x.nome ? esc(x.razao) + ' · ' : ''}${esc(fmtCnpj(x.cnpjTxt) || '—')} · cód. ${esc(x.id)}</span></td><td>${esc(x.csm || '—')}</td><td>${hsSelo(x)}</td><td>${esc(x.IF || '—')}</td><td>${esc(x.fx ? 'Faixa ' + x.fx : '—')}</td><td class="num">${x.mrr ? fmtMoney(x.mrr) : '<span class="mut">—</span>'}</td><td>${pagSelo(x)}</td><td>${chipsAlerta(x)}</td><td class="lks">${[linkBotao(x.link, 'ADM'), linkBotao(x.linkCx, 'CX'), linkBotao(x.linkOcta, 'Octa')].filter(l => !/class="mut"/.test(l)).join('') || '<span class="mut">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+    h += `<div class="empf" role="group" aria-label="Filtros rápidos">${EMP_FILTROS.map(([k, l]) => { const n = base.filter(x => empFiltros(x).includes(k)).length; return `<button type="button" data-empf="${k}" aria-pressed="${EMP_F === k}">${l}<span>${n}</span></button>`; }).join('')}</div>`;
+    h += `<div class="tw"><table id="empTabela"><colgroup><col style="width:23%"><col style="width:9%"><col style="width:10%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:15%"><col style="width:10%"><col style="width:12%"></colgroup><thead><tr><th>Empresa</th><th>Carteira</th><th>Health Score</th><th>IF</th><th>Faixa</th><th class="num">MRR</th><th>Atenção</th><th>Última interação</th><th>Links</th></tr></thead><tbody>${base.map(x =>
+      `<tr data-f="${empFiltros(x).join(' ')}" data-busca="${esc(normBusca([x.nome, x.razao, x.id, x.cnpjTxt, S(x.cnpjTxt).replace(/\D/g, ''), x.csm].join(' ')))}"><td><span class="lk" data-emp="${esc(x.id)}">${esc(x.nome)}</span><span class="mut sm" style="display:block">${x.razao && x.razao !== x.nome ? esc(x.razao) + ' · ' : ''}${esc(fmtCnpj(x.cnpjTxt) || '—')} · cód. ${esc(x.id)}</span></td><td>${esc(x.csm || '—')}</td><td>${hsSelo(x)}</td><td>${esc(x.IF || '—')}</td><td>${esc(x.fx ? 'Faixa ' + x.fx : '—')}</td><td class="num">${x.mrr ? fmtMoney(x.mrr) : '<span class="mut">—</span>'}</td><td>${pagSelo(x)}${alertasCob(x).includes('Divergência CX') ? '<span class="alc alc-y" title="Situação da empresa diferente da situação do contrato no CX">Divergência CX</span>' : ''}</td><td>${x.diasInteracao == null ? '<span class="mut">—</span>' : `<span style="${x.diasInteracao > 60 ? 'color:var(--neg-fg);font-weight:600' : x.diasInteracao > 30 ? 'color:var(--warn-fg);font-weight:600' : ''}">${fmtDays(x.diasInteracao)}</span>`}</td><td class="lks">${[linkBotao(x.link, 'ADM'), linkBotao(x.linkCx, 'CX'), linkBotao(x.linkOcta, 'Octa')].filter(l => !/class="mut"/.test(l)).join('') || '<span class="mut">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;
     box.innerHTML = h; ligarBuscaEmpresa(); return;
   }
 
@@ -2162,14 +2182,29 @@ function renderEmpresa() {
   const req7 = N(M('Total Requisições Últimos 7 Dias')), apps = N(M('Aplicativos com Uso na API'));
   h += `<h2>${esc(a.nome)}</h2><p class="lead ident">${esc(a.razao)} · CNPJ ${esc(fmtCnpj(S(col(a._r, 'CNPJ/CPF')) || S(M('CNPJ'))))} · código ${esc(a.id)} · carteira <b>${esc(a.csm || '—')}</b> · ${esc(a.statusCx || '—')}</p>${a.link || a.linkCx || a.linkOcta ? `<div class="lbtns">${a.link ? `<a class="lbtn" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir no ADM ↗</a>` : ''}${a.linkCx ? `<a class="lbtn" href="${esc(a.linkCx)}" target="_blank" rel="noopener">Abrir no CX ↗</a>` : ''}${a.linkOcta ? `<a class="lbtn" href="${esc(a.linkOcta)}" target="_blank" rel="noopener">Abrir no Octa ↗</a>` : ''}</div>` : ''}`;
   const ant = contasMesAnterior(), aAnt = ant.l && ant.l.find(x => x.id === a.id);
-  h += `<div class="kpis">${[
-    kpiBox(a.score == null ? '–' : a.score, `Health Score · ${esc(a.banda)} (${esc(a.scoreFonte)})`).replace('<b>', `<b style="color:${BAND_COLOR[a.banda] || 'inherit'}">`), (s => `<div class="kpi" title="${esc(pagDica(a))}"><b style="font-size:18px;cursor:help;color:${!s ? 'inherit' : s[1] === 'alc-r' ? 'var(--neg-fg)' : s[1] === 'alc-g' ? 'var(--pos-fg)' : 'var(--warn-fg)'}">${esc(s ? s[0] : '—')}</b><span>situação do pagamento · último pagamento ${a.dtPag ? fmtDate(a.dtPag) : '–'}</span></div>`)(pagSit(a)), kpiBox(esc(a.IF), esc(a.ifLabel || '')), kpiBox(esc(a.fx ? 'Faixa ' + a.fx : '—'), esc(a.fxLabel || 'sem faixa na tag')),
-    kpiBox(fmtMoney(a.mrr), 'MRR'), kpiBox(fmtMi(a.gmv), 'GMV último mês'), kpiVsAnt(a.pedUlt, aAnt && aAnt.pedUlt, 'pedidos último mês', ant), kpiVsAnt(a.media, aAnt && aAnt.media, 'pedidos/mês (média 3m)', ant),
-    `<div class="kpi ck" data-tk="${esc(a.id)}" title="Clique para ver os tickets"><b>${fmtInt(a.tickets)}</b><span class="lk">tickets nos últimos 90 dias</span>${a.ticketsSug != null ? `<span class="kx">${fmtInt(a.ticketsDP)} dúvidas e problemas · ${fmtInt(a.ticketsSug)} sugestões</span>` : ''}</div>`, kpiBox(fmtInt(req7), 'requisições de API (7 dias)'), kpiBox(fmtInt(apps), 'aplicativos com uso na API'),
-    `<div class="kpi${a.certAlerta === 1 ? ' kpi-alerta' : ''}"><b>${fmtDate(a.certVenc)}</b><span>vencimento do certificado digital${a.certVenc ? ' · ' + certSitTxt(a) : ''}</span><small class="kx">comprou certificado no Bling: ${esc(certCompraTxt(a))}</small>${a.certAlerta === 1 ? '<small class="kalerta">⚠ Contatar o cliente para oferecer o certificado digital</small>' : ''}</div>`,
-    kpiBox(a.api == null ? '–' : fmtPctExact(a.api), 'saúde da API (% 2xx)'), kpiBox(a.arm == null ? '–' : fmtPctExact(a.arm), 'armazenamento utilizado'),
-    kpiBox(fmtDays(a.diasLogin), 'desde o último login'), kpiBox(fmtDays(a.diasContato), 'desde o último contato' + (a.tipoContato ? ' · ' + esc(a.tipoContato) : '')), kpiBox(fmtDays(a.diasTarefa), 'desde a última tarefa concluída'),
-  ].join('')}</div>`;
+  { // Ficha em três blocos; cards sem dado ficam de fora
+    const vazio = k => /<b[^>]*>\s*[–—-]?\s*<\/b>/.test(k);
+    const bloco = (tit, ks) => { ks = ks.filter(k => !vazio(k)); return ks.length ? `<h3 class="fgrp">${tit}</h3><div class="kpis">${ks.join('')}</div>` : ''; };
+    const ps = pagSit(a);
+    h += bloco('Saúde', [
+      kpiBox(a.score == null ? '–' : a.score, `Health Score · ${esc(a.banda)}`).replace('<b>', `<b style="color:${BAND_COLOR[a.banda] || 'inherit'}" title="Fonte: ${esc(a.scoreFonte)}">`),
+      kpiBox(esc(a.IF), esc(a.ifLabel || '')),
+      `<div class="kpi" title="${esc(pagDica(a))}"><b style="cursor:help;color:${!ps ? 'inherit' : ps[1] === 'alc-r' ? 'var(--neg-fg)' : ps[1] === 'alc-g' ? 'var(--pos-fg)' : 'var(--warn-fg)'}">${esc(ps ? ps[0] : '—')}</b><span>situação do pagamento · último pagamento ${a.dtPag ? fmtDate(a.dtPag) : '–'}</span></div>`,
+      `<div class="kpi${a.certAlerta === 1 ? ' kpi-alerta' : ''}"><b>${fmtDate(a.certVenc)}</b><span>vencimento do certificado digital${a.certVenc ? ' · ' + certSitTxt(a) : ''}</span><small class="kx">comprou certificado no Bling: ${esc(certCompraTxt(a))}</small>${a.certAlerta === 1 ? '<small class="kalerta">⚠ Contatar o cliente para oferecer o certificado digital</small>' : ''}</div>`,
+    ]);
+    h += bloco('Negócio', [
+      kpiBox(fmtMoney(a.mrr), 'MRR'), kpiBox(esc(a.fx ? 'Faixa ' + a.fx : '—'), esc(a.fxLabel || 'sem faixa na tag')), kpiBox(fmtMi(a.gmv), 'GMV último mês'),
+      kpiVsAnt(a.pedUlt, aAnt && aAnt.pedUlt, 'pedidos último mês', ant), kpiVsAnt(a.media, aAnt && aAnt.media, 'pedidos/mês (média 3m)', ant),
+    ]);
+    h += bloco('Relacionamento', [
+      kpiBox(fmtDays(a.diasContato), 'desde o último contato' + (a.tipoContato ? ' · ' + esc(a.tipoContato) : '')), kpiBox(fmtDays(a.diasTarefa), 'desde a última tarefa concluída'),
+      `<div class="kpi ck" data-tk="${esc(a.id)}" title="Clique para ver os tickets"><b>${fmtInt(a.tickets)}</b><span class="lk">tickets nos últimos 90 dias</span>${a.ticketsSug != null ? `<span class="kx">${fmtInt(a.ticketsDP)} dúvidas e problemas · ${fmtInt(a.ticketsSug)} sugestões</span>` : ''}</div>`,
+    ]);
+    h += bloco('Uso do Bling', [
+      kpiBox(fmtDays(a.diasLogin), 'desde o último login'), kpiBox(a.api == null ? '–' : fmtPctExact(a.api), 'saúde da API (% 2xx)'), kpiBox(a.arm == null ? '–' : fmtPctExact(a.arm), 'armazenamento utilizado'),
+      kpiBox(req7 == null ? '–' : fmtInt(req7), 'requisições de API (7 dias)'), kpiBox(apps == null ? '–' : fmtInt(apps), 'aplicativos com uso na API'),
+    ]);
+  }
 
   h += `<div class="grid">`;
   h += card('O que pesa no Health Score', a.scoreFonte === 'HS (planilha)' ? 'HS oficial do CustomerX; abaixo, os sinais que o dashboard identifica' : 'score calculado pelo dashboard',
@@ -2181,7 +2216,7 @@ function renderEmpresa() {
     ['Sentimento do cliente', esc(S(col(a._r, 'Sentimento do Cliente')) || '—')], ['Plano de ação', esc(S(col(a._r, 'Plano de ação')) || '—')],
   ].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table>`);
   h += card('Canais e integrações', '', `<p class="sub">Marketplaces</p>${chips(a.mktList || M('Marketplaces Configurados'))}<p class="sub">E-commerces</p>${chips(a.ecomList || M('E-commerces Configurados'))}<p class="sub">Logísticas</p>${chips(M('Logísticas Configuradas') || a.logs)}<p class="sub">Integrações ativas (CustomerX)</p>${chips(a.integ)}`);
-  h += card('Adoção de produtos Bling', '', `<table class="kv"><tbody>${[['Conta Digital', simNao(a.contaDigital)], ['Certificado pelo Bling', esc(S(M('Comprou Certificado pelo Bling')) || '–')], ['Checkout', simNao(a.checkout)], ['PDV', simNao(a.pdv)], ['Meu Negócio', simNao(a.meuNegocio)], ['Usou API', simNao(a.usaApi)], ['Plano contratado', esc(a.plano || '–')], ['Situação (Metabase)', esc(a.situacaoMeta || '–')], ['Situação contrato CX (Metabase)', a.divCx === 1 ? `<b style="color:var(--rk)">${esc(a.sitCx || 'vazio')}</b> <span class="mut">esperado: ${esc(a.cxEsperada)}</span>` : esc(a.sitCx || '–')], ['Data de cobrança', a.atrasoMes === 1 ? `<b style="color:var(--rk)">${fmtDate(a.dtCob)} · pagamento atrasado</b>` : fmtDate(a.dtCob)], ['Último pagamento', fmtDate(a.dtPag)]].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table>`);
+  h += card('Adoção de produtos Bling', '', `<table class="kv"><tbody>${[['Conta Digital', simNao(a.contaDigital)], ['Certificado pelo Bling', esc(S(M('Comprou Certificado pelo Bling')) || '–')], ['Checkout', simNao(a.checkout)], ['PDV', simNao(a.pdv)], ['Meu Negócio', simNao(a.meuNegocio)], ['Usou API', simNao(a.usaApi)], ['Plano contratado', esc(a.plano || '–')], ['Situação contrato CX (Metabase)', a.divCx === 1 ? `<b style="color:var(--rk)">${esc(a.sitCx || 'vazio')}</b> <span class="mut">esperado: ${esc(a.cxEsperada)}</span>` : esc(a.sitCx || '–')]].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table>`);
   h += card('Tags no CustomerX', '', chips(S(col(a._r, 'Tags')).split(' | ')));
   h += `</div>`;
 
@@ -2206,12 +2241,20 @@ function renderEmpresa() {
   box.innerHTML = h; ligarBuscaEmpresa();
 }
 const normBusca = t => S(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+// Filtros rápidos da lista de empresas (um por vez; clicar de novo desliga)
+const EMP_FILTROS = [['inad', 'Inadimplentes'], ['atraso', 'Pagamento atrasado'], ['semint', 'Sem interação há 60+ dias'], ['if1', 'IF1'], ['hsbaixo', 'HS abaixo de 50']];
+let EMP_F = '';
+const empFiltros = x => [x.inadSit === 1 && 'inad', x.atrasoMes === 1 && 'atraso', x.diasInteracao != null && x.diasInteracao > 60 && 'semint', x.IF === 'IF1' && 'if1', x.score != null && x.score < HEALTH_BANDS.atencao && 'hsbaixo'].filter(Boolean);
+document.addEventListener('click', e => { const b = e.target.closest('[data-empf]'); if (!b) return;
+  EMP_F = EMP_F === b.dataset.empf ? '' : b.dataset.empf;
+  document.querySelectorAll('[data-empf]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.empf === EMP_F)));
+  const inp = document.getElementById('empBusca'); filtrarListaEmpresas(inp ? inp.value : ''); });
 function filtrarListaEmpresas(v) {
   const t = document.getElementById('empTabela'); if (!t) return;
   const q = normBusca(v.includes(' · ') ? v.slice(0, v.lastIndexOf(' · ')) : v).trim(), dig = v.replace(/\D/g, '');
   let n = 0;
-  t.querySelectorAll('tbody tr').forEach(tr => { const b = tr.dataset.busca || ''; const ok = !q || b.includes(q) || (dig.length >= 3 && b.replace(/\D/g, '').includes(dig)); tr.classList.toggle('emp-oculta', !ok); if (ok) n++; });
-  const c = document.getElementById('empConta'); if (c) c.textContent = q ? `${n} de ${t.tBodies[0].rows.length} empresas` : `${t.tBodies[0].rows.length} empresas`;
+  t.querySelectorAll('tbody tr').forEach(tr => { const b = tr.dataset.busca || ''; const ok = (!q || b.includes(q) || (dig.length >= 3 && b.replace(/\D/g, '').includes(dig))) && (!EMP_F || (tr.dataset.f || '').split(' ').includes(EMP_F)); tr.classList.toggle('emp-oculta', !ok); if (ok) n++; });
+  const c = document.getElementById('empConta'); if (c) c.textContent = q || EMP_F ? `${n} de ${t.tBodies[0].rows.length} empresas` : `${t.tBodies[0].rows.length} empresas`;
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-emplista]')) { EMP_ID = ''; trocarAba('empresa'); } });
 // Modal com a lista de tickets da empresa (planilha "lista_de_tickets_aberto…")
@@ -2831,7 +2874,7 @@ let TEMA = localStorage.getItem('tema') || 'geral', TOP_POR = 'mrr', TOP_FAIXA =
 // Faixas do Top 20 clientes em risco: Crítico 0–39 · Atenção 40–59 · Saudável 60–79 · Excelente 80–100
 const TOP_BANDAS = { atencao: 40, saudavel: 60, excelente: 80 };
 const topBanda = s => s == null ? null : s < TOP_BANDAS.atencao ? 'Crítico' : s < TOP_BANDAS.saudavel ? 'Atenção' : s < TOP_BANDAS.excelente ? 'Saudável' : 'Excelente';
-const temaDe = t => /^(Health Score|Visão geral|1\.|2\.)/.test(t) ? 'geral' : /^(3\.|Top 20|Converg|Cobrança)/.test(t) ? 'risco' : /^4\./.test(t) ? 'expansao' : /^8\./.test(t) ? 'integracoes' : 'portfolio';
+const temaDe = t => /^(Precisa de atenção|Health Score|Visão geral|1\.|2\.)/.test(t) ? 'geral' : /^(3\.|Top 20|Converg|Cobrança)/.test(t) ? 'risco' : /^4\./.test(t) ? 'expansao' : /^8\./.test(t) ? 'integracoes' : 'portfolio';
 function organizarTemas() {
   $('#temas').innerHTML = TEMAS.map(([k, l]) => `<button type="button" data-tema="${k}" class="${k === TEMA ? 'on' : ''}">${l}</button>`).join('');
   let atual = 'geral';
@@ -3422,7 +3465,12 @@ document.addEventListener('click', e => {
 
   function syncNav() {
     aberto[TAB] = true;
-    const tg = GRUPOS.find(g => g[0] === TAB); if (tg) document.getElementById('title').textContent = tg[1];
+    const tg = GRUPOS.find(g => g[0] === TAB);
+    if (tg) { // caminho: grupo › item aberto (o item vira o título; sem item, o grupo é o título)
+      const it = itens(TAB).find(i => i.on), cr = document.querySelector('.crumb');
+      document.getElementById('title').textContent = it ? it.l : tg[1];
+      if (cr) { cr.textContent = it ? tg[1] + ' ›' : ''; cr.hidden = !it; }
+    }
     const resumo = TEMA === 'geral' || TEMA === 'tudo';
     ['kpis'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = !resumo; });
     document.getElementById('sideNav').innerHTML = GRUPOS.map(([g, l]) => `<div class="sg" data-aberto="${aberto[g] ? 1 : 0}">
