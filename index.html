@@ -3133,7 +3133,9 @@ document.addEventListener('click', e => {
 // ===== Envio massivo (e-mail): sai do Gmail de quem envia, pelo Apps Script "Envio massivo" (envio-massivo/ no repositório do CRM Elite) =====
 // O mesmo serviço do CRM: o último envio massivo de cada cliente é compartilhado, e quem já recebeu num dia some da lista desse dia.
 const ENVIO_URL = 'https://script.google.com/a/macros/bling.com.br/s/AKfycbxDSQIHUZpxj-DjZASGN9CZKYbKHcFi00aN1QfELmmmECTzUK2tYbksE9NDtiLhYwRMNw/exec'; // /exec do Apps Script "Envio massivo"
-const ENVIO_VARS = [['empresa', 'Nome da empresa'], ['razao_social', 'Razão social'], ['cnpj', 'CNPJ'], ['contato', 'Nome do contato'], ['csm', 'CSM responsável']];
+const ENVIO_VARS = [['razao_social', 'Razão social'], ['cnpj', 'CNPJ'], ['nome', 'Nome do cliente'], ['contato', 'Nome completo do contato'], ['csm', 'CSM responsável']];
+// {{nome}}: primeiro nome do contato, só a inicial maiúscula ("MARCELO NICORO" → "Marcelo"); {{empresa}} continua valendo em textos antigos
+const primeiroNome = n => { const p = String(n || '').trim().split(/\s+/)[0] || ''; return p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : ''; };
 const ENVD = { canal: 'email', passo: 1, quando: '', assunto: '', corpo: '', eu: null, erroEu: '', envios: null, mails: {}, msg: '', enviando: false };
 function envJsonp(params, ms = 60000) {
   return jsonp(ENVIO_URL + '?' + new URLSearchParams(params), ms).then(d => { if (!d || !d.ok) throw new Error((d && d.erro) || 'Erro no serviço de envio.'); return d; },
@@ -3144,7 +3146,7 @@ const envDia = d => d ? d.split('-').reverse().join('/') : '—';
 const envTrocar = (t, v, fn = String) => String(t).replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (v[k] != null ? fn(v[k]) : ''));
 // mesma montagem do Apps Script: o conteúdo aceita HTML simples (<b>…</b>), os valores das variáveis são escapados
 const envHtml = (v, assin) => `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${envTrocar(ENVD.corpo, v, esc).replace(/\r?\n/g, '<br>')}</div>${assin ? `<br><div>${assin}</div>` : ''}`;
-const envVars = (a, nome) => ({ empresa: a.nome, razao_social: a.razao || a.nome, cnpj: a.cnpjTxt || '', contato: nome || '', csm: a.csm || '' });
+const envVars = (a, nome) => ({ empresa: a.nome, razao_social: a.razao || a.nome, cnpj: a.cnpjTxt || '', contato: nome || '', nome: primeiroNome(nome), csm: a.csm || '' });
 const envOk = e => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(e);
 // E-mails do cliente no CX: o do contato principal primeiro; depois o "Email Cliente". Nada vem marcado: marcar a empresa marca o primeiro.
 function envMails(a) {
@@ -3211,7 +3213,7 @@ function renderEnvio() {
 }
 function envPrev() {
   const f = document.getElementById('envPrev'); if (!f) return;
-  const ex = { empresa: 'Empresa Exemplo', razao_social: 'Empresa Exemplo LTDA', cnpj: '00.000.000/0001-00', contato: 'Maria', csm: 'Carteira' };
+  const ex = { empresa: 'Empresa Exemplo', razao_social: 'Empresa Exemplo LTDA', cnpj: '00.000.000/0001-00', contato: 'Maria Silva', nome: 'Maria', csm: 'Carteira' };
   f.srcdoc = `<base target="_blank"><p style="font:600 14px Arial;margin:0 0 10px">${esc(envTrocar(ENVD.assunto, ex)) || '(sem assunto)'}</p>` + envHtml(ex, ENVD.eu.assinatura);
 }
 const envMarcados = () => (ENVD.lista || []).filter(a => envMails(a).some(m => m.on));
