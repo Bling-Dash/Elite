@@ -619,6 +619,7 @@ h3.tit-ctl .dica{margin-left:0}
 #tab-envio .env-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#tab-envio .env-pri{background:var(--accent-green)!important;color:var(--bg-sidebar)!important}#tab-envio .env-pri:disabled{opacity:.5;cursor:default}
 #tab-envio .env-emp td{border-top:2px solid var(--bd2)}#tab-envio .env-mail td{border:0;padding-top:2px;padding-bottom:2px}#tab-envio .env-mail label{display:flex;gap:8px;align-items:center;color:var(--tx)}
 #tab-envio .env-add{display:flex;gap:8px;align-items:center;margin:2px 0 8px;max-width:520px}#tab-envio .env-add input{flex:1;padding:7px 10px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
+#tab-envio .env-tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--card2);color:var(--tx)}#tab-envio .env-ok{background:rgba(147,245,116,.25)}#tab-envio .env-err{background:rgba(240,81,67,.2)}
 #envPrev{width:100%;height:320px;border:1px solid var(--bd);border-radius:8px;background:#fff}
 #gemform input{padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--input);color:var(--tx);font:inherit}
 
@@ -3175,6 +3176,7 @@ function renderEnvio() {
       <p class="env-acoes"><a class="expbtn" href="${esc(ENVIO_URL)}" target="_blank" rel="noopener">Autorizar ↗</a><button type="button" class="expbtn" data-env="autorizei">Já autorizei</button></p><p class="note">Detalhe: ${esc(ENVD.erroEu)}</p></div>`;
     return;
   }
+  if (ENVD.passo === 3) { envResultado(el, tit); return; }
   if (ENVD.passo === 1) {
     el.innerHTML = tit + `<p class="note">1 de 2 · Mensagem. Sai do Gmail de ${esc(ENVD.eu.email)}, com a sua assinatura padrão.</p>
     <form class="card env" id="envForm" onsubmit="return false"><div id="envErro"></div>
@@ -3236,17 +3238,33 @@ async function envEnviar() {
     if (ult && ult.length < 50 && tam([...ult, it]) < 7000) ult.push(it); else lotes.push([it]);
   }
   if (lotes.some(l => tam(l) >= 7000)) { alert('O conteúdo está longo demais para enviar. Encurte o texto.'); return; }
-  const r = { enviados: 0, pulados: 0, erros: [] }, b = document.getElementById('envEnviar');
+  const st = {}, nomes = {}, b = document.getElementById('envEnviar'); // st: situação de cada cliente (ok, pulado ou erro)
+  envMarcados().forEach(a => (nomes[a.id] = a.nome));
   ENVD.enviando = true; b.disabled = true;
   try {
     for (let i = 0; i < lotes.length; i++) {
       b.textContent = `${futuro ? 'Agendando' : 'Enviando'}… ${i + 1}/${lotes.length}`;
-      try { const d = await envJsonp({ ...base, lista: JSON.stringify(lotes[i]) }, 300000); r.enviados += d.enviados.length; r.pulados += d.pulados.length; r.erros.push(...d.erros.map(e => e.msg)); }
-      catch (e) { r.erros.push(e.message); }
+      try {
+        const d = await envJsonp({ ...base, lista: JSON.stringify(lotes[i]) }, 300000);
+        d.enviados.forEach(id => (st[id] = { s: 'ok', erros: [] })); d.pulados.forEach(id => (st[id] = { s: 'pulado', erros: [] }));
+        d.erros.forEach(e => (st[e.id] = st[e.id] || { s: 'erro', erros: [] }).erros.push(e.msg));
+      } catch (e) { lotes[i].forEach(x => (st[x.id] = { s: 'erro', erros: [e.message] })); }
     }
   } finally { ENVD.enviando = false; }
-  ENVD.msg = `${futuro ? 'Agendado para' : 'Enviado para'} ${r.enviados} cliente(s)${r.pulados ? ` · ${r.pulados} já tinham recebido nesse dia` : ''}${r.erros.length ? ` · ${r.erros.length} erro(s): ${r.erros[0]}` : ''}.`;
-  ENVD.mails = {}; ENVD.envios = null; renderEnvio(); envCarregarEnvios();
+  ENVD.resultado = { futuro, quando: ENVD.quando, assunto: ENVD.assunto,
+    linhas: itens.map(x => ({ nome: nomes[x.id], emails: x.para.map(p => p.email), ...(st[x.id] || { s: 'erro', erros: ['Sem resposta do serviço.'] }) })) };
+  ENVD.passo = 3; ENVD.msg = ''; ENVD.mails = {}; ENVD.envios = null; renderEnvio(); envCarregarEnvios();
+}
+// Passo 3: para quem foi; "Concluir" limpa a mensagem e volta ao começo do envio de e-mail
+function envResultado(el, tit) {
+  const r = ENVD.resultado, quando = envDia(r.quando.slice(0, 10)) + ' ' + r.quando.slice(11), n = s => r.linhas.filter(l => l.s === s).length;
+  const sit = l => l.s === 'pulado' ? '<span class="env-tag">Já tinha recebido nesse dia · não enviado</span>'
+    : l.s === 'erro' ? `<span class="env-tag env-err">Erro</span> <span class="note">${esc(l.erros.join(' · '))}</span>`
+    : `<span class="env-tag env-ok">${r.futuro ? 'Agendado para ' + quando : 'Enviado'}</span>${l.erros.length ? ` <span class="note">Falhou: ${esc(l.erros.join(' · '))}</span>` : ''}`;
+  el.innerHTML = tit + `<p class="note">${r.futuro ? 'Agendamento concluído' : 'Envio concluído'} · "${esc(r.assunto)}" · ${n('ok')} cliente(s) ${r.futuro ? 'agendado(s)' : 'com e-mail enviado'}${n('pulado') ? ` · ${n('pulado')} já tinham recebido nesse dia` : ''}${n('erro') ? ` · ${n('erro')} com erro` : ''}.</p>
+  <div class="card env" style="overflow:auto"><table><thead><tr><th>Cliente</th><th>E-mails</th><th>Situação</th></tr></thead>
+  <tbody>${r.linhas.map(l => `<tr><td><b>${esc(l.nome)}</b></td><td>${l.emails.map(esc).join('<br>')}</td><td>${sit(l)}</td></tr>`).join('')}</tbody></table></div>
+  <p class="env-acoes"><button type="button" class="expbtn env-pri" data-env="concluir">Concluir</button></p>`;
 }
 document.addEventListener('input', e => {
   const f = e.target.form; if (!f || f.id !== 'envForm') return;
@@ -3276,6 +3294,7 @@ document.addEventListener('click', e => {
   const a = b.dataset.env;
   if (a === 'autorizei') { ENVD.erroEu = ''; renderEnvio(); }
   else if (a === 'add') envAdicionar(b.dataset.id);
+  else if (a === 'concluir') { Object.assign(ENVD, { passo: 1, quando: '', assunto: '', corpo: '', resultado: null }); renderEnvio(); }
   else if (a === 'negrito') { const c = document.getElementById('envForm').corpo, i = c.selectionStart, j = c.selectionEnd; c.setRangeText(`<b>${c.value.slice(i, j) || 'texto'}</b>`, i, j, 'select'); c.focus(); c.dispatchEvent(new Event('input', { bubbles: true })); }
   else if (a === 'voltar') { ENVD.passo = 1; ENVD.msg = ''; renderEnvio(); }
   else if (a === 'enviar') envEnviar();
