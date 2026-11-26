@@ -663,6 +663,7 @@ button[data-hmov]{cursor:pointer}button[data-hmov]:hover{border-color:var(--acce
 .crumb{font-size:14px!important;font-weight:500!important;color:var(--mut)!important;letter-spacing:0!important;white-space:nowrap}
 @media (max-width:640px){#kpis .kxl{white-space:normal;overflow:visible}}
 @media (max-width:960px){body{padding-bottom:84px}}
+table[data-txk]>thead th{cursor:pointer;user-select:none}table[data-txk]>thead th.tx-ord::after{content:attr(data-dir);font-size:9px;margin-left:4px;color:var(--ac)}
 </style>
 </head>
 <body>
@@ -3011,8 +3012,36 @@ function txPreparar(t) {
     th.appendChild(b);
   });
   if (st.ordem) st.ordem.forEach((rot, para) => { const hs = [...t.tHead.rows[0].cells].map(txRotulo), de = hs.indexOf(rot); if (de >= 0 && de !== para && para < hs.length) txMover(t, de, para); });
+  txOrdenar(t);
   txAplicarFiltros(t);
 }
+// Ordenar pelo clique no título da coluna (alterna crescente/decrescente). Número quando o texto começa com número
+// (R$, %, "87 d", "59 Atenção"); "hoje" = 0; vazio e "—" sempre no fim; linhas "Total" ficam embaixo.
+function txChaveOrd(td) {
+  const v = txTexto(td); if (!v || /^[–—-]$/.test(v)) return null;
+  if (/^hoje$/i.test(v)) return 0;
+  const d = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if (d) return Number(d[3] + d[2] + d[1]);
+  const m = v.replace(/^R\$\s*/, '').match(/^-?\d[\d.]*(,\d+)?/); if (m) return Number(m[0].replace(/\./g, '').replace(',', '.'));
+  return v;
+}
+function txOrdenar(t) {
+  const o = (TX_ESTADO[t.dataset.txk] || {}).sort, hs = [...t.tHead.rows[0].cells], n = hs.length;
+  hs.forEach(th => { const on = o && txRotulo(th) === o.rot; th.setAttribute('aria-sort', on ? (o.dir > 0 ? 'ascending' : 'descending') : 'none'); th.classList.toggle('tx-ord', !!on); th.dataset.dir = on ? (o.dir > 0 ? '▲' : '▼') : ''; });
+  const i = o ? hs.findIndex(th => txRotulo(th) === o.rot) : -1; if (i < 0) return;
+  [...t.tBodies].forEach(tb => {
+    const rs = [...tb.rows], ok = rs.filter(r => r.cells.length === n && !/^total\b/i.test(txTexto(r.cells[0]))), resto = rs.filter(r => !ok.includes(r));
+    const k = new Map(ok.map(r => [r, txChaveOrd(r.cells[i])]));
+    ok.sort((a, b) => { const x = k.get(a), y = k.get(b); if (x == null || y == null) return (x == null) - (y == null);
+      return o.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR', { numeric: true, sensitivity: 'base' })); });
+    [...ok, ...resto].forEach(r => tb.appendChild(r));
+  });
+}
+document.addEventListener('click', e => {
+  const th = e.target.closest('table[data-txk] > thead > tr > th'); if (!th || e.target.closest('.tx-dots,a,button,input,select')) return;
+  const t = th.closest('table'), st = TX_ESTADO[t.dataset.txk], rot = txRotulo(th);
+  st.sort = st.sort && st.sort.rot === rot ? { rot, dir: -st.sort.dir } : { rot, dir: 1 };
+  txOrdenar(t);
+});
 const txSalvarOrdem = t => { TX_ESTADO[t.dataset.txk].ordem = [...t.tHead.rows[0].cells].map(txRotulo); };
 let txAgendado = false;
 new MutationObserver(() => { if (txAgendado) return; txAgendado = true; requestAnimationFrame(() => { txAgendado = false; document.querySelectorAll('table').forEach(txPreparar); }); })
