@@ -1673,7 +1673,8 @@ function linhas(series, labels, fmt = fmtInt, doZero = true) {
     g += `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>${pts}`;
   });
   const leg = series.length > 1 ? `<div class="chips" style="margin-top:6px">${series.map((s, si) => `<span><b style="color:${s.cor || CORES[si % CORES.length]}">●</b> ${esc(s.nome)}</span>`).join('')}</div>` : '';
-  return `<svg class="lc" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;overflow:visible">${g}</svg>${leg}`;
+  const exp = esc(JSON.stringify({ l: labels, s: series.map(s => ({ n: s.nome, v: s.vals })) }));   // números para o Exportar dados
+  return `<svg class="lc" data-exp="${exp}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;overflow:visible">${g}</svg>${leg}`;
 }
 const tabela = (cab, linhasT) => { const nc = colsNum(linhasT); return `<div class="tw"><table><thead><tr>${cab.map((c, j) => `<th${nc.has(j) ? ' class="num"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${linhasT.map(r => `<tr>${r.map((c, j) => `<td${nc.has(j) ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; };
 const delta = (a, b, fmt = fmtInt, inverso = false) => {
@@ -3065,11 +3066,9 @@ document.getElementById('mExport').addEventListener('click', e => {
   const t = document.querySelector('#mbody table'); if (!t) return;
   txEscolherFormato(e.currentTarget, 'Exportar esta lista', fmt => txBaixar(document.getElementById('mtitle').textContent || 'Lista', txLinhasDaTabela(t), fmt));
 });
-// botão Exportar dados (canto superior direito): todas as empresas, todos os campos
-document.getElementById('exportAll').addEventListener('click', e => {
-  e.stopPropagation();
-  if (!temDados()) { alert('Os dados ainda não foram carregados.'); return; }
-  txEscolherFormato(e.currentTarget, `Exportar todas as ${ALL.length} empresas`, fmt => {
+// Carteira: todas as empresas, todos os campos (o export que existia antes)
+function exportarTudo(fmt) {
+  {
     const resumoCab = ['Empresa', 'Razão Social', 'Código', 'CNPJ', 'Carteira', 'Status', 'IF', 'Faixa', 'Health Score', 'Faixa do HS', 'Fonte do HS', 'Em risco', 'MRR', 'Fonte do MRR', 'GMV último mês', 'Pedidos último mês',
       'Pedidos/mês (média 3m)', 'Tickets 90d', 'Dias sem login', 'Dias sem interação', 'Armazenamento %', 'Saúde API %', 'Posição vs faixa', 'Motivo do risco', 'Sinais do Health Score'];
     const resumo = a => [a.nome, a.razao, a.id, S(col(a._r, 'CNPJ/CPF')), a.csm, a.statusCx, a.IF, a.fx ? 'Faixa ' + a.fx : '', a.score, a.banda, a.scoreFonte, emRisco(a) ? 'Sim' : 'Não',
@@ -3086,8 +3085,75 @@ document.getElementById('exportAll').addEventListener('click', e => {
         ['CustomerX', [cxCols, ...ALL.map(a => cxCols.map(c => v((a._r || {})[c])))]],
         ['Metabase', [mtCols, ...ALL.filter(a => a._m).map(a => mtCols.map(c => v(a._m[c])))]]]);
     }
+  }
+}
+// ===== Exportar dados (canto superior direito): o que a aba aberta mostra =====
+// Cada tabela, gráfico ou lista visível vira uma aba do Excel (no CSV, um bloco embaixo do outro).
+// Sem nada exportável na aba (GEM, QBR) o botão some.
+const EXP_SEL = 'table, svg.lc[data-exp], ul.leg, div.bl, ol.locrank, .kpis, .sb';
+const expVisivel = el => el.getClientRects().length > 0 && !el.closest('.tx-pop, #modal');
+const expTxt = el => el ? txValor(txTexto(el)) : '';
+function expNome(el, raiz) {
+  const h = (el.closest('.card') && el.closest('.card').querySelector('h3')) || [...raiz.querySelectorAll('h2, h3')].filter(x => x.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING).pop();
+  if (!h) return '';
+  const c = h.cloneNode(true); c.querySelectorAll('.dica, .tx-dots').forEach(d => d.remove()); return c.textContent.replace(/\s+/g, ' ').trim();
+}
+function expBlocos(raiz) {
+  const out = [], feitos = new Set();
+  raiz.querySelectorAll(EXP_SEL).forEach(el => {
+    if (!expVisivel(el) || (el.matches('table') && el.parentElement.closest('table'))) return;
+    let linhas;
+    if (el.matches('table')) linhas = el.tHead && el.tHead.rows.length ? txLinhasDaTabela(el) : [...el.rows].map(r => [...r.cells].map(expTxt));
+    else if (el.matches('svg')) { const d = JSON.parse(el.dataset.exp); linhas = [['Período', ...d.s.map(x => x.n)], ...d.l.map((l, i) => [l, ...d.s.map(x => x.v[i] == null ? '' : x.v[i])])]; }
+    else if (el.matches('ul.leg')) linhas = [['Item', '%', 'Detalhe'], ...[...el.children].map(li => [expTxt(li.querySelector('span:not(.dot)')), expTxt(li.querySelector('b')), expTxt(li.querySelector('em'))])];
+    else if (el.matches('div.bl')) linhas = [['Item', 'Valor'], ...[...el.querySelectorAll('.blr')].map(r => [expTxt(r.querySelector('span')), expTxt(r.querySelector('b'))])];
+    else if (el.matches('ol.locrank')) linhas = [['Posição/UF', 'Nome', 'Clientes', '%'], ...[...el.querySelectorAll('button')].map(b => { const q = b.querySelector('.locqt'); return [expTxt(b.querySelector('.locsg')), expTxt(b.querySelector('.nm')), txValor(q ? q.firstChild.textContent : ''), q && q.querySelector('small') ? q.querySelector('small').textContent : '']; })];
+    else if (el.matches('.kpis')) linhas = [['Indicador', 'Valor'], ...[...el.querySelectorAll('.kpi')].map(k => [expTxt(k.querySelector('span')), expTxt(k.querySelector('b'))])];
+    else { // barras empilhadas: um bloco por grupo de .sb
+      if (feitos.has(el.parentElement)) return; feitos.add(el.parentElement);
+      linhas = [['Linha', 'Total', 'Partes'], ...[...el.parentElement.children].filter(x => x.matches('.sb')).map(sb => { const sl = sb.querySelector('.sl'), n = sl.querySelector('small');
+        return [sl.firstChild.textContent.trim(), n ? txValor(n.textContent.replace('n=', '')) : '', [...sb.querySelectorAll('.sbar i[title]')].map(i => i.title).join(' · ')]; })];
+    }
+    if (linhas.length > 1) out.push([expNome(el, raiz) || 'Dados', linhas]);
+  });
+  const usados = {}; // nomes de aba únicos (o Excel não aceita repetidos; 31 letras)
+  return out.map(([n, l]) => { n = n.replace(/[\\/?*[\]:]/g, '').slice(0, 26) || 'Dados'; const k = n.toLowerCase(); usados[k] = (usados[k] || 0) + 1; return [usados[k] > 1 ? `${n} (${usados[k]})` : n, l]; });
+}
+function expTela(fmt) {
+  const blocos = expBlocos(document.getElementById('tab-' + TAB)), nome = 'Dash Elite - ' + (document.getElementById('title').textContent || TAB);
+  if (fmt === 'csv') txBaixar(nome, blocos.flatMap(([n, l], i) => [...(i ? [[]] : []), [n], ...l]), 'csv');
+  else txBaixar(nome, null, 'xlsx', blocos);
+}
+async function expEnvios(fmt) {
+  try {
+    const h = (await envJsonp({ acao: 'historico' })).historico;
+    if (!h.length) { alert('Ainda não há envios registrados.'); return; }
+    txBaixar('Envio massivo - histórico de e-mails', [['Data', 'Hora', 'Cliente', 'Código', 'E-mails', 'Assunto', 'Enviado por'], ...h.map(r => [envDia(r.d), r.h, r.c, r.id, r.e, r.a, r.p])], fmt);
+  } catch (e) { alert('Não consegui buscar o histórico de envios: ' + e.message); }
+}
+document.getElementById('exportAll').addEventListener('click', e => {
+  e.stopPropagation();
+  const n = expBlocos(document.getElementById('tab-' + TAB)).length, op = (k, t) => `<button type="button" data-expop="${k}-xlsx">📗 ${t} · Excel</button><button type="button" data-expop="${k}-csv">📄 ${t} · CSV</button>`;
+  let html = '';
+  if (TAB === 'envio') html += `<b class="tx-tit">Histórico de envios de e-mail</b>${op('envios', 'Para quem e quando')}`;
+  if (n) html += `<b class="tx-tit">O que está na tela (${n} ${n === 1 ? 'tabela ou gráfico' : 'tabelas e gráficos'})</b>${op('tela', 'Esta tela')}`;
+  if (TAB === 'carteira' && temDados()) html += `<b class="tx-tit">Todas as ${ALL.length} empresas, todos os campos</b>${op('tudo', 'Todas as empresas')}`;
+  if (!html) { alert('Nada para exportar nesta tela.'); return; }
+  const p = txAbrirPop(e.currentTarget, html);
+  p.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-expop]'); if (!b) return; ev.stopPropagation(); txFecharPop();
+    const [o, fmt] = b.dataset.expop.split('-');
+    if (o === 'envios') expEnvios(fmt); else if (o === 'tela') expTela(fmt); else exportarTudo(fmt);
   });
 });
+// o botão só aparece onde há o que exportar
+let expT;
+function expAtualizar() {
+  const r = document.getElementById('tab-' + TAB);
+  document.getElementById('exportAll').hidden = !(TAB === 'envio' || (TAB === 'carteira' && temDados()) || (r && [...r.querySelectorAll(EXP_SEL)].some(expVisivel)));
+}
+new MutationObserver(() => { clearTimeout(expT); expT = setTimeout(expAtualizar, 150); }).observe(document.getElementById('conteudo'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+
 </script>
 <script>
 // ===== GEM: atalhos para os Gems do Gemini, num lugar só =====
