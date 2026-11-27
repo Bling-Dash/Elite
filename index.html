@@ -2516,11 +2516,10 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-hmov
 function histElite(H) {
   if (!H.per.length) return '<p class="note">Ainda não há fotos gravadas. A primeira entra na próxima publicação do Drive.</p>';
   const ult = H.snap[H.per[H.per.length - 1]];
-  const carteiras = [...new Set([...H.per.flatMap(p => H.snap[p].map(x => x.csm)), ...carteirasAoVivo()].filter(Boolean))].sort();
+  const gc = $('#csm').value; HV2.carteira = gc === '__all__' ? '' : gc;   // segue o seletor de carteira do topo (sem seletor próprio)
   const empresas = ult.filter(x => !HV2.carteira || x.csm === HV2.carteira).sort((p, q) => p.nome.localeCompare(q.nome));
   const empSel = HV2.empresa ? ult.find(x => x.id === HV2.empresa) : null;
-  let h = `<div class="heatctl"><label>Carteira<select data-h2f="carteira"><option value="">Todas</option>${carteiras.map(c => `<option${c === HV2.carteira ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
-    <label>Empresa<input data-h2f="empresa" list="h2emp" placeholder="Todas as empresas" value="${empSel ? esc(empSel.nome + ' · ' + empSel.id) : ''}"></label><datalist id="h2emp">${empresas.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">`).join('')}</datalist></div>`;
+  let h = `<div class="heatctl"><label>Empresa<input data-h2f="empresa" list="h2emp" placeholder="Todas as empresas" value="${empSel ? esc(empSel.nome + ' · ' + empSel.id) : ''}"></label><datalist id="h2emp">${empresas.map(x => `<option value="${esc(x.nome + ' · ' + x.id)}">`).join('')}</datalist></div>`;
   const labs = H.per.map(rotulo);
   const filtra = arr => arr.filter(x => (!HV2.carteira || x.csm === HV2.carteira) && (!HV2.empresa || x.id === HV2.empresa));
   const P = H.per.map(p => metricas(filtra(H.snap[p])));
